@@ -24,7 +24,9 @@ import kotlin.jvm.JvmOverloads
  * event is translated into the SAX2 `ContentHandler` call a JAXP `SAXParserFactory` parser makes: adjacent character
  * data (text, entity and character references) is delivered as one [ContentHandler.characters] call; a CDATA section's
  * content is its own `characters` call; comments and CDATA boundaries go to a handler that also implements the internal
- * [LexicalEventHandler] (kdom's tree builder); `ignorableWhitespace` and `skippedEntity` are never called (no DTD).
+ * [LexicalEventHandler] (kdom's tree builder); `ignorableWhitespace` is never called (no DTD is read), and
+ * `skippedEntity` only in permissive DOCTYPE mode ([allowDocType]: an undeclared entity under an unread external subset,
+ * or an external entity).
  * Errors found by the pre-scan are reported before any event (a SAX parser would report the events before the error
  * first). See docs/xmlutil-probes.md (P1..P8) and docs/translation-notes.md ("XmlEventParser").
  *
@@ -51,7 +53,7 @@ public class XmlEventParser @JvmOverloads constructor(
         EventRun(mask?.masked ?: xml, mask, handler, namespaceAware, scanner.docType).run()
     }
 
-    /** Bytes with BOM / XML-declaration encoding detection (UTF-8, UTF-16 BE/LE, ISO-8859-1, US-ASCII). */
+    /** Bytes with BOM / XML-declaration encoding detection (UTF-8, UTF-16 BE/LE, ISO-8859-1, US-ASCII, windows-1252). */
     @Throws(SAXException::class)
     public fun parse(xml: ByteArray, handler: ContentHandler) {
         parse(XmlByteDecoder.decode(xml), handler)
