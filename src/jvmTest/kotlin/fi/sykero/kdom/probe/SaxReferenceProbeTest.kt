@@ -9,22 +9,7 @@ import org.xml.sax.helpers.DefaultHandler
 
 /** JAXP SAX reference verdicts for the same probes as [XmlUtilReaderProbeTest] (the bar XmlEventParser must meet). */
 class SaxReferenceProbeTest {
-    private val probes = linkedMapOf(
-        "unclosed root" to "<a><b></b>",
-        "stray ampersand" to "<a>x & y</a>",
-        "undefined entity" to "<a>&nbsp;</a>",
-        "unquoted attribute" to "<a b=1/>",
-        "unterminated attribute value" to "<a b=\"1/>",
-        "mis-nested tags" to "<a><b><c></b></c></a>",
-        "stray end tag" to "<a></b></a>",
-        "text after root" to "<a/>tail",
-        "two roots" to "<a/><b/>",
-        "duplicate attribute" to "<a b=\"1\" b=\"2\"/>",
-        "less-than in text" to "<a>1 < 2</a>",
-        "empty input" to "",
-        "undeclared prefix" to "<p:a/>",
-        "valid control" to "<a x=\"&lt;&amp;&#233;\"><![CDATA[<raw>]]>t&gt;</a>",
-    )
+    private val probes = ProbeInputs.probes
 
     private fun verdict(xml: String, nsAware: Boolean): String = try {
         val f = SAXParserFactory.newInstance().apply { isNamespaceAware = nsAware }
@@ -57,6 +42,12 @@ class SaxReferenceProbeTest {
             "empty input" to "rejected:SAXParseException",
             "undeclared prefix" to "rejected:SAXParseException",
             "valid control" to "accepted",
+            "undefined entity in attribute" to "rejected:SAXParseException",
+            "illegal character" to "rejected:SAXParseException",
+            "less-than in attribute" to "rejected:SAXParseException",
+            "doctype with entity decl" to "accepted",
+            "plain doctype" to "accepted",
+            "out-of-range character reference" to "rejected:SAXParseException",
         )
         val EXPECTED_NO_NS: Map<String, String> = mapOf(
             "unclosed root" to "rejected:SAXParseException",
@@ -73,6 +64,12 @@ class SaxReferenceProbeTest {
             "empty input" to "rejected:SAXParseException",
             "undeclared prefix" to "accepted",
             "valid control" to "accepted",
+            "undefined entity in attribute" to "rejected:SAXParseException",
+            "illegal character" to "rejected:SAXParseException",
+            "less-than in attribute" to "rejected:SAXParseException",
+            "doctype with entity decl" to "accepted",
+            "plain doctype" to "accepted",
+            "out-of-range character reference" to "rejected:SAXParseException",
         )
     }
 }
