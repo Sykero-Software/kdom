@@ -5,7 +5,64 @@ and a line here.
 
 ## Property rule exceptions
 
-(none yet)
+- `Namespace.getURI()` -> property `uri` with `@get:JvmName("getURI")` (a plain `val uri` would compile to `getUri()`
+  and break the Java/JVM name). Kotlin callers still write `ns.uri`.
+- `util.NamespaceStack.getScope()` -> property `scope` (copying getter, returns a fresh array each read, as in jdom2);
+  the former private `scope`/`added` fields became `scopes`/`added` (private) to avoid the name clash.
+- `LineSeparator.value()` stays a function: it is not a `getX()` getter in jdom2.
+- Not a property: `NamespaceStack.getNamespaceForPrefix(prefix)`, `getFirstNamespaceForURI(uri)`,
+  `getAllNamespacesForURI(uri)`, `getRebound(prefix)` take a parameter and stay functions.
+
+## API shape
+
+Task 4 (leaf classes translated to Kotlin, JVM only; sources under `src/jvmMain/kotlin`). All translated files keep the
+JDOM licence header; JVM names are unchanged unless listed here.
+
+Property rule applications:
+- `NamespaceAware`: `getNamespacesInScope()/getNamespacesIntroduced()/getNamespacesInherited()` -> `val namespacesInScope`,
+  `namespacesIntroduced`, `namespacesInherited` (`List<Namespace>`; Java implementers keep `getX()`).
+- `Namespace`: `getPrefix()` -> `val prefix`; `getURI()` -> `val uri` (see exceptions).
+- `NamespaceStack`: `getScope()` -> `val scope` (see exceptions).
+- `JDOMParseException`: `getPartialDocument()/getPublicId()/getSystemId()/getLineNumber()/getColumnNumber()` -> `val`s.
+
+Shape decisions (no behaviour change intended):
+- Static members use `companion object` + `@JvmStatic` / `@JvmField` / `const`: `JDOMConstants` (all `const val`, class kept final
+  with a private constructor), `Namespace` (`NO_NAMESPACE` / `XML_NAMESPACE` are `@JvmField`; init order namespacemap,
+  NO_NAMESPACE, XML_NAMESPACE, XMLNS_NAMESPACE, pre-population block is the Java order), `ArrayCopy`, `SystemProperty`
+  (kept a public no-arg-constructible class as in Java), `Verifier`, `AttributeType` (enum companion).
+- Every exception keeps `serialVersionUID = 200L` as a `private const val` in a private companion (static field on the outer
+  class, as in Java). The package-private constructors of `IllegalAddException/IllegalDataException/IllegalNameException/
+  IllegalTargetException` became `internal` (no Java caller outside the package; Kotlin emits them as public in bytecode, so the
+  Java callers in `fi.sykero.kdom` still compile). Their string parameters are nullable and concatenate as `"null"` exactly as
+  `StringBuilder.append(String)` did.
+- Kotlin artefacts that were not in the Java classes: a `Companion` static field/class on classes with a companion; a public
+  synthetic `Namespace(String, String, DefaultConstructorMarker)` constructor next to the private one; `IteratorIterable` carries
+  the `KMappedMarker` marker interface; the enum classes have `getEntries()`.
+- `EscapeStrategy` became a `fun interface` (Java lambdas / anonymous classes still work).
+- `LineSeparator`: the Java `private static getDefaultLineSeparator()` is a top-level private function (not a companion
+  member) because enum entries call it during enum initialisation, when a companion object does not exist yet.
+- `AttributeType.byIndex` is `@Deprecated("Use normal Enums instead of int's")` (Kotlin requires a message); the
+  `org.xml.sax.Attributes` import (javadoc-only) was dropped. `typeName.trim()` kept Java semantics (`trim { it <= ' ' }`).
+- `ArrayCopy.copyOf/copyOfRange` keep reflection (`Array.newInstance(source.javaClass.componentType, len)`) so the runtime
+  component type is preserved; overloads for `CharArray`, `IntArray`, `BooleanArray` are separate functions.
+- `NamespaceStack.push(Namespace...)` is `vararg namespaces: Namespace`; the Java `namespaces == null` check is gone (Kotlin
+  rejects a null array at the call), the empty case still duplicates the current level. No Java caller passes null.
+  The nested `ForwardWalker`/`BackwardWalker`/`EmptyIterable` implement `Iterator<Namespace>` with a plain `fun remove()` that
+  throws `UnsupportedOperationException` (same JVM method as the Java override).
+- `Verifier`: the two compressed tables are `byteArrayOf` / `intArrayOf` (622 entries each, copied by script); mask tests are
+  `0 != (CHARFLAGS[c.code].toInt() and MASK.toInt())` (Java: `(byte)0 != (byte)(flags & mask)`, all masks are < 128).
+  `for` loops that mutate the index (`checkCharacterData`) are `while` loops. `String.format` keeps the default locale.
+  `checkCDATASection/checkProcessingInstructionData/checkCommentData/checkProcessingInstructionTarget` use `data!!`/`target!!`
+  after the null-checking helper returned null (Java NPE-free by construction).
+- `jswordAssert`, `splitLikeJava`, `latin1String` were not needed in these 18 files; there is no `assert` in them.
+
+JDOMParseException re-shape (ruling R3): no dependency on `org.xml.sax` or `fi.sykero.kdom.sax`. jdom2 read publicId, systemId,
+line and column from a `SAXParseException` cause (`-1` / `null` when the cause was something else). kdom stores them as plain
+constructor fields. Constructors: primary `(message, cause, partialDocument, publicId, systemId, lineNumber, columnNumber)`;
+secondary `(message)`, `(message, cause)`, `(message, cause, partialDocument)` (jdom2's) and
+`(message, cause, lineNumber, columnNumber)`. Defaults are `partialDocument = null`, `publicId = systemId = null`,
+`lineNumber = columnNumber = -1`, so the jdom2 constructors give the values jdom2 gave for a non-SAX cause. A parser that
+wraps a position-carrying exception must now pass the position explicitly (Task 9). No Java test used these accessors.
 
 ## Behaviour differences
 
