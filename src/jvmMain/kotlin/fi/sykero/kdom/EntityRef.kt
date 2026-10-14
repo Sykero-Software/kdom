@@ -245,7 +245,7 @@ open class EntityRef : Content {
         return super.detach() as EntityRef
     }
 
-    override fun setParent(parent: Parent?): EntityRef {
+    internal override fun setParent(parent: Parent?): EntityRef {
         return super.setParent(parent) as EntityRef
     }
 

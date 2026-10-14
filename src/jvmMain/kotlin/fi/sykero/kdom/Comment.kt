@@ -132,7 +132,7 @@ open class Comment : Content {
         return super.detach() as Comment
     }
 
-    override fun setParent(parent: Parent?): Comment {
+    internal override fun setParent(parent: Parent?): Comment {
         return super.setParent(parent) as Comment
     }
 

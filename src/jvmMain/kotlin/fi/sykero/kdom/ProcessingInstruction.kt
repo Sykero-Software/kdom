@@ -407,7 +407,7 @@ open class ProcessingInstruction : Content {
         return super.detach() as ProcessingInstruction
     }
 
-    override fun setParent(parent: Parent?): ProcessingInstruction {
+    internal override fun setParent(parent: Parent?): ProcessingInstruction {
         return super.setParent(parent) as ProcessingInstruction
     }
 

@@ -240,7 +240,7 @@ open class Text : Content {
         return super.detach() as Text
     }
 
-    override fun setParent(parent: Parent?): Text {
+    internal override fun setParent(parent: Parent?): Text {
         return super.setParent(parent) as Text
     }
 

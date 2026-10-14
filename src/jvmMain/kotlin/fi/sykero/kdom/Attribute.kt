@@ -558,7 +558,7 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
      * @return this Attribute (state may be indeterminate depending on whether
      * this has been included in the Element's list yet).
      */
-    open fun setParent(parent: Element?): Attribute {
+    internal open fun setParent(parent: Element?): Attribute {
         this.parentRef = parent
         return this
     }

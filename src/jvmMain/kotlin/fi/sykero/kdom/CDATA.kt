@@ -208,7 +208,7 @@ open class CDATA : Text {
         return super.detach() as CDATA
     }
 
-    override fun setParent(parent: Parent?): CDATA {
+    internal override fun setParent(parent: Parent?): CDATA {
         return super.setParent(parent) as CDATA
     }
 

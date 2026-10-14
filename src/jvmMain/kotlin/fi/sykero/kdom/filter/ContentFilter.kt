@@ -90,9 +90,6 @@ import fi.sykero.kdom.Text
  */
 open class ContentFilter : AbstractFilter<Content> {
 
-    /** The JDOM object mask  */
-    private var mask: Int = 0
-
     /**
      * Default constructor that allows any legal JDOM objects.
      */
@@ -110,7 +107,7 @@ open class ContentFilter : AbstractFilter<Content> {
         if (allVisible) {
             setDefaultMask()
         } else {
-            mask = mask and mask.inv()
+            filterMask = 0
         }
     }
 
@@ -126,21 +123,20 @@ open class ContentFilter : AbstractFilter<Content> {
     /**
      * Return current filtering mask.
      * Set filtering mask: the new filtering mask is applied to the default mask.
-     * (The mask is stored in the private field `mask`; jdom2 called it `filterMask`.)
+     * (The JDOM object mask.)
      */
-    var filterMask: Int
-        get() = mask
+    var filterMask: Int = 0
         set(mask) {
-            setDefaultMask()
-            this.mask = this.mask and mask
+            // jdom2: setDefaultMask(); filterMask &= mask. Every mask this class assigns is a subset of the
+            // default mask, so applying the default mask here is equivalent for all assignments.
+            field = DEFAULT_MASK and mask
         }
 
     /**
      * Set this filter to allow all legal JDOM objects.
      */
     fun setDefaultMask() {
-        mask = ELEMENT or CDATA or TEXT or COMMENT or
-                PI or ENTITYREF or DOCUMENT or DOCTYPE
+        filterMask = DEFAULT_MASK
     }
 
     /**
@@ -148,7 +144,7 @@ open class ContentFilter : AbstractFilter<Content> {
      * document content.
      */
     fun setDocumentContent() {
-        mask = ELEMENT or COMMENT or PI or DOCTYPE
+        filterMask = ELEMENT or COMMENT or PI or DOCTYPE
     }
 
     /**
@@ -156,7 +152,7 @@ open class ContentFilter : AbstractFilter<Content> {
      * element content.
      */
     fun setElementContent() {
-        mask = ELEMENT or CDATA or TEXT or
+        filterMask = ELEMENT or CDATA or TEXT or
                 COMMENT or PI or ENTITYREF
     }
 
@@ -168,9 +164,9 @@ open class ContentFilter : AbstractFilter<Content> {
      */
     fun setElementVisible(visible: Boolean) {
         if (visible) {
-            mask = mask or ELEMENT
+            filterMask = filterMask or ELEMENT
         } else {
-            mask = mask and ELEMENT.inv()
+            filterMask = filterMask and ELEMENT.inv()
         }
     }
 
@@ -182,9 +178,9 @@ open class ContentFilter : AbstractFilter<Content> {
      */
     fun setCDATAVisible(visible: Boolean) {
         if (visible) {
-            mask = mask or CDATA
+            filterMask = filterMask or CDATA
         } else {
-            mask = mask and CDATA.inv()
+            filterMask = filterMask and CDATA.inv()
         }
     }
 
@@ -196,9 +192,9 @@ open class ContentFilter : AbstractFilter<Content> {
      */
     fun setTextVisible(visible: Boolean) {
         if (visible) {
-            mask = mask or TEXT
+            filterMask = filterMask or TEXT
         } else {
-            mask = mask and TEXT.inv()
+            filterMask = filterMask and TEXT.inv()
         }
     }
 
@@ -210,9 +206,9 @@ open class ContentFilter : AbstractFilter<Content> {
      */
     fun setCommentVisible(visible: Boolean) {
         if (visible) {
-            mask = mask or COMMENT
+            filterMask = filterMask or COMMENT
         } else {
-            mask = mask and COMMENT.inv()
+            filterMask = filterMask and COMMENT.inv()
         }
     }
 
@@ -224,9 +220,9 @@ open class ContentFilter : AbstractFilter<Content> {
      */
     fun setPIVisible(visible: Boolean) {
         if (visible) {
-            mask = mask or PI
+            filterMask = filterMask or PI
         } else {
-            mask = mask and PI.inv()
+            filterMask = filterMask and PI.inv()
         }
     }
 
@@ -238,9 +234,9 @@ open class ContentFilter : AbstractFilter<Content> {
      */
     fun setEntityRefVisible(visible: Boolean) {
         if (visible) {
-            mask = mask or ENTITYREF
+            filterMask = filterMask or ENTITYREF
         } else {
-            mask = mask and ENTITYREF.inv()
+            filterMask = filterMask and ENTITYREF.inv()
         }
     }
 
@@ -252,9 +248,9 @@ open class ContentFilter : AbstractFilter<Content> {
      */
     fun setDocTypeVisible(visible: Boolean) {
         if (visible) {
-            mask = mask or DOCTYPE
+            filterMask = filterMask or DOCTYPE
         } else {
-            mask = mask and DOCTYPE.inv()
+            filterMask = filterMask and DOCTYPE.inv()
         }
     }
 
@@ -273,23 +269,23 @@ open class ContentFilter : AbstractFilter<Content> {
         val c = content as Content
 
         if (c is Element) {
-            return if ((mask and ELEMENT) != 0) c else null
+            return if ((filterMask and ELEMENT) != 0) c else null
         } else if (c is CDATA) { // must come before Text check
-            return if ((mask and CDATA) != 0) c else null
+            return if ((filterMask and CDATA) != 0) c else null
         } else if (c is Text) {
-            return if ((mask and TEXT) != 0) c else null
+            return if ((filterMask and TEXT) != 0) c else null
         } else if (c is Comment) {
-            return if ((mask and COMMENT) != 0) c else null
+            return if ((filterMask and COMMENT) != 0) c else null
         } else if (c is ProcessingInstruction) {
-            return if ((mask and PI) != 0) c else null
+            return if ((filterMask and PI) != 0) c else null
         } else if (c is EntityRef) {
-            return if ((mask and ENTITYREF) != 0) c else null
+            return if ((filterMask and ENTITYREF) != 0) c else null
         }
         //        else if (obj instanceof Document) {
         //            return (filterMask & DOCUMENT) != 0 ? obj : null;
         //        }
         else if (c is DocType) {
-            return if ((mask and DOCTYPE) != 0) c else null
+            return if ((filterMask and DOCTYPE) != 0) c else null
         }
 
         return null
@@ -309,14 +305,14 @@ open class ContentFilter : AbstractFilter<Content> {
 
         val filter: ContentFilter = other
 
-        if (mask != filter.mask) return false
+        if (filterMask != filter.filterMask) return false
 
         return true
     }
 
     override fun hashCode(): Int {
         // Generated by IntelliJ
-        return mask
+        return filterMask
     }
 
     companion object {
@@ -348,5 +344,8 @@ open class ContentFilter : AbstractFilter<Content> {
 
         /** Mask for JDOM [DocType] object  */
         const val DOCTYPE: Int = 128
+
+        private const val DEFAULT_MASK: Int = ELEMENT or CDATA or TEXT or COMMENT or
+                PI or ENTITYREF or DOCUMENT or DOCTYPE
     }
 }

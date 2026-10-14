@@ -217,7 +217,7 @@ abstract class Content protected constructor(type: CType) : CloneBase(), Seriali
      * @param  parent              new parent element
      * @return                     the target element
      */
-    open fun setParent(parent: Parent?): Content {
+    internal open fun setParent(parent: Parent?): Content {
         this.parentRef = parent
         return this
     }

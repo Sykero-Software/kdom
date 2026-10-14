@@ -278,7 +278,7 @@ open class DocType : Content {
         return super.detach() as DocType
     }
 
-    override fun setParent(parent: Parent?): DocType {
+    internal override fun setParent(parent: Parent?): DocType {
         return super.setParent(parent) as DocType
     }
 
