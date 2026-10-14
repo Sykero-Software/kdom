@@ -56,6 +56,7 @@
 
 package fi.sykero.kdom
 
+import fi.sykero.kdom.internal.isJavaWhitespace
 import fi.sykero.kdom.internal.EmptyUnmodifiableMap
 import fi.sykero.kdom.internal.unsafeNull
 
@@ -338,8 +339,8 @@ open class ProcessingInstruction : Content {
                     )
                     pos += bounds[1] + 1 // skip past value
                     break
-                } else if (Character.isWhitespace(previousChar)
-                    && !Character.isWhitespace(currentChar)
+                } else if (isJavaWhitespace(previousChar)
+                    && !isJavaWhitespace(currentChar)
                 ) {
                     startName = pos
                 }
@@ -434,7 +435,7 @@ open class ProcessingInstruction : Content {
             }
             // Remove last space, if we did any appending
             if (stringData.length > 0) {
-                stringData.setLength(stringData.length - 1)
+                stringData.deleteAt(stringData.length - 1)
             }
 
             return stringData.toString()

@@ -16,3 +16,7 @@ internal actual abstract class KdomMutableList<E> actual constructor() : Abstrac
         sortLive(c)
     }
 }
+
+internal actual fun className(obj: Any): String = obj.javaClass.name
+
+internal actual fun className(kclass: kotlin.reflect.KClass<*>): String = kclass.javaObjectType.name

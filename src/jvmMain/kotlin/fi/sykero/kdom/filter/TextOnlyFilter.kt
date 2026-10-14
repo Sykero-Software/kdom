@@ -79,7 +79,7 @@ internal class TextOnlyFilter : AbstractFilter<Text>() {
     }
 
     override fun hashCode(): Int {
-        return this.javaClass.hashCode()
+        return this::class.hashCode()
     }
 
     override fun equals(other: Any?): Boolean {

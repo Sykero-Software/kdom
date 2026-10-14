@@ -34,3 +34,9 @@ internal expect abstract class KdomMutableList<E>() : AbstractMutableList<E> {
     /** Sorts the list in place, keeping the relative order of equal entries (jdom2's `sort(Comparator)` body). */
     protected abstract fun sortLive(comp: Comparator<in E>?)
 }
+
+/** The class name used in jdom2's messages (JVM: `obj.getClass().getName()`; elsewhere the qualified Kotlin name). */
+internal expect fun className(obj: Any): String
+
+/** The name `ClassFilter.toString()` shows (JVM: the boxed Java class name, as jdom2's `Class.getName()`). */
+internal expect fun className(kclass: kotlin.reflect.KClass<*>): String

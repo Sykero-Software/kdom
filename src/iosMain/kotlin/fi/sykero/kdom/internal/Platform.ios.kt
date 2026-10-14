@@ -15,3 +15,8 @@ actual open class IOException : Exception {
 internal actual abstract class KdomMutableList<E> actual constructor() : AbstractMutableList<E>() {
     protected actual abstract fun sortLive(comp: Comparator<in E>?)
 }
+
+internal actual fun className(obj: Any): String = className(obj::class)
+
+internal actual fun className(kclass: kotlin.reflect.KClass<*>): String =
+    kclass.qualifiedName ?: kclass.simpleName ?: kclass.toString()

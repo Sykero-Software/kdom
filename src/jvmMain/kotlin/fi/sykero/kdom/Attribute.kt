@@ -627,7 +627,8 @@ open class Attribute : CloneBase, NamespaceAware {
         get() {
             try {
                 // Avoid Float.parseFloat() to support JDK 1.1
-                return java.lang.Float.valueOf(value.trim { it <= ' ' }).toFloat()
+                // (kdom: String.toFloat() is Float.parseFloat on the JVM, the same grammar as Float.valueOf)
+                return value.trim { it <= ' ' }.toFloat()
             } catch (e: NumberFormatException) {
                 throw DataConversionException(name, "float")
             }
@@ -647,7 +648,8 @@ open class Attribute : CloneBase, NamespaceAware {
         get() {
             try {
                 // Avoid Double.parseDouble() to support JDK 1.1
-                return java.lang.Double.valueOf(value.trim { it <= ' ' }).toDouble()
+                // (kdom: String.toDouble() is Double.parseDouble on the JVM, the same grammar as Double.valueOf)
+                return value.trim { it <= ' ' }.toDouble()
             } catch (e: NumberFormatException) {
                 // Specially handle INF and -INF that Double.valueOf doesn't do
                 val v = value.trim { it <= ' ' }

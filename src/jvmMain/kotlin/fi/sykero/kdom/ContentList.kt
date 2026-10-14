@@ -56,6 +56,7 @@
 
 package fi.sykero.kdom
 
+import fi.sykero.kdom.internal.className
 import fi.sykero.kdom.internal.KdomMutableList
 import fi.sykero.kdom.filter.Filter
 import fi.sykero.kdom.internal.ArrayCopy
@@ -1062,7 +1063,7 @@ internal class ContentList
             } else {
                 throw IllegalAddException(
                     "Filter won't allow the " +
-                            obj.javaClass.name +
+                            className(obj) +
                             " '" + obj + "' to be added to the list"
                 )
             }
@@ -1125,7 +1126,7 @@ internal class ContentList
                     } else {
                         throw IllegalAddException(
                             "Filter won't allow the " +
-                                    c.javaClass.name +
+                                    className(c) +
                                     " '" + c + "' to be added to the list"
                         )
 
@@ -1232,7 +1233,7 @@ internal class ContentList
             throw IllegalAddException(
                 "Filter won't allow index " +
                         index + " to be set to " +
-                        (obj.javaClass).name
+                        className(obj)
             )
         }
 

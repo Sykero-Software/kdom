@@ -56,6 +56,7 @@
 
 package fi.sykero.kdom.filter
 
+import kotlin.reflect.KClass
 import fi.sykero.kdom.Attribute
 import fi.sykero.kdom.CDATA
 import fi.sykero.kdom.Comment
@@ -89,48 +90,46 @@ class Filters private constructor() {
 
     companion object {
         private val fcontent: Filter<Content> =
-            ClassFilter<Content>(Content::class.java)
+            ClassFilter<Content>(Content::class)
 
         private val fattribute: Filter<Attribute> =
             AttributeFilter()
 
         private val fcomment: Filter<Comment> =
-            ClassFilter<Comment>(Comment::class.java)
+            ClassFilter<Comment>(Comment::class)
 
         private val fcdata: Filter<CDATA> =
-            ClassFilter<CDATA>(CDATA::class.java)
+            ClassFilter<CDATA>(CDATA::class)
 
         private val fdoctype: Filter<DocType> =
-            ClassFilter<DocType>(DocType::class.java)
+            ClassFilter<DocType>(DocType::class)
 
         private val fentityref: Filter<EntityRef> =
-            ClassFilter<EntityRef>(EntityRef::class.java)
+            ClassFilter<EntityRef>(EntityRef::class)
 
         private val fpi: Filter<ProcessingInstruction> =
-            ClassFilter<ProcessingInstruction>(ProcessingInstruction::class.java)
+            ClassFilter<ProcessingInstruction>(ProcessingInstruction::class)
 
         private val ftext: Filter<Text> =
-            ClassFilter<Text>(Text::class.java)
+            ClassFilter<Text>(Text::class)
 
         private val ftextonly: Filter<Text> = TextOnlyFilter()
 
         private val felement: Filter<Element> =
-            ClassFilter<Element>(Element::class.java)
+            ClassFilter<Element>(Element::class)
 
         private val fdocument: Filter<Document> =
-            ClassFilter<Document>(Document::class.java)
+            ClassFilter<Document>(Document::class)
 
-        // The boxed java.lang classes: Boolean::class.java would be the primitive class, which no object is an instance of.
-        @Suppress("UNCHECKED_CAST", "PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+        // KClass.isInstance matches the boxed values (jdom2 needed java.lang.Double.class / java.lang.Boolean.class).
         private val fdouble: Filter<Double> =
-            ClassFilter<Double>(java.lang.Double::class.java as Class<Double>)
+            ClassFilter<Double>(Double::class)
 
-        @Suppress("UNCHECKED_CAST", "PLATFORM_CLASS_MAPPED_TO_KOTLIN")
         private val fboolean: Filter<Boolean> =
-            ClassFilter<Boolean>(java.lang.Boolean::class.java as Class<Boolean>)
+            ClassFilter<Boolean>(Boolean::class)
 
         private val fstring: Filter<String> =
-            ClassFilter<String>(String::class.java)
+            ClassFilter<String>(String::class)
 
         private val fpassthrough: Filter<Any> =
             PassThroughFilter()
@@ -364,11 +363,12 @@ class Filters private constructor() {
          * Return a Filter that matches any data of the specified Class.
          *
          * @param <F> The generic type of the content returned by this Filter
-         * @param clazz the Class type to match in the filter
+         * @param clazz the Class type to match in the filter (kdom: a `KClass`; Java callers pass
+         *        `JvmClassMappingKt.getKotlinClass(X.class)`)
          * @return a Filter that matches any data of the specified Class.
          */
         @JvmStatic
-        fun <F> fclass(clazz: Class<F>): Filter<F> {
+        fun <F : Any> fclass(clazz: KClass<F>): Filter<F> {
             return ClassFilter<F>(clazz)
         }
 

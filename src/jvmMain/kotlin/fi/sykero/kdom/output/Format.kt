@@ -699,13 +699,13 @@ open class Format private constructor() {
                     if (!Verifier.isLowSurrogate(ch)) {
                         throw IllegalDataException(
                             "Could not decode surrogate pair 0x" +
-                                Integer.toHexString(highsurrogate.code) + " / 0x" +
-                                Integer.toHexString(ch.code)
+                                highsurrogate.code.toString(16) + " / 0x" +
+                                ch.code.toString(16)
                         )
                     }
                     val chp = Verifier.decodeSurrogatePair(highsurrogate, ch)
                     sb.append("&#x")
-                    sb.append(Integer.toHexString(chp))
+                    sb.append(chp.toString(16))
                     sb.append(';')
                     highsurrogate = 0.toChar()
                     continue
@@ -727,7 +727,7 @@ open class Format private constructor() {
                                 highsurrogate = ch
                             } else {
                                 sb.append("&#x")
-                                sb.append(Integer.toHexString(ch.code))
+                                sb.append(ch.code.toString(16))
                                 sb.append(';')
                             }
                         } else {
@@ -738,7 +738,7 @@ open class Format private constructor() {
             if (highsurrogate.code > 0) {
                 throw IllegalDataException(
                     "Surrogate pair 0x" +
-                        Integer.toHexString(highsurrogate.code) + "truncated"
+                        highsurrogate.code.toString(16) + "truncated"
                 )
             }
 
@@ -795,12 +795,12 @@ open class Format private constructor() {
                     if (!Verifier.isLowSurrogate(ch)) {
                         throw IllegalDataException(
                             "Could not decode surrogate pair 0x" +
-                                Integer.toHexString(highsurrogate.code) + " / 0x" +
-                                Integer.toHexString(ch.code)
+                                highsurrogate.code.toString(16) + " / 0x" +
+                                ch.code.toString(16)
                         )
                     }
                     val chp = Verifier.decodeSurrogatePair(highsurrogate, ch)
-                    sb.append("&#x" + Integer.toHexString(chp) + ";")
+                    sb.append("&#x" + chp.toString(16) + ";")
                     highsurrogate = 0.toChar()
                     continue
                 }
@@ -823,7 +823,7 @@ open class Format private constructor() {
                                 // this is a the high of a surrogate pair
                                 highsurrogate = ch
                             } else {
-                                sb.append("&#x" + Integer.toHexString(ch.code) + ";")
+                                sb.append("&#x" + ch.code.toString(16) + ";")
                             }
                         } else {
                             sb.append(ch)
@@ -833,7 +833,7 @@ open class Format private constructor() {
             if (highsurrogate.code > 0) {
                 throw IllegalDataException(
                     "Surrogate pair 0x" +
-                        Integer.toHexString(highsurrogate.code) + "truncated"
+                        highsurrogate.code.toString(16) + "truncated"
                 )
             }
 

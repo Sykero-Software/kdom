@@ -150,7 +150,7 @@ abstract class AbstractFormattedWalker(
             ensurespace()
             mtdata[mtsize] = null
             mttext[mtsize++] = mtbuffer.toString()
-            mtbuffer.setLength(0)
+            mtbuffer.clear()
         }
 
         /**
@@ -243,7 +243,7 @@ abstract class AbstractFormattedWalker(
             ensurespace()
             mttext[mtsize] = null
             mtdata[mtsize++] = c
-            mtbuffer.setLength(0)
+            mtbuffer.clear()
         }
 
         /**
@@ -258,7 +258,7 @@ abstract class AbstractFormattedWalker(
             if (mtgottext) {
                 closeText()
             }
-            mtbuffer.setLength(0)
+            mtbuffer.clear()
         }
     }
 
@@ -449,7 +449,7 @@ abstract class AbstractFormattedWalker(
         mtgottext = false
         mtpostpad = false
         mtwasescape = null
-        mtbuffer.setLength(0)
+        mtbuffer.clear()
     }
 
     /**

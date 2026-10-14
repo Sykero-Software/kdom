@@ -56,6 +56,8 @@
 
 package fi.sykero.kdom.filter
 
+import kotlin.reflect.KClass
+import fi.sykero.kdom.internal.className
 /**
  * Filter input according to the input class.
  *
@@ -69,15 +71,18 @@ internal class ClassFilter<T>
  * @param tclass the class instance for the generic type.
  */
 (
-    private val fclass: Class<out T>
+    private val fclass: KClass<out Any>
 ) : AbstractFilter<T>() {
 
+    // kdom: a KClass (common code has no java.lang.Class). KClass.isInstance treats a primitive-type KClass such as
+    // Double::class as its boxed class, as jdom2 needed java.lang.Double.class for.
+    @Suppress("UNCHECKED_CAST")
     override fun filter(content: Any?): T? {
-        return if (fclass.isInstance(content)) fclass.cast(content) else null
+        return if (fclass.isInstance(content)) content as T else null
     }
 
     override fun toString(): String {
-        return "[ClassFilter: Class " + fclass.name + "]"
+        return "[ClassFilter: Class " + className(fclass) + "]"
     }
 
     override fun equals(other: Any?): Boolean {

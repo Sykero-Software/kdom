@@ -56,6 +56,7 @@
 
 package fi.sykero.kdom
 
+import fi.sykero.kdom.internal.hex
 /**
  * A utility class to handle well-formedness checks on names, data, and other
  * verification tasks for JDOM. The class is final and may not be subclassed.
@@ -466,10 +467,7 @@ class Verifier private constructor() {
                     // we will expect the low char on the next index,
                     i++
                     if (i >= len) {
-                        return String.format(
-                            "Truncated Surrogate Pair 0x%04x????",
-                            text[i - 1].code
-                        )
+                        return "Truncated Surrogate Pair 0x" + hex(text[i - 1].code, 4) + "????"
                     }
                     if (isLowSurrogate(text[i])) {
                         // we now have the low char of a pair, decode and validate
@@ -482,28 +480,21 @@ class Verifier private constructor() {
                             // Likely this character can't be easily displayed
                             // because it's a control so we use it'd hexadecimal
                             // representation in the reason.
-                            return String.format(
-                                "0x%06x is not a legal XML character",
+                            return "0x" + hex(
                                 decodeSurrogatePair(
                                     text[i - 1], text[i]
-                                )
-                            )
+                                ), 6
+                            ) + " is not a legal XML character"
                         }
                     } else {
                         // we got a normal character, but we wanted a low surrogate
-                        return String.format(
-                            "Illegal Surrogate Pair 0x%04x%04x",
-                            text[i - 1].code, text[i].code
-                        )
+                        return "Illegal Surrogate Pair 0x" + hex(text[i - 1].code, 4) + hex(text[i].code, 4)
                     }
                 } else {
                     // Likely this character can't be easily displayed
                     // because it's a control so we use its hexadecimal
                     // representation in the reason.
-                    return String.format(
-                        "0x%04x is not a legal XML character",
-                        text[i].code
-                    )
+                    return "0x" + hex(text[i].code, 4) + " is not a legal XML character"
                 }
                 i++
             }
@@ -596,7 +587,7 @@ class Verifier private constructor() {
 
             // Cannot start with a number
             val first = uri[0]
-            if (Character.isDigit(first)) {
+            if (first.isDigit()) {
                 return "Namespace URIs cannot begin with a number"
             }
             // Cannot start with a $
@@ -1056,8 +1047,8 @@ class Verifier private constructor() {
             for (i in 0 until uri.length) {
                 val test = uri[i]
                 if (!isURICharacter(test)) {
-                    var msgNumber = "0x" + Integer.toHexString(test.code)
-                    if (test.code <= 0x09) msgNumber = "0x0" + Integer.toHexString(test.code)
+                    var msgNumber = "0x" + test.code.toString(16)
+                    if (test.code <= 0x09) msgNumber = "0x0" + test.code.toString(16)
                     return "URIs cannot contain " + msgNumber
                 } // end if
                 if (test == '%') { // must be followed by two hexadecimal digits

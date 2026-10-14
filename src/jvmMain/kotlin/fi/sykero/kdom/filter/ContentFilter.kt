@@ -262,7 +262,7 @@ open class ContentFilter : AbstractFilter<Content> {
      *           set of rules.
      */
     override fun filter(content: Any?): Content? {
-        if (content == null || !Content::class.java.isInstance(content)) {
+        if (content == null || content !is Content) {
             return null
         }
 
