@@ -57,17 +57,13 @@
 package fi.sykero.kdom.output
 
 import fi.sykero.kdom.JDOMConstants
-import fi.sykero.kdom.internal.SystemProperty
+import fi.sykero.kdom.internal.systemLineSeparator
 
 /**
  * An enumeration of common separators that are used for JDOM output.
  * <p>
  * These enumerated values can be used as input to the
- * {@link Format#setLineSeparator(LineSeparator)} method. Additionally, the
- * names of these constants can be also be used in the System Property
- * {@link JDOMConstants#JDOM2_PROPERTY_LINE_SEPARATOR} which is used to
- * define the default Line Separator sequence for JDOM output. See
- * {@link #DEFAULT} Javadoc.
+ * {@link Format#setLineSeparator(LineSeparator)} method.
  * 
  * <p>
  * JDOM has historically used the CR/NL sequence '\r\n' as a line-terminator.
@@ -96,18 +92,9 @@ import fi.sykero.kdom.internal.SystemProperty
  * now also call {@link Format#setLineSeparator(LineSeparator)} with one of the
  * common enumerations.
  * <p>
- * The second new JDOM2 feature is the ability to set a global default
- * end-of-line sequence. JDOM 1.x forced the default sequence to be the CRLF
- * sequence, but JDOM2 allows you to set the system property
- * {@link JDOMConstants#JDOM2_PROPERTY_LINE_SEPARATOR} which will be used as the
- * default sequence for Format. You can set the property to be the name of one
- * of these LineSeparator enumerations too. For example, the following will
- * cause all default Format instances to use the System-dependent end-of-line
- * sequence instead of always CRLF:
- * <p>
- * <pre>
- * java -Dorg.jdom2.output.LineSeparator=SYSTEM ...
- * </pre>
+ * kdom: jdom2's second new feature, a global default end-of-line sequence read from the system property
+ * {@link JDOMConstants#JDOM2_PROPERTY_LINE_SEPARATOR}, is not supported (no system properties in common
+ * code): {@link #DEFAULT} is always CRNL, jdom2's default when the property is not set.
  * 
  * @since JDOM2
  * @author Rolf Lear
@@ -138,25 +125,21 @@ enum class LineSeparator(private val value: String?) {
 	
 	/**
 	 * The system-dependent Separator sequence NL which is obtained from
-	 * <code>System.getProperty("line.separator")</code>. This should be
+	 * <code>System.getProperty("line.separator")</code> on the JVM ("\n" on iOS). This should be
 	 * the equivalent of {@link #DOS} on windows platforms, and
 	 * of {@link #UNIX} on UNIX and Apple systems (after Mac OSX).
 	 */
-	SYSTEM(SystemProperty.get("line.separator", "\r\n")),
+	SYSTEM(systemLineSeparator()),
 	
 	/** Perform no end-of-line processing. */
 	NONE(null),
 	
 	/**
-	 * Use the sequence '\r\n' unless the System property
-	 * {@link JDOMConstants#JDOM2_PROPERTY_LINE_SEPARATOR} is defined, in which
-	 * case use the value specified in that property. If the value in that
-	 * property matches one of the Enumeration names (e.g. SYSTEM) then use the
-	 * sequence specified in that enumeration. 
+	 * Use the sequence '\r\n'. (jdom2 let the System property
+	 * {@link JDOMConstants#JDOM2_PROPERTY_LINE_SEPARATOR} override it; kdom does not, see the class
+	 * documentation.)
 	 */
-	// DEFAULT must be declared last so that you can specify enum names
-	// in the system property.
-	DEFAULT(getDefaultLineSeparator());
+	DEFAULT("\r\n");
 	
 	
 	
@@ -168,35 +151,4 @@ enum class LineSeparator(private val value: String?) {
 		return value
 	}
 
-}
-
-// Kept outside the enum (a Java `private static` method of the enum): the enum constants call it while the
-// enum class is initializing, when a companion object would not exist yet.
-private fun getDefaultLineSeparator(): String? {
-	// Android has some unique ordering requirements in this bootstrap process.
-	// also, Android will not have the system property set, so we can exit with the null.
-	val prop = SystemProperty.get(JDOMConstants.JDOM2_PROPERTY_LINE_SEPARATOR, "DEFAULT")
-	if ("DEFAULT" == prop) {
-		// need to do this to catch the normal process where the property is not set
-		// which will cause the value 'DEFAULT' to be returned by the getProperty(),
-		// or in an unlikely instance when someone sets
-		// -Dorg.jdom2.output.LineSeparator=DEFAULT
-		// which would create some sort of loop to happen....
-		return "\r\n"
-	} else if ("SYSTEM" == prop) {
-		return System.getProperty("line.separator")
-	} else if ("CRNL" == prop) {
-		return "\r\n"
-	} else if ("NL" == prop) {
-		return "\n"
-	} else if ("CR" == prop) {
-		return "\r"
-	} else if ("DOS" == prop) {
-		return "\r\n"
-	} else if ("UNIX" == prop) {
-		return "\n"
-	} else if ("NONE" == prop) {
-		return null
-	}
-	return prop
 }

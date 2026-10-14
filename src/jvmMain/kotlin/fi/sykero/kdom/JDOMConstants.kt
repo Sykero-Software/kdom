@@ -146,7 +146,8 @@ class JDOMConstants private constructor() {
             "fi.sykero.kdom.xpath.XPathFactory"
 
         /**
-         * System Property queried to obtain an alternate default Line Separator.
+         * System Property queried by jdom2 to obtain an alternate default Line Separator
+         * (kdom never reads it: [LineSeparator.DEFAULT] is always CRNL).
          *
          * Defined as `fi.sykero.kdom.output.LineSeparator`
          * @see LineSeparator
