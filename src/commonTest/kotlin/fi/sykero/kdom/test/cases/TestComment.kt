@@ -122,11 +122,11 @@ class TestComment {
 		val com2 = Comment("test")
 		//different comments, same text
 		val x: Int = com2.hashCode()
-		assertTrue(x !== i, "Different comments with same value have same hashcode")
+		assertTrue(x != i, "Different comments with same value have same hashcode")
 		val com3 = Comment("test2")
 		//only an exception would be a problem
 		val y: Int = com3.hashCode()
-		assertTrue(y !== x, "Different comments have same hashcode")
+		assertTrue(y != x, "Different comments have same hashcode")
 	}
 	
 	/**

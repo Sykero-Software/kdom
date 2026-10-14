@@ -143,14 +143,14 @@ class TestCDATA {
 
         //different CDATA sections, same text
 		val similarHash: Int = similarCDATA.hashCode()
-		assertTrue(hash !== similarHash, "Different comments with same value have same hashcode")
+		assertTrue(hash != similarHash, "Different comments with same value have same hashcode")
         
 		val otherCDATA = CDATA("this is another CDATA section")
 
         //only an exception would be a problem
 		val otherHash: Int = otherCDATA.hashCode()
-        assertTrue(otherHash !== hash, "Different comments have same hashcode")
-        assertTrue(otherHash !== similarHash, "Different comments have same hashcode")
+        assertTrue(otherHash != hash, "Different comments have same hashcode")
+        assertTrue(otherHash != similarHash, "Different comments have same hashcode")
 	}
 
     /**
@@ -221,7 +221,7 @@ class TestCDATA {
         val specialText = "> this is a CDATA section with special characters as ]]"
         val cdataEndText = "this is aCDATA section with a CDATA end marke ]]> somewhere inside"
 
-        {
+        run {
             // simple text in CDATA section
             val cdata = CDATA(text)
             assertEquals(text, cdata.text, "incorrect CDATA text")
@@ -232,7 +232,7 @@ class TestCDATA {
             }
         }
 
-        {
+        run {
             // set it to the empty string
             val cdata = CDATA(emptyString)
             assertEquals("", cdata.text, "incorrect CDATA text")
@@ -255,7 +255,7 @@ class TestCDATA {
             }
         }
 
-        {
+        run {
             // set it to a another string
             val cdata = CDATA(otherString)
             assertEquals(otherString, cdata.text, "incorrect CDATA text")
@@ -274,7 +274,7 @@ class TestCDATA {
             }
         }
         
-        {
+        run {
             // set it to the null (after it was set to another string so that we 
             // are sure something has changed)
             val cdata = CDATA(nullString)
@@ -296,31 +296,31 @@ class TestCDATA {
             }
         }
 
-        {
+        run {
             // set it to the null (after it was set to another string so that we 
             // are sure something has changed)
             val cdata = CDATA(null)
             assertEquals("", cdata.text, "incorrect CDATA text")
-            cdata.append((null as String))
+            cdata.append((null as String?))
             assertEquals("", cdata.text, "incorrect CDATA text")
             assertFailsWith<IllegalDataException>("failed to detect CDATA end marker") {
                 cdata.append(cdataEndText)
             }
         }
 
-        {
+        run {
             // set it to the null (after it was set to another string so that we 
             // are sure something has changed)
             val cdata = CDATA(null)
             assertEquals("", cdata.text, "incorrect CDATA text")
-            cdata.append((null as Text))
+            cdata.append((null as Text?))
             assertEquals("", cdata.text, "incorrect CDATA text")
             assertFailsWith<IllegalDataException>("failed to detect CDATA end marker") {
                 cdata.append(cdataEndText)
             }
         }
 
-        {
+        run {
             // set text with some special characters
             val cdata = CDATA(specialCharactersText)
             assertEquals(specialCharactersText, cdata.text, "incorrect CDATA text")
@@ -352,7 +352,7 @@ class TestCDATA {
         val specialText = "> this is a CDATA section with special characters as ]]"
         val cdataEndText = "this is aCDATA section with a CDATA end marke ]]> somewhere inside"
 
-        {
+        run {
             // simple text in CDATA section
             val cdata = CDATA(text)
             assertEquals(text, cdata.text, "incorrect CDATA text")
@@ -363,7 +363,7 @@ class TestCDATA {
             }
         }
 
-        {
+        run {
             // set it to the empty string
             val cdata = CDATA(emptyString)
             assertEquals("", cdata.text, "incorrect CDATA text")
@@ -386,7 +386,7 @@ class TestCDATA {
             }
         }
 
-        {
+        run {
             // set it to a another string
             val cdata = CDATA(otherString)
             assertEquals(otherString, cdata.text, "incorrect CDATA text")
@@ -405,7 +405,7 @@ class TestCDATA {
             }
         }
         
-        {
+        run {
             // set it to the null (after it was set to another string so that we 
             // are sure something has changed)
             val cdata = CDATA(nullString)
@@ -427,31 +427,31 @@ class TestCDATA {
             }
         }
 
-        {
+        run {
             // set it to the null (after it was set to another string so that we 
             // are sure comething has changed)
             val cdata = CDATA(null)
             assertEquals("", cdata.text, "incorrect CDATA text")
-            cdata.append((null as String))
+            cdata.append((null as String?))
             assertEquals("", cdata.text, "incorrect CDATA text")
             assertFailsWith<IllegalDataException>("failed to detect CDATA end marker") {
                 cdata.append(Text(cdataEndText))
             }
         }
 
-        {
+        run {
             // set it to the null (after it was set to another string so that we 
             // are sure something has changed)
             val cdata = CDATA(null)
             assertEquals("", cdata.text, "incorrect CDATA text")
-            cdata.append((null as Text))
+            cdata.append((null as Text?))
             assertEquals("", cdata.text, "incorrect CDATA text")
             assertFailsWith<IllegalDataException>("failed to detect CDATA end marker") {
                 cdata.append(Text(cdataEndText))
             }
         }
 
-        {
+        run {
             // set text with some special characters
             val cdata = CDATA(specialCharactersText)
             assertEquals(specialCharactersText, cdata.text, "incorrect CDATA text")
@@ -476,28 +476,28 @@ class TestCDATA {
      * It assumes that the constructor is working correctly
 	 */
 	@Test fun test_TCM__String_getText() {
-        {
+        run {
             val text = "this is a CDATA section"        
     
             val cdata = CDATA(text)
             assertEquals(text, cdata.text, "incorrect CDATA text")
         }
 
-        {
+        run {
             //set it to the empty string
             val emptyString = ""
             val cdata = CDATA(emptyString)
             assertEquals(emptyString, cdata.text, "incorrect CDATA text")
         }
 
-        {
+        run {
             // set it to a another string
             val otherString = "12345qwerty" 
             val cdata = CDATA(otherString)
             assertEquals(otherString, cdata.text, "incorrect CDATA text")
         }
 
-        {
+        run {
             // set it to the null
             val cdata = CDATA(null)
             assertEquals("", cdata.text, "incorrect CDATA text")
@@ -508,14 +508,14 @@ class TestCDATA {
      * check for the expected toString text value of Comment.
      */
 	@Test fun test_TCM__String_toString() {
-        {
+        run {
             val text = "this is a simple CDATA section"        
             val cdata = CDATA(text)
 
             assertEquals("[CDATA: " + text + ']', cdata.toString(), "incorrect CDATA constructed") 
         }
     
-        {
+        run {
             val text = "this is CDATA section with special characters as < > & &amp; &lt; &gt; [[ ]] > <![!["        
             val cdata = CDATA(text)
 
