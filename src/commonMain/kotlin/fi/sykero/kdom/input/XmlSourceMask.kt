@@ -10,6 +10,8 @@ import fi.sykero.kdom.sax.SAXParseException
  * - U+0085 and U+2028 (anywhere): xmlutil applies XML 1.1 line-end handling to them (turns them into `\n`, or a space in
  *   attribute values); SAX 1.0 keeps them. They become private-use characters that occur neither in the source nor as
  *   a character reference, and [content] turns them back.
+ * - A carriage return not followed by a line feed becomes a line feed (xmlutil folds `\r\r` into one line end; SAX
+ *   reports two). Not restored: XML line-end normalization turns it into a line feed anyway.
  * - Namespace-unaware mode (requirement P4): xmlutil's reader always processes namespaces and rejects `<p:a/>` with an
  *   undeclared prefix. Each `:` inside a name becomes a name character absent from the source, and the final `s` of
  *   an attribute named exactly `xmlns` another one, so the reader sees plain names and no namespace declarations;
@@ -52,7 +54,8 @@ internal class XmlSourceMask private constructor(
         fun create(source: String, scan: SourceScanner): XmlSourceMask? {
             val hasNel = scan.lineEndChars.any { source[it] == '\u0085' }
             val hasLsep = scan.lineEndChars.any { source[it] == '\u2028' }
-            if (scan.nameColons.isEmpty() && scan.xmlnsNames.isEmpty() && !hasNel && !hasLsep) return null
+            if (scan.nameColons.isEmpty() && scan.xmlnsNames.isEmpty() && !hasNel && !hasLsep &&
+                scan.loneCarriageReturns.isEmpty()) return null
             val present = BooleanArray(65536)
             for (c in source) present[c.code] = true
             for (cp in scan.privateUseRefs) present[cp] = true
@@ -68,6 +71,9 @@ internal class XmlSourceMask private constructor(
             for (k in scan.nameColons) chars[k] = colon
             for (k in scan.xmlnsNames) chars[k] = xmlns
             for (k in scan.lineEndChars) chars[k] = if (chars[k] == '\u0085') nel else lsep
+            // A lone CR is a line end (XML 1.0 2.11): writing the LF it normalizes to keeps lines and offsets, and the
+            // reader then normalizes it as SAX does (LF in content, a space in attribute values). Needs no restore.
+            for (k in scan.loneCarriageReturns) chars[k] = '\n'
             return XmlSourceMask(chars.concatToString(), colon, xmlns, nel, lsep)
         }
 

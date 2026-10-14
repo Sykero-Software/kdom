@@ -57,6 +57,9 @@ internal class SourceScanner(private val s: String, private val namespaceAware: 
     /** Offsets of the final `s` of attribute names that are exactly `xmlns` (namespace-unaware mode only). */
     val xmlnsNames: MutableList<Int> = ArrayList()
 
+    /** Offsets of carriage returns not followed by a line feed (xmlutil folds `\r\r` into one line end). */
+    val loneCarriageReturns: MutableList<Int> = ArrayList()
+
     /** Offsets of U+0085 and U+2028 characters. */
     val lineEndChars: MutableList<Int> = ArrayList()
 
@@ -91,6 +94,7 @@ internal class SourceScanner(private val s: String, private val namespaceAware: 
                 }
                 c.isLowSurrogate() -> invalidChar(k, c)
                 c == '\u0085' || c == '\u2028' -> lineEndChars.add(k)
+                c == '\r' -> if (k + 1 >= n || s[k + 1] != '\n') loneCarriageReturns.add(k)
                 !isXmlCodePoint(c.code) -> invalidChar(k, c)
             }
             k++
