@@ -52,8 +52,6 @@
 
  Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
 
- Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
-
  */
 package fi.sykero.kdom.output.support
 
