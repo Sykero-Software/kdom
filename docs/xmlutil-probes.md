@@ -89,3 +89,45 @@ surface as `IllegalStateException`, not `XmlException`.
   illegal code point (xmlutil yields a garbage surrogate string); simplest is to apply P5 to the `ENTITY_REF` text, together with a
   lone-surrogate check.
 - No requirement for probes 1, 2, 4, 6, 7, 9, 11, 12, 15: xmlutil rejects them, as SAX does.
+
+## How XmlEventParser (Task 9) meets P1..P8
+
+`fi.sykero.kdom.input.XmlEventParser` reads with `xmlStreaming.newGenericReader(text, expandEntities = true)` after a raw-source
+pre-scan (`SourceScanner`) and, when needed, a same-length masked copy of the text (`XmlSourceMask`). Pinned by
+`XmlEventParserProbeTest` (common, all 20 probes in both modes: SAX verdicts, DOCTYPE probes rejected),
+`SaxEventDifferentialTest` (jvmTest: event streams against the JDK SAX parser for 31 well-formed inputs in both modes, 75
+malformed inputs, 11 mode-specific inputs) and `KdomBuilderDifferentialTest` (trees against jdom2's `SAXBuilder`).
+
+- **P1** undefined entity: the reader runs in entity-expanding mode, which throws for an unknown entity (text and attributes).
+- **P2** duplicate attribute: the pre-scan rejects a repeated raw qualified name in a start tag (this also covers a repeated
+  `xmlns:p`, which the reader accepts); in namespace-aware mode the event loop also rejects two attributes with the same
+  (namespace URI, local name) (`p:x` and `q:x` bound to one URI).
+- **P3** exceptions: every reader call runs inside a guard that turns any `Exception` (XmlException, IllegalStateException, ...)
+  into `fi.sykero.kdom.sax.SAXParseException` with line/column from `reader.extLocationInfo` (`XmlReader.ExtLocationInfo`, the
+  `line:col - ` prefix stripped from the message). Exceptions thrown by the handler propagate unchanged, as with SAX.
+- **P4** namespace-unaware mode: xmlutil 1.0.2.1 has no namespace-unaware option (`KtXmlReader.PROCESS_NAMESPACES` is a constant
+  `true`; the only switch, `relaxed`, also drops well-formedness errors, so it is not used). The pre-scan records every `:` in
+  element/attribute names and every attribute named exactly `xmlns`; the masked copy replaces each such `:` by a name character
+  absent from the document (first free one in U+2C00..U+2FEF) and the `s` of `xmlns` by another one, so the reader sees plain
+  names and no namespace declarations. The event loop restores the names and reports SAX's no-namespace shape: element
+  `uri = ""`, `localName = ""`, `qName` = raw name; attributes `uri = ""`, `localName = qName` (what the JDK parser reports),
+  `xmlns*` as ordinary attributes, no prefix mappings. Line/column positions are unchanged (same length).
+- **P5** illegal characters: the pre-scan checks every character of the document (text, attribute values, CDATA, comments,
+  processing instructions, names) against the XML 1.0 `Char` production, with surrogates paired, as SAX does.
+- **P6** `<` in an attribute value (ruling R7): the pre-scan walks start tags (skipping comments, CDATA sections and processing
+  instructions) and rejects a literal `<` inside a quoted attribute value. Byte input is decoded first, then scanned.
+- **P7** DOCTYPE: the pre-scan rejects `<!DOCTYPE` (and every other `<!` declaration outside a comment/CDATA); a `DOCDECL`
+  event is rejected as well.
+- **P8** character references: the pre-scan checks each `&#...;` / `&#x...;` in text and attribute values: digits present,
+  `;` present, and the code point a legal `Char` (`&#0;`, `&#xD800;`, `&#55357;&#56832;`, `&#1114112;` are rejected).
+
+Further SAX parity fixes found by the differential test (xmlutil accepts or differs, SAX does not):
+- `]]>` in character data, attributes not separated by white space (`<a x="1"y="2"/>`), a leading U+FEFF in a string,
+  `<?xml version="2.0"?>`: rejected (pre-scan / START_DOCUMENT check; versions 1.0 and 1.1 are accepted).
+- U+0085 and U+2028: xmlutil applies XML 1.1 line-end handling (turns them into `\n` in text and a space in attribute
+  values); SAX 1.0 keeps them. They are masked as private-use characters absent from the document (and from its character
+  references) and restored in every reported string.
+- Processing instruction data: SAX skips all white space after the target (`<?pi\nd?>` is target `pi`, data `d`); xmlutil's
+  `piTarget`/`piData` split at the first space only. The parser splits the PI text itself.
+- `xmlns:xmlns="..."`, a prefix bound to the XML namespace or `xml` bound elsewhere: rejected in namespace-aware mode; the
+  predeclared `xmlns:xml="http://www.w3.org/XML/1998/namespace"` is accepted and, as by SAX, not reported as a prefix mapping.

@@ -270,6 +270,46 @@ common code uses only the Kotlin stdlib, no `java.*`/`javax.*`). API changes:
   non-null (a member call) is undefined on Native (no NPE guarantee). Production code never creates raw instances, and a `== null` check
   on a non-null-typed value may be folded away by the compiler, so no common test pins it; the 8 Java raw-instance tests stay JVM-only.
 
+## XmlEventParser and KdomBuilder (Task 9, new code)
+
+New public API (`commonMain`): `fi.sykero.kdom.sax.{SAXException, SAXParseException, Locator, Attributes, ContentHandler}`
+(SAX2 shapes; `Attributes.length` is a property), `fi.sykero.kdom.input.XmlEventParser(namespaceAware)` with
+`parse(String, ContentHandler)` / `parse(ByteArray, ContentHandler)`, and `fi.sykero.kdom.input.KdomBuilder` with
+`build(String)` / `build(ByteArray)`; JVM-only extensions in `KdomBuilderJvm.kt` (`build(Reader)`, `build(InputStream)`,
+`build(File)`: read fully, then parse; the stream is not closed; read errors are `IOException`). Internal: `TreeBuildingHandler`
+(jdom2 2.0.6.1 `SAXHandler` without the DTD parts), `LexicalEventHandler` (comment / CDATA events; there is no public
+`LexicalHandler`), `ParsedAttributes`, `SourceScanner`, `XmlSourceMask`, `XmlByteDecoder`. How the probes' requirements P1..P8
+are met: `docs/xmlutil-probes.md`. New files carry no licence header (like the other new kdom files, e.g. `internal/Chars.kt`).
+
+Tree rules (as jdom2's `SAXBuilder`): adjacent character data is one `Text`; CDATA is a `CDATA` node; empty comments are
+dropped and an empty CDATA section is kept; jdom2's quirk that text directly before an *empty* CDATA section becomes that
+`CDATA` (`y<![CDATA[]]>` gives `CDATA("y")`) is kept; comments/PIs inside and outside the root are kept; white space-only
+text is kept; namespace declarations become the element namespace / additional namespaces; attributes keep document order,
+type `CDATA`, `specified`; the XML declaration is not in the tree. Errors: `JDOMParseException("Error on line N: msg",
+cause = SAXParseException, partialDocument (when the root was started), null, null, line, column)`, as jdom2's
+`SAXBuilderEngine` (R3 shape). Pinned by `KdomBuilderTest` (common) and `KdomBuilderDifferentialTest` (jvmTest, against jdom2).
+
+Remaining differences from a JAXP SAX parser / jdom2 `SAXBuilder` (all deliberate):
+- **DOCTYPE is rejected** (plan rule P7; SAX accepts it and expands internal entities).
+- **Errors found by the raw pre-scan are reported before any event** (illegal character, `<` in an attribute value, bad
+  character reference, DOCTYPE, raw duplicate attribute, missing white space between attributes, `]]>` in text, unterminated
+  comment/CDATA/PI). SAX reports the events before the error first; only a handler that keeps state across a failed parse (or
+  `JDOMParseException.partialDocument`, then `null`) can tell.
+- **Messages and positions** are kdom's/xmlutil's, not Xerces's. Pre-scan errors give the line/column of the offending
+  character (Xerces usually reports the column after it); reader errors give where xmlutil stopped.
+- **XML 1.1** documents (`version="1.1"`) are accepted but read with the XML 1.0 character and line-end rules.
+- **Byte input** supports UTF-8, UTF-16 (BOM or `<?xml` pattern), ISO-8859-1 and US-ASCII (with common aliases); any other
+  declared encoding (e.g. `windows-1252`) and a `UTF-16` declaration without UTF-16 bytes are rejected. Malformed bytes
+  (invalid/overlong/truncated UTF-8, encoded surrogates, a byte above 0x7F in US-ASCII, odd UTF-16 length) are a
+  `SAXParseException` / `JDOMParseException` with the line of the decoded text, where the JDK parser threw a
+  `CharConversionException` (an `IOException`, which jdom2 passed through).
+- **Locator**: `publicId`/`systemId` are always `null`; line/column come from xmlutil. `Document.baseURI` stays `null`
+  (as `SAXBuilder.build(Reader)` without a system id).
+- `characters` delivers each run of character data in one call (SAX chunks arbitrarily; the content is equal);
+  `ignorableWhitespace` and `skippedEntity` are never called (no DTD; an undefined entity is an error).
+- Element/attribute name validity is xmlutil's (`NCName` rules in namespace-aware mode); the differential covers the common
+  invalid names, the Task 12 corpus run is the real check.
+
 ## Behaviour differences
 
 - `JDOMParseException` (R3): a SAX-carrying cause no longer supplies line/column/publicId/systemId; callers pass them
@@ -485,6 +525,9 @@ Each parse goes through a private placeholder `parseWithKdomBuilder(String)` in 
 This number may only grow (apart from the listed removals); the 8 K5 ignores return in Task 9.
 After Task 8 (common tests; 5 raw-instance tests moved into `RawInstanceTest`, the totals of the translated classes are unchanged): 52 classes / 728 tests
 (724 + `LineSeparatorTest#defaultIgnoresTheJdom2SystemProperty` + 3 `OutputStreamBindingTest`) / 10 skipped / 0 failures.
+After Task 9 (XmlEventParser, KdomBuilder): 58 classes / 766 tests / 2 skipped / 0 failures (728 + 38 new in 6 classes:
+`XmlEventParserProbeTest` 4, `SaxEventDifferentialTest` 5, `KdomBuilderTest` 23, `KdomBuilderDifferentialTest` 2, `KdomBuilderJvmTest` 1,
+`KdomBuilderConcurrencyTest` 3; the 8 K5 `@Ignore`s are re-enabled, leaving jdom2's own 2 skipped).
 
 ### Import notes (fix round 1)
 
