@@ -49,9 +49,8 @@
  created by Brett McLaughlin <brett@jdom.org> and 
  Jason Hunter <jhunter@jdom.org>.  For more information on the 
  JDOM Project, please see <http://www.jdom.org/>.
- 
  Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
-
+ 
  */
 package fi.sykero.kdom.test.cases
 

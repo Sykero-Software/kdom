@@ -458,6 +458,19 @@ Differences from the Java tests (none changes an expectation):
   `LinkedHashMap`; they cast to `Map<String?, String>` (unchecked) to keep the Java call.
 - **Static init order.** `Filters` keeps the Java field order in its companion; `Attribute` keeps the `*_TYPE` constants in the companion.
 
+## Licence headers (M0 gate fix I1)
+
+Every translated file carries its upstream jdom2 source's `/*-- ... */` licence block **byte for byte** (taken from
+hunterhacker/jdom tag `JDOM-2.0.6.1`, including upstream's trailing white space, year ranges and the
+`<request_AT_jdom_DOT_org).` typo in some files), with the single line
+` Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.` inserted as the block's last text line
+(before the closing blank line and ` */`). `scripts/fix-headers.py <kdom> <jdom2 checkout>` (run with `python3 -I`) rewrites
+the blocks; it maps each `src/*/fi/sykero/kdom/<path>` to `core|test/src/java/org/jdom2/<path>.java` (plus an explicit map,
+e.g. `input/TreeBuildingHandler.kt` <- `input/sax/SAXHandler.java`). Check: rerun the script (it must report `changed 0`) and
+the review checker (`review-scratch/m0/hdr2.py <kdom> <jdom2 checkout>`): every file with an upstream header must be
+`UPHDR verbatim` with exactly one translation line. Translated test files whose upstream has no header keep a one-line
+`/* Kotlin Multiplatform translation ... */` comment.
+
 ## Task 3: jdom2 subset import (Java)
 
 Source: hunterhacker/jdom tag `JDOM-2.0.6.1` (commit c6065f684bdff5cebf5f23b2859c5e4c89fd89db), imported by
