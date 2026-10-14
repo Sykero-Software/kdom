@@ -52,103 +52,93 @@
 
  Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
 
+ Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
+
  */
+package fi.sykero.kdom.output.support
 
-package fi.sykero.kdom.output.support;
-
-import java.util.List;
-
-import fi.sykero.kdom.Content;
-import fi.sykero.kdom.Verifier;
+import fi.sykero.kdom.Content
+import fi.sykero.kdom.Verifier
 
 /**
  * This Walker implementation will produce trimmed text content.
- * 
- * @author Rolf Lear
  *
+ * @author Rolf Lear
  */
-public class WalkerNORMALIZE extends AbstractFormattedWalker {
+class WalkerNORMALIZE
+/**
+ * Create the Trimmed walker instance.
+ * @param content The list of content to format
+ * @param fstack The current stack.
+ * @param escape Whether Text values should be escaped.
+ */
+(content: List<Content>, fstack: FormatStack, escape: Boolean) :
+    AbstractFormattedWalker(content, fstack, escape) {
 
-	/**
-	 * Create the Trimmed walker instance.
-	 * @param content The list of content to format
-	 * @param fstack The current stack.
-	 * @param escape Whether Text values should be escaped.
-	 */
-	public WalkerNORMALIZE(final List<? extends Content> content, 
-			final FormatStack fstack, final boolean escape) {
-		super(content, fstack, escape);
-	}
-	
-	private boolean isSpaceFirst(String text) {
-		if (text.length() > 0) {
-			return Verifier.isXMLWhitespace(text.charAt(0));
-		}
-		return false;
-	}
-	
-	private boolean isSpaceLast(String text) {
-		final int tlen = text.length();
-		if (tlen > 0 && Verifier.isXMLWhitespace(text.charAt(tlen - 1))) {
-			return true;
-		}
-		return false;
-	}
+    private fun isSpaceFirst(text: String): Boolean {
+        if (text.length > 0) {
+            return Verifier.isXMLWhitespace(text[0])
+        }
+        return false
+    }
 
-	@Override
-	protected void analyzeMultiText(final MultiText mtext,
-			final int offset, final int len) {
-		boolean needspace = false;
-		boolean between = false;
-		
-		String ttext = null;
-		for (int i = 0; i < len; i++) {
-			final Content c = get(offset + i);
-			switch (c.getCType()) {
-				case Text :
-					ttext = c.getValue();
-					if (Verifier.isAllXMLWhitespace(ttext)) {
-						if (between && ttext.length() > 0) {
-							needspace = true;
-						}
-					} else {
-						if (between && (needspace || isSpaceFirst(ttext))) {
-							mtext.appendText(Trim.NONE, " ");
-						}
-						mtext.appendText(Trim.COMPACT, ttext);
-						between = true;
-						needspace = isSpaceLast(ttext);
-					}
-					break;
-				case CDATA :
-					ttext = c.getValue();
-					if (Verifier.isAllXMLWhitespace(ttext)) {
-						if (between && ttext.length() > 0) {
-							needspace = true;
-						}
-					} else {
-						if (between && (needspace || isSpaceFirst(ttext))) {
-							mtext.appendText(Trim.NONE, " ");
-						}
-						mtext.appendCDATA(Trim.COMPACT, ttext);
-						between = true;
-						needspace = isSpaceLast(ttext);
-					}
-					break;
-				case EntityRef:
-					// treat like any other content.
-					// raw.
-				default:
-					ttext = null;
-					if (between && needspace) {
-						mtext.appendText(Trim.NONE, " ");
-					}
-					mtext.appendRaw(c);
-					between = true;
-					needspace = false;
-					break;
-			}
-		}
-	}
-	
+    private fun isSpaceLast(text: String): Boolean {
+        val tlen = text.length
+        if (tlen > 0 && Verifier.isXMLWhitespace(text[tlen - 1])) {
+            return true
+        }
+        return false
+    }
+
+    override fun analyzeMultiText(mtext: MultiText, offset: Int, len: Int) {
+        var needspace = false
+        var between = false
+
+        var ttext: String?
+        for (i in 0 until len) {
+            val c = get(offset + i)
+            when (c.cType) {
+                Content.CType.Text -> {
+                    ttext = c.value
+                    if (Verifier.isAllXMLWhitespace(ttext)) {
+                        if (between && ttext.length > 0) {
+                            needspace = true
+                        }
+                    } else {
+                        if (between && (needspace || isSpaceFirst(ttext))) {
+                            mtext.appendText(Trim.NONE, " ")
+                        }
+                        mtext.appendText(Trim.COMPACT, ttext)
+                        between = true
+                        needspace = isSpaceLast(ttext)
+                    }
+                }
+                Content.CType.CDATA -> {
+                    ttext = c.value
+                    if (Verifier.isAllXMLWhitespace(ttext)) {
+                        if (between && ttext.length > 0) {
+                            needspace = true
+                        }
+                    } else {
+                        if (between && (needspace || isSpaceFirst(ttext))) {
+                            mtext.appendText(Trim.NONE, " ")
+                        }
+                        mtext.appendCDATA(Trim.COMPACT, ttext)
+                        between = true
+                        needspace = isSpaceLast(ttext)
+                    }
+                }
+                // EntityRef: treat like any other content, raw.
+                else -> {
+                    ttext = null
+                    if (between && needspace) {
+                        mtext.appendText(Trim.NONE, " ")
+                    }
+                    mtext.appendRaw(c)
+                    between = true
+                    needspace = false
+                }
+            }
+        }
+    }
 }

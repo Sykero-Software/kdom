@@ -52,96 +52,94 @@
 
  Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
 
+ Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
+
  */
+package fi.sykero.kdom.output.support
 
-package fi.sykero.kdom.output.support;
-
-import java.util.NoSuchElementException;
-
-import fi.sykero.kdom.CDATA;
-import fi.sykero.kdom.Content;
-import fi.sykero.kdom.EntityRef;
-import fi.sykero.kdom.Text;
+import fi.sykero.kdom.CDATA
+import fi.sykero.kdom.Content
+import fi.sykero.kdom.EntityRef
+import fi.sykero.kdom.Text
+import java.util.NoSuchElementException
 
 /**
  * A model for walking the (potentially formatted) content of an Element.
- * <p>
+ *
  * Implementations of this class restructure the content to a particular format
  * and expose the restructured content in this 'Walker' which is a loose
  * equivalent to an iterator.
- * <p>
+ *
  * The next() method will return a Content instance (perhaps null) if there
  * is more content. If the returned content is null, then there will be some
  * formatted characters available in the text() method. These characters may
  * need to be represented as CDATA (check the isCDATA() method).
- * <p>
+ *
  * Not all CDATA and Text nodes need to be reformatted, and as a result they
  * may be returned as their original CDATA or Text instances instead of using
  * the formatted text() / isCDATA() mechanism.
- * <p>
+ *
  * The 'Rules' for the walkers are that no padding is done before the
  * first content step, and no padding is done after the last content step (but
  * the first/last content items may be trimmed to the correct format).
  * Any required padding will be done in plain text (not CDATA) content.
- * Consecutive CDATA sections may be separated by whitespace text for example. 
- * 
- * @author Rolf Lear
+ * Consecutive CDATA sections may be separated by whitespace text for example.
  *
+ * @author Rolf Lear
  */
-public interface Walker {
+interface Walker {
 
-	/**
-	 * If all the content in this walker is empty, or if whatever content
-	 * is available is Text-like.
-	 * <p>
-	 * Text-like content is considered to be {@link Text}, {@link CDATA},
-	 * {@link EntityRef}, or any (potentially mixed) sequence of these types,
-	 * but no other types.
-	 * 
-	 * @return true if there is no content, or all content is Text
-	 */
-	public abstract boolean isAllText();
-	
-	/**
-	 * If all the content is Text-like ({@link #isAllText()} returns true), and
-	 * additionally that any content is either Text or CDATA, and that the
-	 * values of these Text/CDATA members are all XML Whitespace.
-	 * @return true 
-	 */
-	public abstract boolean isAllWhitespace();
+    /**
+     * If all the content in this walker is empty, or if whatever content
+     * is available is Text-like.
+     *
+     * Text-like content is considered to be [Text], [CDATA],
+     * [EntityRef], or any (potentially mixed) sequence of these types,
+     * but no other types.
+     *
+     * @return true if there is no content, or all content is Text
+     */
+    val isAllText: Boolean
 
-	/**
-	 * Behaves similarly to to a regular Iterator
-	 * 
-	 * @return true if there is more content to be processed
-	 */
-	public abstract boolean hasNext();
+    /**
+     * If all the content is Text-like ([isAllText] returns true), and
+     * additionally that any content is either Text or CDATA, and that the
+     * values of these Text/CDATA members are all XML Whitespace.
+     * @return true
+     */
+    val isAllWhitespace: Boolean
 
-	/**
-	 * Similar to an Iterator, but null return values need special treatment.
-	 * 
-	 * @return the next content to be processed, perhaps null if the next
-	 * content is re-formatted text of some sort (Text / CDATA).
-	 * @throws NoSuchElementException if there is no further content.
-	 */
-	public abstract Content next();
-	
-	/**
-	 * If the previous call to next() returned null, then this will return the
-	 * required text to be processed. Check to see whether this text is CDATA
-	 * by calling the isCDATA() method.
-	 * @return The current text value (null if the previous invocation of next()
-	 * returned a non-null value).
-	 * @throws IllegalStateException if there was not previous call to next()
-	 */
-	public abstract String text();
-	
-	/**
-	 * If the previous next() method returned null, then this will indicate
-	 * whether the current text() value is CDATA or regular Text.
-	 * @return true if the current text() is valid, and is CDATA.
-	 * @throws IllegalStateException if there was not previous call to next()
-	 */
-	public abstract boolean isCDATA();
+    /**
+     * Behaves similarly to to a regular Iterator
+     *
+     * @return true if there is more content to be processed
+     */
+    fun hasNext(): Boolean
 
+    /**
+     * Similar to an Iterator, but null return values need special treatment.
+     *
+     * @return the next content to be processed, perhaps null if the next
+     * content is re-formatted text of some sort (Text / CDATA).
+     * @throws NoSuchElementException if there is no further content.
+     */
+    fun next(): Content?
+
+    /**
+     * If the previous call to next() returned null, then this will return the
+     * required text to be processed. Check to see whether this text is CDATA
+     * by calling the isCDATA() method.
+     * @return The current text value (null if the previous invocation of next()
+     * returned a non-null value).
+     * @throws IllegalStateException if there was not previous call to next()
+     */
+    fun text(): String?
+
+    /**
+     * If the previous next() method returned null, then this will indicate
+     * whether the current text() value is CDATA or regular Text.
+     * @return true if the current text() is valid, and is CDATA.
+     * @throws IllegalStateException if there was not previous call to next()
+     */
+    val isCDATA: Boolean
 }

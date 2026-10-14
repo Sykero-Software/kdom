@@ -52,105 +52,71 @@
 
  Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
 
+ Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
+
  */
+package fi.sykero.kdom.output.support
 
-package fi.sykero.kdom.output.support;
-
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
-
-import fi.sykero.kdom.Content;
+import fi.sykero.kdom.Content
+import java.util.NoSuchElementException
 
 /**
  * This Walker implementation walks a list of Content in its original RAW
  * format. There is no text manipulation, and all content will be returned as
  * the input type. In other words, next() will never be null, and text() will
  * always be null.
- * 
- * @author Rolf Lear
  *
+ * @author Rolf Lear
  */
-public class WalkerPRESERVE implements Walker {
-	
-	private static final Iterator<Content> EMPTYIT = new Iterator<Content>() {
-		@Override
-		public boolean hasNext() {
-			return false;
-		}
+class WalkerPRESERVE(content: List<Content>) : Walker {
 
-		@Override
-		public Content next() {
-			throw new NoSuchElementException("Cannot call next() on an empty iterator.");
-		}
+    private val iter: Iterator<Content>
+    private val alltext: Boolean
 
-		@Override
-		public void remove() {
-			throw new UnsupportedOperationException("Cannot remove from an empty iterator.");
-		}
-	};
-	
-	private final Iterator<? extends Content> iter;
-	private final boolean alltext;
-	
-	/**
-	 * Create a Walker that preserves all content in its raw state.
-	 * @param content the content to walk.
-	 */
-	public WalkerPRESERVE(final List<? extends Content> content) {
-		super();
-		if (content.isEmpty()) {
-			alltext = true;
-			iter = EMPTYIT;
-		} else {
-			iter = content.iterator();
-			alltext = false;
-//			final int len = content.size();
-//			boolean at = true;
-//			for (int i = 0 ; i < len && at ; i++) {
-//			    switch (content.get(i).getCType()) {
-//			        case Text:
-//			        case CDATA:
-//			        case EntityRef:
-//			            break;
-//			        default :
-//			            at = false;
-//			            break;
-//			    }
-//			}
-//			alltext = at;
-		}
-		
-	}
+    init {
+        if (content.isEmpty()) {
+            alltext = true
+            iter = EMPTYIT
+        } else {
+            iter = content.iterator()
+            alltext = false
+        }
+    }
 
-	@Override
-	public boolean isAllText() {
-		return alltext;
-	}
+    override val isAllText: Boolean
+        get() = alltext
 
-	@Override
-	public boolean hasNext() {
-		return iter.hasNext();
-	}
+    override fun hasNext(): Boolean {
+        return iter.hasNext()
+    }
 
-	@Override
-	public Content next() {
-		return iter.next();
-	}
+    override fun next(): Content? {
+        return iter.next()
+    }
 
-	@Override
-	public String text() {
-		return null;
-	}
+    override fun text(): String? {
+        return null
+    }
 
-	@Override
-	public boolean isCDATA() {
-		return false;
-	}
+    override val isCDATA: Boolean
+        get() = false
 
-	@Override
-	public boolean isAllWhitespace() {
-		return alltext;
-	}
+    override val isAllWhitespace: Boolean
+        get() = alltext
 
+    private companion object {
+        private val EMPTYIT: Iterator<Content> = object : MutableIterator<Content> {
+            override fun hasNext(): Boolean {
+                return false
+            }
+
+            override fun next(): Content {
+                throw NoSuchElementException("Cannot call next() on an empty iterator.")
+            }
+
+            override fun remove() {
+                throw UnsupportedOperationException("Cannot remove from an empty iterator.")
+            }
+        }
+    }
 }

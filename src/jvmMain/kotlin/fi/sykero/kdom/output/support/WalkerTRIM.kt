@@ -52,93 +52,72 @@
 
  Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
 
+ Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
+
  */
+package fi.sykero.kdom.output.support
 
-package fi.sykero.kdom.output.support;
-
-import java.util.List;
-
-import fi.sykero.kdom.Content;
-import fi.sykero.kdom.Text;
-import fi.sykero.kdom.Verifier;
+import fi.sykero.kdom.Content
+import fi.sykero.kdom.Text
+import fi.sykero.kdom.Verifier
 
 /**
  * This Walker implementation will produce trimmed text content.
- * 
- * @author Rolf Lear
  *
+ * @author Rolf Lear
  */
-public class WalkerTRIM extends AbstractFormattedWalker {
+class WalkerTRIM(content: List<Content>, fstack: FormatStack, escape: Boolean) :
+    AbstractFormattedWalker(content, fstack, escape) {
 
-	/**
-	 * Create the Trimmed walker instance.
-	 * @param content The list of content to format
-	 * @param fstack The current stack.
-	 * @param escape Whether Text values should be escaped.
-	 */
-	public WalkerTRIM(final List<? extends Content> content, 
-			final FormatStack fstack, final boolean escape) {
-		super(content, fstack, escape);
-	}
+    override fun analyzeMultiText(mtext: MultiText, offset: Int, len: Int) {
+        var offset = offset
+        var len = len
 
-	@Override
-	protected void analyzeMultiText(final MultiText mtext,
-			int offset, int len) {
-		
-		while (len > 0) {
-			final Content c = get(offset);
-			if (c instanceof Text) {
-				// either Text or CDATA
-				if (!Verifier.isAllXMLWhitespace(c.getValue())) {
-					break;
-				}
-			} else {
-				break;
-			}
-			offset++;
-			len--;
-		}
-		
-		while (len > 0) {
-			final Content c = get(offset + len - 1);
-			if (c instanceof Text) {
-				// either Text or CDATA
-				if (!Verifier.isAllXMLWhitespace(c.getValue())) {
-					break;
-				}
-			} else {
-				break;
-			}
-			len--;
-		}
-		
-		for (int i = 0; i < len; i++) {
-			Trim trim = Trim.NONE;
-			if (i + 1 == len) {
-				trim = Trim.RIGHT;
-			}
-			if (i == 0) {
-				trim = Trim.LEFT;
-			}
-			if (len == 1) {
-				trim = Trim.BOTH;
-			}
-			final Content c = get(offset + i);
-			switch (c.getCType()) {
-				case Text :
-					mtext.appendText(trim, c.getValue());
-					break;
-				case CDATA :
-					mtext.appendCDATA(trim, c.getValue());
-					break;
-				case EntityRef:
-					// treat like any other content.
-					// raw.
-				default:
-					mtext.appendRaw(c);
-					break;
-			}
-		}
-		
-	}
+        while (len > 0) {
+            val c = get(offset)
+            if (c is Text) {
+                // either Text or CDATA
+                if (!Verifier.isAllXMLWhitespace(c.value)) {
+                    break
+                }
+            } else {
+                break
+            }
+            offset++
+            len--
+        }
+
+        while (len > 0) {
+            val c = get(offset + len - 1)
+            if (c is Text) {
+                // either Text or CDATA
+                if (!Verifier.isAllXMLWhitespace(c.value)) {
+                    break
+                }
+            } else {
+                break
+            }
+            len--
+        }
+
+        for (i in 0 until len) {
+            var trim = Trim.NONE
+            if (i + 1 == len) {
+                trim = Trim.RIGHT
+            }
+            if (i == 0) {
+                trim = Trim.LEFT
+            }
+            if (len == 1) {
+                trim = Trim.BOTH
+            }
+            val c = get(offset + i)
+            when (c.cType) {
+                Content.CType.Text -> mtext.appendText(trim, c.value)
+                Content.CType.CDATA -> mtext.appendCDATA(trim, c.value)
+                // EntityRef: treat like any other content, raw.
+                else -> mtext.appendRaw(c)
+            }
+        }
+    }
 }
