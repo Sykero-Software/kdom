@@ -6,11 +6,13 @@ import fi.sykero.kdom.JDOMConstants.Companion.NS_URI_XML
 import fi.sykero.kdom.JDOMConstants.Companion.NS_URI_XMLNS
 import fi.sykero.kdom.sax.ContentHandler
 import fi.sykero.kdom.sax.Locator
+import fi.sykero.kdom.sax.SAXException
 import fi.sykero.kdom.sax.SAXParseException
 import nl.adaptivity.xmlutil.EventType
 import nl.adaptivity.xmlutil.ExperimentalXmlUtilApi
 import nl.adaptivity.xmlutil.XmlReader
 import nl.adaptivity.xmlutil.xmlStreaming
+import kotlin.Throws
 
 /**
  * Streams SAX-shaped events from xmlutil's reader; rejects every input a JAXP SAX parser rejects (no DTD support).
@@ -33,6 +35,7 @@ public class XmlEventParser(
     public val namespaceAware: Boolean = true,
 ) {
     /** Calls the handler; on malformed input throws [fi.sykero.kdom.sax.SAXParseException] with line/column when known. */
+    @Throws(SAXException::class)
     public fun parse(xml: String, handler: ContentHandler) {
         val scanner = SourceScanner(xml, namespaceAware)
         scanner.scan()
@@ -41,6 +44,7 @@ public class XmlEventParser(
     }
 
     /** Bytes with BOM / XML-declaration encoding detection (UTF-8, UTF-16 BE/LE, ISO-8859-1, US-ASCII). */
+    @Throws(SAXException::class)
     public fun parse(xml: ByteArray, handler: ContentHandler) {
         parse(XmlByteDecoder.decode(xml), handler)
     }
@@ -153,7 +157,7 @@ private class EventRun(
         val localName: String
         val qName: String
         if (namespaceAware) {
-            val decls = guarded { r.namespaceDecls.map { it.prefix to it.namespaceURI } }
+            val decls = guarded { r.namespaceDecls.map { it.prefix to content(it.namespaceURI) } }
             val prefixes = ArrayList<String>(decls.size)
             for ((p, u) in decls) {
                 if (p == "xmlns" || u == NS_URI_XMLNS) {
@@ -166,14 +170,14 @@ private class EventRun(
                 if (p == "xml") continue // SAX does not report the predeclared xml prefix
                 prefixes.add(p)
             }
-            uri = guarded { r.namespaceURI }
+            uri = content(guarded { r.namespaceURI })
             localName = guarded { r.localName }
             val prefix = guarded { r.prefix }
             qName = if (prefix.isEmpty()) localName else "$prefix:$localName"
             val count = guarded { r.attributeCount }
             var seen: MutableSet<Pair<String, String>>? = null
             for (i in 0 until count) {
-                val aUri = guarded { r.getAttributeNamespace(i) }
+                val aUri = content(guarded { r.getAttributeNamespace(i) })
                 val aLocal = guarded { r.getAttributeLocalName(i) }
                 val aPrefix = guarded { r.getAttributePrefix(i) }
                 val value = content(guarded { r.getAttributeValue(i) })
