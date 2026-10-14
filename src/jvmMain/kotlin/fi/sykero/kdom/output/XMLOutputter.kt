@@ -142,7 +142,7 @@ import fi.sykero.kdom.internal.flushIfPossible
  * @author Bradley S. Huffman
  * @author Rolf Lear
  */
-class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable {
+class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) {
 
     /**
      * Create a final and static instance of the AbstractXMLOutputProcessor The
@@ -657,21 +657,15 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
     /**
      * Returns a cloned copy of this XMLOutputter.
      */
-    public override fun clone(): XMLOutputter {
+    fun clone(): XMLOutputter {
         // Implementation notes: Since all state of an XMLOutputter is
         // embodied in simple private instance variables, Object.clone
-        // can be used. Note that since Object.clone is totally
-        // broken, we must catch an exception that will never be
-        // thrown.
-        try {
-            return super<Cloneable>.clone() as XMLOutputter
-        } catch (e: CloneNotSupportedException) {
-            // even though this should never ever happen, it's still
-            // possible to fool Java into throwing a
-            // CloneNotSupportedException. If that happens, we
-            // shouldn't swallow it.
-            throw RuntimeException(e.toString())
-        }
+        // can be used.
+        // kdom: no Object.clone() in common code; the copy shares the Format and the processor instances, as
+        // jdom2's shallow Object.clone() did.
+        val copy = XMLOutputter(null as Format?, myProcessor)
+        copy.myFormat = myFormat
+        return copy
     }
 
     /**

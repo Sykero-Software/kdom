@@ -82,7 +82,7 @@ import java.util.TreeMap
  * @author  Victor Toni
  * @author  Rolf Lear
  */
-open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
+open class Attribute : CloneBase, NamespaceAware, Serializable {
 
     /**
      * This will retrieve the local name of the
@@ -536,8 +536,19 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
             .toString()
     }
 
+    protected override fun shallowCopy(): Attribute {
+        val copy = Attribute()
+        copy.nameField = nameField
+        copy.namespaceField = namespaceField
+        copy.valueField = valueField
+        copy.type = type
+        copy.specified = specified
+        copy.parentRef = parentRef
+        return copy
+    }
+
     public override fun clone(): Attribute {
-        val clone = super<CloneBase>.clone() as Attribute
+        val clone = super.clone() as Attribute
         clone.parentRef = null
         return clone
     }

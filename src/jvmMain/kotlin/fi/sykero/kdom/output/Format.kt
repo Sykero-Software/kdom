@@ -89,7 +89,7 @@ import fi.sykero.kdom.Verifier
  * @author Jason Hunter
  * @author Rolf Lear
  */
-open class Format private constructor() : Cloneable {
+open class Format private constructor() {
 
     /**
      * An EscapeStrategy suitable for UTF-8 an UTF-16. We want the class to
@@ -387,8 +387,23 @@ open class Format private constructor() : Cloneable {
         return this
     }
 
-    public override fun clone(): Format {
-        return super.clone() as Format
+    /**
+     * Returns a copy of this Format (jdom2: `Object.clone()`, a field-by-field copy; every field is an immutable
+     * value or a shared [EscapeStrategy]).
+     */
+    open fun clone(): Format {
+        val copy = Format()
+        copy.indent = indent
+        copy.lineSeparator = lineSeparator
+        copy.encoding = encoding // re-chooses the strategy; the copied strategy below wins, as in jdom2
+        copy.omitDeclaration = omitDeclaration
+        copy.omitEncoding = omitEncoding
+        copy.isSpecifiedAttributesOnly = isSpecifiedAttributesOnly
+        copy.expandEmptyElements = expandEmptyElements
+        copy.ignoreTrAXEscapingPIs = ignoreTrAXEscapingPIs
+        copy.textMode = textMode
+        copy.escapeStrategy = escapeStrategy
+        return copy
     }
 
     /**

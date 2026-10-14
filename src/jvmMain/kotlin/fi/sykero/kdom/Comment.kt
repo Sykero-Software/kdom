@@ -124,6 +124,12 @@ open class Comment : Content {
         return this
     }
 
+    protected override fun shallowCopy(): Comment {
+        val copy = Comment()
+        copy.textField = textField
+        return copy
+    }
+
     public override fun clone(): Comment {
         return super.clone() as Comment
     }

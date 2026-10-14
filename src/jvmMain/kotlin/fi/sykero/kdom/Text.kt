@@ -230,6 +230,12 @@ open class Text : Content {
             .toString()
     }
 
+    protected override fun shallowCopy(): Text {
+        val copy = Text()
+        copy.textValue = textValue
+        return copy
+    }
+
     public override fun clone(): Text {
         val text = super.clone() as Text
         text.textValue = textValue

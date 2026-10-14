@@ -60,25 +60,24 @@ package fi.sykero.kdom
  * This simple class just tidies up any cloneable classes. This method deals
  * with any CloneNotSupported exceptions. THis class is package private only.
  *
+ * kdom: there is no `Cloneable`/`Object.clone()` in common Kotlin. Each concrete subclass implements
+ * [shallowCopy] (a new instance with every field copied, what `Object.clone()` did), and the `clone()`
+ * overrides keep jdom2's deep-copy code on top of it.
+ *
  * @author Rolf Lear
  */
 // was package-private (Kotlin cannot expose an internal supertype from the public Content)
-open class CloneBase : Cloneable {
+abstract class CloneBase protected constructor() {
+
+    // jdom2: the protected no-arg constructor is needed to solve issue #88 (a no-arg constructor
+    // accessible by all potential subclasses of CloneBase).
 
     /**
-     * Change the permission of the no-arg constructor from public to protected.
-     *
-     * Otherwise package-private class's constructor is not really public. Changing this to
-     * 'protected' makes this constructor available to all subclasses regardless of the
-     * subclass's package. This in turn makes it possible to make all th subclasses of this
-     * CloneBase class serializable.
+     * Returns a new instance of the runtime class's kdom type with every field copied by reference, the
+     * equivalent of jdom2's `Object.clone()` call (`super.clone()`). A subclass outside kdom inherits its kdom
+     * superclass's implementation, so its clone is an instance of that kdom class (see translation-notes.md).
      */
-    protected constructor() {
-        // This constructor is needed to solve issue #88
-        // There needs to be a no-arg constructor accessible by all
-        // potential subclasses of CloneBase, and 'protected' is actually more
-        // accessible than 'public' since this is a package-private class.
-    }
+    protected abstract fun shallowCopy(): CloneBase
 
     /**
      * Return a deep clone of this instance. Even if this instance has a parent,
@@ -91,30 +90,8 @@ open class CloneBase : Cloneable {
      *
      * Subclasses of this should still call super.clone() in their clone method.
      */
-    override fun clone(): CloneBase {
-        /*
-         * Additionally, when you use the concept of 'co-variant return values'
-         * you create 'bridge' methods. By way of example, because we change the
-         * return type of clone() from Object to CloneBase, Java is forced to
-         * put in a 'bridge' method that has an Object return type, even though
-         * we never actually call it. <p> This has an impact on the code
-         * coverage tool Cobertura, which reports that there is missed code (and
-         * there is, the bridge method). It reports it as being '0' calls to the
-         * 'class' line (the class line is marked red). By making this CloneBase
-         * code do the first level of co-variant return, it is this class which
-         * is victim of the Cobertura reporting, not the multiple subclasses
-         * (like Attribute, Document, Content, etc.).
-         */
-        try {
-            return super<Cloneable>.clone() as CloneBase
-        } catch (e: CloneNotSupportedException) {
-            throw IllegalStateException(
-                String.format(
-                    "Unable to clone class %s which should always support it.",
-                    this.javaClass.name
-                ), e
-            )
-        }
+    open fun clone(): CloneBase {
+        return shallowCopy()
     }
 
 }

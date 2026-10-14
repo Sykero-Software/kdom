@@ -666,6 +666,14 @@ open class Document : CloneBase, Parent {
      *
      * @return `Object` clone of this `Document`
      */
+    protected override fun shallowCopy(): Document {
+        val copy = Document()
+        copy.contentList = contentList
+        copy.baseURI = baseURI
+        copy.propertyMap = propertyMap
+        return copy
+    }
+
     public override fun clone(): Document {
         val doc = super.clone() as Document
 

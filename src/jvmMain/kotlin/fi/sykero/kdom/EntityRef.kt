@@ -254,6 +254,14 @@ open class EntityRef : Content {
             // because DocType can only be attached to a Document.
             super.parent as Element?
 
+    protected override fun shallowCopy(): EntityRef {
+        val copy = EntityRef()
+        copy.nameField = nameField
+        copy.publicIDField = publicIDField
+        copy.systemIDField = systemIDField
+        return copy
+    }
+
     public override fun clone(): EntityRef {
         return super.clone() as EntityRef
     }

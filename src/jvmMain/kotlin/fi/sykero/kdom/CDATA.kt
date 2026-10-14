@@ -200,6 +200,12 @@ open class CDATA : Text {
             .toString()
     }
 
+    protected override fun shallowCopy(): CDATA {
+        val copy = CDATA()
+        copy.textValue = textValue
+        return copy
+    }
+
     public override fun clone(): CDATA {
         return super.clone() as CDATA
     }

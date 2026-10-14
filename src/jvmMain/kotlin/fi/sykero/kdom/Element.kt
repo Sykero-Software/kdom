@@ -1417,6 +1417,16 @@ open class Element : Content, Parent {
      *
      * @return the clone of this element
      */
+    protected override fun shallowCopy(): Element {
+        val copy = Element()
+        copy.nameField = nameField
+        copy.namespaceField = namespaceField
+        copy.additionalNamespaceList = additionalNamespaceList
+        copy.attributeListField = attributeListField
+        copy.contentList = contentList
+        return copy
+    }
+
     public override fun clone(): Element {
 
         // Ken Rune Helland <kenh@csc.no> is our local clone() guru

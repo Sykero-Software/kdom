@@ -270,6 +270,15 @@ open class DocType : Content {
             .toString()
     }
 
+    protected override fun shallowCopy(): DocType {
+        val copy = DocType()
+        copy.elementNameField = elementNameField
+        copy.publicIDField = publicIDField
+        copy.systemIDField = systemIDField
+        copy.internalSubset = internalSubset
+        return copy
+    }
+
     public override fun clone(): DocType {
         return super.clone() as DocType
     }

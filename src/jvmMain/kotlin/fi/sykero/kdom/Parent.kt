@@ -73,7 +73,7 @@ import java.io.Serializable
  * @author Jason Hunter
  * @author Rolf Lear
  */
-interface Parent : Cloneable, NamespaceAware, Serializable {
+interface Parent : NamespaceAware, Serializable {
 
     /**
      * Returns the number of children in this parent's content list.
@@ -204,7 +204,7 @@ interface Parent : Cloneable, NamespaceAware, Serializable {
      *
      * @return a deep copy of this parent and its children.
      */
-    public override fun clone(): Any
+    fun clone(): Any
 
     /**
      * Returns an [java.util.Iterator] that walks over all descendants

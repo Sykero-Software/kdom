@@ -392,6 +392,14 @@ open class ProcessingInstruction : Content {
             .toString()
     }
 
+    protected override fun shallowCopy(): ProcessingInstruction {
+        val copy = ProcessingInstruction()
+        copy.targetField = targetField
+        copy.rawData = rawData
+        copy.mapData = mapData
+        return copy
+    }
+
     public override fun clone(): ProcessingInstruction {
         val pi = super.clone() as ProcessingInstruction
 
