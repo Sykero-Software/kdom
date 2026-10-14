@@ -110,14 +110,12 @@ internal class ContentList
      * ConcurrentModification checking.
      *
      */
-    @Transient
     private var sizeModCount = Int.MIN_VALUE
 
     /**
      * modCount is used for concurrent modification, but dataModCount is used
      * for refreshing filters.
      */
-    @Transient
     private var dataModiCount = Int.MIN_VALUE
 
     /**

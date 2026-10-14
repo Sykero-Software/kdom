@@ -109,9 +109,4 @@ open class IllegalDataException : IllegalArgumentException {
      * @param reason cause of the problem
      */
     constructor(reason: String?) : super(reason)
-
-    private companion object {
-        /** Standard JDOM2 Exception Serialization. Default. */
-        private const val serialVersionUID = 200L
-    }
 }

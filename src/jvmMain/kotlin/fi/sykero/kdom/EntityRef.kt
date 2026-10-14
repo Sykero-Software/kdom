@@ -265,11 +265,4 @@ open class EntityRef : Content {
     public override fun clone(): EntityRef {
         return super.clone() as EntityRef
     }
-
-    private companion object {
-        /**
-         * JDOM2 Serialization. In this case, EntityRef is simple.
-         */
-        private const val serialVersionUID = 200L
-    }
 }

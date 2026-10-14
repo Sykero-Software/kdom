@@ -269,7 +269,7 @@ public class TestContentFilter extends AbstractTestFilter {
 		assertFilterEquals(new ContentFilter(), new ContentFilter(true));
 		
 		ContentFilter cfa = new ContentFilter(ContentFilter.CDATA);
-		ContentFilter cfb = UnitTestUtil.deSerialize(cfa);
+		ContentFilter cfb = new ContentFilter(ContentFilter.CDATA); // K5: was a deserialized copy (no serialization)
 		assertFilterEquals(cfa, cfb);
 		cfa.setCommentVisible(true);
 		assertFilterNotEquals(cfa, cfb);

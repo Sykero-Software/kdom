@@ -89,11 +89,4 @@ internal class PassThroughFilter : AbstractFilter<Any>() {
         return Collections.unmodifiableList(ret)
     }
 
-    private companion object {
-        /**
-         * JDOM2 Serialization: Default mechanism
-         */
-        private const val serialVersionUID = 200L
-    }
-
 }

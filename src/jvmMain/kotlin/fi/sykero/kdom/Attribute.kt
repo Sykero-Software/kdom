@@ -58,7 +58,6 @@ package fi.sykero.kdom
 
 import fi.sykero.kdom.internal.unsafeNull
 
-import java.io.Serializable
 import java.util.ArrayList
 import java.util.Collections
 import java.util.TreeMap
@@ -82,7 +81,7 @@ import java.util.TreeMap
  * @author  Victor Toni
  * @author  Rolf Lear
  */
-open class Attribute : CloneBase, NamespaceAware, Serializable {
+open class Attribute : CloneBase, NamespaceAware {
 
     /**
      * This will retrieve the local name of the
@@ -190,7 +189,6 @@ open class Attribute : CloneBase, NamespaceAware, Serializable {
      * `internal` + `@JvmField` so that `AttributeList` can set it, as package access did in Java.)
      */
     @JvmField
-    @Transient
     internal var parentRef: Element? = null
 
     /**
@@ -751,11 +749,6 @@ open class Attribute : CloneBase, NamespaceAware, Serializable {
         }
 
     companion object {
-        /**
-         * JDOM 2.0.0 Serialization version. Attribute is simple
-         */
-        private const val serialVersionUID = 200L
-
         // Keep the old constant names for one beta cycle to help migration
 
         /** JDOM 1.x compatible reference to [AttributeType.UNDECLARED]  */

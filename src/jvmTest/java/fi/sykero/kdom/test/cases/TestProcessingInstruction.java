@@ -3,7 +3,6 @@ package fi.sykero.kdom.test.cases;
 
 import static fi.sykero.kdom.test.util.UnitTestUtil.checkEquals;
 import static fi.sykero.kdom.test.util.UnitTestUtil.cloneString;
-import static fi.sykero.kdom.test.util.UnitTestUtil.deSerialize;
 import static org.junit.Assert.*;
 
 import java.util.Collections;
@@ -208,13 +207,6 @@ public class TestProcessingInstruction {
 		checkEquals(pi.getValue(), copy.getValue());
 	}
 
-	@Test
-	public void testSerialize() {
-		ProcessingInstruction pi = new ProcessingInstruction("test", "value");
-		ProcessingInstruction copy = deSerialize(pi);
-		checkEquals(pi.getTarget(), copy.getTarget());
-		checkEquals(pi.getValue(), copy.getValue());
-	}
 
 	@Test
 	public void testSetTarget() {

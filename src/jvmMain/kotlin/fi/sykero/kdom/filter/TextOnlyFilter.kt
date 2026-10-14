@@ -86,11 +86,4 @@ internal class TextOnlyFilter : AbstractFilter<Text>() {
         return other is TextOnlyFilter
     }
 
-    private companion object {
-        /**
-         * JDOM2 Serialization: Default mechanism
-         */
-        private const val serialVersionUID = 200L
-    }
-
 }

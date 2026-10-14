@@ -160,11 +160,4 @@ open class Comment : Content {
             .toString()
     }
 
-    private companion object {
-        /**
-         * JDOM2 Serialization. In this case, Comment is simple.
-         */
-        private const val serialVersionUID = 200L
-    }
-
 }

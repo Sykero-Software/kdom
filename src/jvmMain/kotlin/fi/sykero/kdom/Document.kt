@@ -59,9 +59,6 @@ package fi.sykero.kdom
 import fi.sykero.kdom.filter.Filter
 import fi.sykero.kdom.filter.Filters
 import fi.sykero.kdom.util.IteratorIterable
-import java.io.IOException
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
 import java.util.ArrayList
 import java.util.Arrays
 import java.util.Collections
@@ -86,7 +83,6 @@ open class Document : CloneBase, Parent {
      * mechanism.
      * (Was the package-private field `content`; renamed because that is now the property.)
      */
-    @Transient
     private var contentList: ContentList = ContentList(this)
 
     /**
@@ -102,7 +98,6 @@ open class Document : CloneBase, Parent {
     var baseURI: String? = null
 
     // Supports the setProperty/getProperty calls
-    @Transient
     private var propertyMap: HashMap<String?, Any?>? = null
 
     /**
@@ -857,59 +852,5 @@ open class Document : CloneBase, Parent {
     override val namespacesInherited: List<Namespace>
         get() = Collections.emptyList()
 
-
-    /**
-     * Serialize out the Element.
-     *
-     * @serialData
-     * **Document Properties are not serialized!**
-     *
-     * The Stream protocol is:
-     *
-     * 1. The BaseURI using default Serialization.
-     * 1. The count of child Content
-     * 1. The actual Child Content.
-     *
-     * @param out where to write the Element to.
-     * @throws IOException if there is a writing problem.
-     */
-    @Throws(IOException::class)
-    private fun writeObject(out: ObjectOutputStream) {
-        out.defaultWriteObject()
-        val cs = contentList.size
-        out.writeInt(cs)
-        for (i in 0 until cs) {
-            out.writeObject(getContent(i))
-        }
-    }
-
-    /**
-     * Read an Element off the ObjectInputStream.
-     *
-     * @see writeObject
-     * @param in where to read the Element from.
-     * @throws IOException if there is a reading problem.
-     * @throws ClassNotFoundException when a class cannot be found
-     */
-    @Throws(IOException::class, ClassNotFoundException::class)
-    private fun readObject(`in`: ObjectInputStream) {
-
-        `in`.defaultReadObject()
-
-        contentList = ContentList(this)
-
-        var cs = `in`.readInt()
-        while (--cs >= 0) {
-            addContent(`in`.readObject() as Content)
-        }
-
-    }
-
-    private companion object {
-        /**
-         * JDOM2 Serialization. In this case, DocType is simple.
-         */
-        private const val serialVersionUID = 200L
-    }
 
 }

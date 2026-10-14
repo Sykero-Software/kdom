@@ -218,11 +218,4 @@ open class CDATA : Text {
         return super.setParent(parent) as CDATA
     }
 
-    private companion object {
-        /**
-         * JDOM 2.0.0 Serialization version. CDATA is simple
-         */
-        private const val serialVersionUID = 200L
-    }
-
 }

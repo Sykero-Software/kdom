@@ -296,11 +296,4 @@ open class DocType : Content {
             // because DocType can only be attached to a Document.
             super.parent as Document?
 
-    private companion object {
-        /**
-         * JDOM2 Serialization. In this case, DocType is simple.
-         */
-        private const val serialVersionUID = 200L
-    }
-
 }

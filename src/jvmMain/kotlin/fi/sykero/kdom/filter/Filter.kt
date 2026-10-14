@@ -64,7 +64,7 @@ package fi.sykero.kdom.filter
  * @author  Rolf Lear
  * @param <T> The Generic type of content returned by this Filter
  */
-interface Filter<T> : java.io.Serializable {
+interface Filter<T> {
 
     /**
      * Filter the input list keeping only the items that match the Filter.

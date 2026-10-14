@@ -29,7 +29,7 @@ public class TestFilters extends AbstractTestFilter {
 	private <F> void checkFilter(Filter<F> filter, F match, Object not) {
 		assertNotNull(filter);
 		assertNotNull(filter.toString());
-		assertFilterEquals(filter, UnitTestUtil.deSerialize(filter));
+		// K5: the deserialized-copy check is gone (no serialization)
 		assertFilterNotEquals(filter, filter.negate());
 		assertFalse(filter.equals(null));
 		assertTrue(filter.matches(match));

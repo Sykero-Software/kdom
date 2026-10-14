@@ -71,8 +71,4 @@ open class DataConversionException(name: String?, dataType: String?) : JDOMExcep
         .append(dataType)
         .toString()
 ) {
-    private companion object {
-        /** Standard JDOM2 Exception Serialization. Default. */
-        private const val serialVersionUID = 200L
-    }
 }

@@ -99,7 +99,6 @@ open class ProcessingInstruction : Content {
 
     /** The data for the PI in name/value pairs  */
     @JvmField
-    @Transient
     protected var mapData: MutableMap<String, String>? = null
 
     /**
@@ -420,11 +419,6 @@ open class ProcessingInstruction : Content {
     }
 
     private companion object {
-        /**
-         * JDOM2 Serialization. In this case, ProcessingInstruction is simple.
-         */
-        private const val serialVersionUID = 200L
-
         /**
          * This will convert the Map to a string representation.
          *

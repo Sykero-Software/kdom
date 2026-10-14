@@ -59,7 +59,6 @@ package fi.sykero.kdom
 import fi.sykero.kdom.filter.Filter
 import fi.sykero.kdom.filter.Filters
 import fi.sykero.kdom.util.IteratorIterable
-import java.io.Serializable
 
 /**
  * Interface for JDOM objects which are allowed to contain
@@ -73,7 +72,7 @@ import java.io.Serializable
  * @author Jason Hunter
  * @author Rolf Lear
  */
-interface Parent : NamespaceAware, Serializable {
+interface Parent : NamespaceAware {
 
     /**
      * Returns the number of children in this parent's content list.

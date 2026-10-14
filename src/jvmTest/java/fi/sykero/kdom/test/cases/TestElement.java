@@ -2031,66 +2031,6 @@ public final class TestElement {
         }
     }
 
-    /**
-     * Test that Element serialization works, including with namespaces
-     * @throws IOException 
-     *
-     */
-    @Test
-    public void test_TCU__testSerialization() throws IOException {
-
-        //set up an element to test with
-        Element element = new Element("element", Namespace.getNamespace("http://foo"));
-        Element child1 = new Element("child1");
-        child1.setAttribute(new Attribute("anAttribute", "no namespace"));
-        Element child2 = new Element("child2");
-        Attribute att1 = new Attribute("anAttribute", "with namespace", Namespace.getNamespace("x", "http://foo"));
-        child2.setAttribute(att1);
-        //add another child level deep
-        Element descendent = new Element("descendent");
-        child2.addContent(descendent);
-        element.addContent(child1);
-        element.addContent(child2);
-
-
-
-        //here is what we expect back after serialization
-        String bufWithEmptyNS =
-                "<element xmlns=\"http://foo\"><child1 xmlns=\"\" anAttribute=\"no namespace\" /><child2 xmlns=\"\" xmlns:x=\"http://foo\" x:anAttribute=\"with namespace\"><descendent /></child2></element>";
-
-        Element elIn = UnitTestUtil.deSerialize(element);
-
-        StringWriter sw = new StringWriter();
-        XMLOutputter op = new XMLOutputter();
-        op.output(elIn, sw);
-        assertEquals("Incorrect data after serialization", sw.toString(), bufWithEmptyNS);
-
-        //set up an element to test with
-        Element element2 = new Element("element", Namespace.getNamespace("http://foo"));
-        element2.addNamespaceDeclaration(Namespace.getNamespace("foo", "http://test1"));
-        element2.addNamespaceDeclaration(Namespace.getNamespace("bar", "http://test2"));
-        Element child21 = new Element("child1");
-        child21.setAttribute(new Attribute("anAttribute", "no namespace"));
-        Element child22 = new Element("child2");
-        Attribute att21 = new Attribute("anAttribute", "with namespace", Namespace.getNamespace("x", "http://foo"));
-        child22.setAttribute(att21);
-        //add another child level deep
-        Element descendent2 = new Element("descendent");
-        child22.addContent(descendent2);
-        element2.addContent(child21);
-        element2.addContent(child22);
-
-        //here is what we expect back after serialization
-        String bufWithEmptyNS2 =
-                "<element xmlns=\"http://foo\" xmlns:bar=\"http://test2\" xmlns:foo=\"http://test1\"><child1 xmlns=\"\" anAttribute=\"no namespace\" /><child2 xmlns=\"\" xmlns:x=\"http://foo\" x:anAttribute=\"with namespace\"><descendent /></child2></element>";
-
-        Element elIn2 = UnitTestUtil.deSerialize(element2);
-
-        StringWriter sw2 = new StringWriter();
-        XMLOutputter op2 = new XMLOutputter();
-        op2.output(elIn2, sw2);
-        assertTrue("Incorrect data after serialization", sw2.toString().equals(bufWithEmptyNS2));
-    }
 
 //    @Test
 //    public void test_AddingString() {

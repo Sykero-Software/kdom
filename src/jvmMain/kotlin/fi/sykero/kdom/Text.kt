@@ -256,11 +256,6 @@ open class Text : Content {
             super.parent as Element?
 
     companion object {
-        /**
-         * JDOM2 Serialization. In this case, Text is simple.
-         */
-        private const val serialVersionUID = 200L
-
         internal const val EMPTY_STRING = ""
 
         /**

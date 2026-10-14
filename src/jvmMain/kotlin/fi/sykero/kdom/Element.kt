@@ -65,9 +65,6 @@ import fi.sykero.kdom.filter.ElementFilter
 import fi.sykero.kdom.filter.Filter
 import fi.sykero.kdom.filter.Filters
 import fi.sykero.kdom.util.IteratorIterable
-import java.io.IOException
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
 import java.util.ArrayList
 import java.util.Collections
 import java.util.Comparator
@@ -138,14 +135,12 @@ open class Element : Content, Parent {
      * during output
      * (Was the package-private field `additionalNamespaces`; renamed because that is now the property.)
      */
-    @Transient
     private var additionalNamespaceList: MutableList<Namespace>? = null
 
     /**
      *  The attributes of the element.  Subclassers have to
      * track attributes using their own mechanism.
      */
-    @Transient
     private var attributeListField: AttributeList? = null // = new AttributeList(this);
 
     /**
@@ -153,7 +148,6 @@ open class Element : Content, Parent {
      * track content using their own mechanism.
      * (Was the package-private field `content`; renamed because that is now the property.)
      */
-    @Transient
     private var contentList: ContentList = ContentList(this)
 
     /**
@@ -1941,94 +1935,9 @@ open class Element : Content, Parent {
     }
 
 
-    /**
-     * Serialize out the Element.
-     *
-     * @serialData
-     * The Stream protocol is:
-     *
-     * 1. The Element name and Namespace using default Serialization.
-     * 1. The count of additional Namespace Declarations.
-     * 1. The actual additional Namespace Declarations.
-     * 1. The count of Attributes.
-     * 1. The actual Attributes.
-     * 1. The count of child Content
-     * 1. The actual Child Content.
-     *
-     * @param out where to write the Element to.
-     * @throws IOException if there is a writing problem.
-     */
-    @Throws(IOException::class)
-    private fun writeObject(out: ObjectOutputStream) {
-        // sends out the name and namespace.
-        out.defaultWriteObject()
-        if (hasAdditionalNamespaces()) {
-            val ans = additionalNamespaceList!!.size
-            out.writeInt(ans)
-            for (i in 0 until ans) {
-                out.writeObject(additionalNamespaceList!![i])
-            }
-        } else {
-            out.writeInt(0)
-        }
-        if (hasAttributes()) {
-            val ans = attributeListField!!.size
-            out.writeInt(ans)
-            for (i in 0 until ans) {
-                out.writeObject(attributeListField!![i])
-            }
-        } else {
-            out.writeInt(0)
-        }
-
-        val cs = contentList.size
-        out.writeInt(cs)
-        for (i in 0 until cs) {
-            out.writeObject(contentList[i])
-        }
-
-    }
-
-    /**
-     * Read an Element off the ObjectInputStream.
-     *
-     * @see writeObject
-     * @param in where to read the Element from.
-     * @throws IOException if there is a reading problem.
-     * @throws ClassNotFoundException when a class cannot be found
-     */
-    @Throws(IOException::class, ClassNotFoundException::class)
-    private fun readObject(`in`: ObjectInputStream) {
-
-        `in`.defaultReadObject()
-
-        contentList = ContentList(this)
-
-        var nss = `in`.readInt()
-
-        while (--nss >= 0) {
-            addNamespaceDeclaration(`in`.readObject() as Namespace)
-        }
-
-        var ats = `in`.readInt()
-        while (--ats >= 0) {
-            setAttribute(`in`.readObject() as Attribute)
-        }
-
-        var cs = `in`.readInt()
-        while (--cs >= 0) {
-            addContent(`in`.readObject() as Content)
-        }
-
-    }
-
     private companion object {
         private const val INITIAL_ARRAY_SIZE = 5
 
-        /**
-         * JDOM2 Serialization. In this case, DocType is simple.
-         */
-        private const val serialVersionUID = 200L
     }
 
 }

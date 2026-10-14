@@ -62,8 +62,6 @@ import fi.sykero.kdom.JDOMConstants.Companion.NS_PREFIX_XMLNS
 import fi.sykero.kdom.JDOMConstants.Companion.NS_URI_DEFAULT
 import fi.sykero.kdom.JDOMConstants.Companion.NS_URI_XML
 import fi.sykero.kdom.JDOMConstants.Companion.NS_URI_XMLNS
-import java.io.InvalidObjectException
-import java.io.Serializable
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
@@ -85,10 +83,10 @@ import java.util.concurrent.ConcurrentMap
  */
 class Namespace private constructor(
     /** The prefix mapped to this namespace. */
-    @Transient val prefix: String,
+    val prefix: String,
     /** The URI for this namespace. */
-    @get:JvmName("getURI") @Transient val uri: String
-) : Serializable {
+    @get:JvmName("getURI") val uri: String
+) {
 
     /**
      * This tests for equality - Two `Namespaces`
@@ -129,46 +127,6 @@ class Namespace private constructor(
      */
     override fun hashCode(): Int {
         return uri.hashCode()
-    }
-
-    /* *****************************************
-     * Serialization
-     * ***************************************** */
-
-    private class NamespaceSerializationProxy(
-        private val pprefix: String?,
-        private val puri: String?
-    ) : Serializable {
-
-        private fun readResolve(): Any {
-            return getNamespace(pprefix, puri)
-        }
-
-        private companion object {
-            private const val serialVersionUID = 200L
-        }
-    }
-
-    /**
-     * Serializes Namespace by using a proxy serialization instance.
-     * @serialData The proxy deals with the protocol.
-     * @return the Namespace proxy instance.
-     */
-    private fun writeReplace(): Any {
-        return NamespaceSerializationProxy(prefix, uri)
-    }
-
-    /**
-     * Because Namespace is serialized by proxy, the reading of direct Namespace
-     * instances is illegal and prohibited.
-     * @return nothing.
-     * @throws InvalidObjectException always
-     */
-    @Throws(InvalidObjectException::class)
-    private fun readResolve(): Any {
-        throw InvalidObjectException(
-            "Namespace is serialized through a proxy"
-        )
     }
 
     companion object {
@@ -214,11 +172,6 @@ class Namespace private constructor(
             xnsmap.put(XMLNS_NAMESPACE.prefix, XMLNS_NAMESPACE)
             namespacemap.put(XMLNS_NAMESPACE.uri, xnsmap)
         }
-
-        /**
-         * JDOM 2.0.0 Serialization version
-         */
-        private const val serialVersionUID = 200L
 
         /**
          * This will retrieve (if in existence) or create (if not) a

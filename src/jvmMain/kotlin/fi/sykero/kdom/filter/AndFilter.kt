@@ -112,11 +112,4 @@ internal class AndFilter<T>(base: Filter<*>?, refiner: Filter<T>?) : AbstractFil
             .append("]")
             .toString()
     }
-
-    private companion object {
-        /**
-         * JDOM2 Serialization: Default mechanism
-         */
-        private const val serialVersionUID = 200L
-    }
 }

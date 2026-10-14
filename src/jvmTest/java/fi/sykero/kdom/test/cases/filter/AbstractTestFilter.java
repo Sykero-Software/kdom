@@ -247,11 +247,8 @@ public class AbstractTestFilter {
 		assertFalse(af.matches(new Object()));
 		exerciseCore(af, parent, callback);
 		
-		// test the deserialized version of the Filter.
-		final Filter<F> des = UnitTestUtil.deSerialize(af);
-		assertTrue(des != af);
-		assertFilterEquals(af, des);
-		exerciseCore(des, parent, callback);
+		// K5: the deserialized-copy round (des != af, equal, exercised) is gone (no serialization); below,
+		// x is replaced by x itself.
 		
 		try {
 			Filter<?> or = af.or(null); 
@@ -273,10 +270,10 @@ public class AbstractTestFilter {
 		
 		exerciseCore(af.negate().refine(Filters.content()), parent, new NegateCallBack(callback));
 		exerciseCore(af.or(af.negate()).refine(Filters.content()), parent, new TrueCallBack());
-		exerciseCore(af.or(UnitTestUtil.deSerialize(af)).refine(Filters.content()), parent, callback);
+		exerciseCore(af.or(af).refine(Filters.content()), parent, callback);
 		exerciseCore(af.negate().and(af).refine(Filters.content()), parent, new FalseCallBack());
 		exerciseCore(af.and(af).refine(Filters.content()), parent, callback);
-		exerciseCore(af.and(UnitTestUtil.deSerialize(af)).refine(Filters.content()), parent, callback);
+		exerciseCore(af.and(af).refine(Filters.content()), parent, callback);
 		
 		Filter<?> nf = af.negate();
 		exerciseCore(nf.negate().refine(Filters.content()), parent, callback);
@@ -284,11 +281,11 @@ public class AbstractTestFilter {
 		exerciseCore(nf.and(nf.negate()).refine(Filters.content()), parent, new FalseCallBack());
 		
 
-		Filter<?> afor = UnitTestUtil.deSerialize(af).or(nf);
+		Filter<?> afor = af.or(nf);
 		Filter<?> bfor = nf.or(af);
 		assertFilterEquals(afor, bfor);
 		
-		Filter<F> afand = UnitTestUtil.deSerialize(af).and(nf);
+		Filter<F> afand = af.and(nf);
 		Filter<?> bfand = nf.and(af);
 		assertFilterEquals(afand, bfand);
 		
@@ -332,7 +329,7 @@ public class AbstractTestFilter {
 		for (int i = 0; i < fc.size(); i++) {
 			assertTrue(fc.get(i) == mc.get(i));
 		}
-		Filter<? extends Content> cf = UnitTestUtil.deSerialize(ef);
+		Filter<? extends Content> cf = ef;
 		assertFilterEquals(cf, ef);
 		ContentFilter xf = new ContentFilter();
 		assertFilterEquals(cf.refine(xf), ef.refine(xf));
@@ -403,10 +400,10 @@ public class AbstractTestFilter {
 		
 		//exerciseCoreAtt(af.negate().refine(Filters.attribute()), parent, new NegateCallBack(callback));
 		//exerciseCoreAtt(af.or(af.negate()).refine(Filters.attribute()), parent, new TrueCallBack());
-		exerciseCoreAtt(af.or(UnitTestUtil.deSerialize(af)).refine(Filters.attribute()), parent, callback);
+		exerciseCoreAtt(af.or(af).refine(Filters.attribute()), parent, callback);
 		//exerciseCoreAtt(af.negate().and(af).refine(Filters.attribute()), parent, new FalseCallBack());
 		exerciseCoreAtt(af.and(af).refine(Filters.attribute()), parent, callback);
-		exerciseCoreAtt(af.and(UnitTestUtil.deSerialize(af)).refine(Filters.attribute()), parent, callback);
+		exerciseCoreAtt(af.and(af).refine(Filters.attribute()), parent, callback);
 		
 		Filter<?> nf = af.negate();
 //		exerciseCore(nf.negate().refine(Filters.content()), parent, callback);
@@ -414,11 +411,11 @@ public class AbstractTestFilter {
 //		exerciseCore(nf.and(nf.negate()).refine(Filters.content()), parent, new FalseCallBack());
 		
 
-		Filter<?> afor = UnitTestUtil.deSerialize(af).or(nf);
+		Filter<?> afor = af.or(nf);
 		Filter<?> bfor = nf.or(af);
 		assertFilterEquals(afor, bfor);
 		
-		Filter<F> afand = UnitTestUtil.deSerialize(af).and(nf);
+		Filter<F> afand = af.and(nf);
 		Filter<?> bfand = nf.and(af);
 		assertFilterEquals(afand, bfand);
 		
@@ -450,7 +447,7 @@ public class AbstractTestFilter {
 						+ " for value " + c);
 			}
 		}
-		Filter<? extends Attribute> cf = UnitTestUtil.deSerialize(ef);
+		Filter<? extends Attribute> cf = ef;
 		assertFilterEquals(cf, ef);
 		AttributeFilter xf = new AttributeFilter();
 		assertFilterEquals(cf.refine(xf), ef.refine(xf));

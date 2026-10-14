@@ -837,48 +837,7 @@ public final class TestAttribute {
         assertNull("attribute has still a parent", attribute.getParent());
     }
 
-    @Test
-    public void serialization_default() {
-        final String attributeName = "test";
-        final String attributeValue = "value";
 
-        final Attribute attribute = new Attribute(attributeName, attributeValue);
-
-        final Attribute serializedAttribute = UnitTestUtil.deSerialize(attribute);
-        
-        assertTrue(attribute != serializedAttribute);
-
-        assertTrue("incorrect name in serialized attribute", serializedAttribute.getName().equals(attributeName));
-        assertTrue("incorrect value in serialized attribute", serializedAttribute.getValue().equals(attributeValue));
-        assertEquals("incoorect attribute type in serialized attribute", serializedAttribute.getAttributeType(), Attribute.UNDECLARED_TYPE);
-
-        assertEquals("incorrect Namespace in serialized attribute", serializedAttribute.getNamespace(), Namespace.NO_NAMESPACE);
-    }
-
-    @Test
-    public void serialization_Namespace() {
-        final String prefix = "prefx";
-        final String uri = "http://some.other.place";
-
-        final Namespace namespace = Namespace.getNamespace(prefix, uri);
-
-        final String attributeName = "test";
-        final String attributeValue = "value";
-
-        final Attribute attribute = new Attribute(attributeName, attributeValue, namespace);
-
-        final Attribute serializedAttribute = UnitTestUtil.deSerialize(attribute);
-
-        assertTrue("incorrect name in serialized attribute", serializedAttribute.getName().equals(attributeName));
-        assertTrue("incorrect value in serialized attribute", serializedAttribute.getValue().equals(attributeValue));
-        assertEquals("incoorect attribute type in serialized attribute", serializedAttribute.getAttributeType(), Attribute.UNDECLARED_TYPE);
-
-        assertTrue("incorrect prefix in serialized attribute", serializedAttribute.getNamespacePrefix().equals(prefix));
-        assertTrue("incorrect qualified name in serialized attribute", serializedAttribute.getQualifiedName().equals(prefix + ':' + attributeName));
-        assertTrue("incorrect Namespace URI in serialized attribute", serializedAttribute.getNamespaceURI().equals(uri));
-
-        assertEquals("incorrect Namespace in serialized attribute", serializedAttribute.getNamespace(), namespace);
-    }
 
     @Test
     public void testInfinity() throws DataConversionException {

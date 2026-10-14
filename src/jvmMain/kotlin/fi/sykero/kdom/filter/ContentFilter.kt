@@ -316,11 +316,6 @@ open class ContentFilter : AbstractFilter<Content> {
     }
 
     companion object {
-        /**
-         * JDOM2 Serialization: Default mechanism
-         */
-        private const val serialVersionUID = 200L
-
         /** Mask for JDOM [Element] objects  */
         const val ELEMENT: Int = 1
 

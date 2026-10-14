@@ -145,9 +145,4 @@ open class JDOMParseException(
 	 */
 	constructor(message: String?, cause: Throwable?, lineNumber: Int, columnNumber: Int) :
 		this(message, cause, null, null, null, lineNumber, columnNumber)
-
-	private companion object {
-		/** Standard JDOM2 Exception Serialization. Default. */
-		private const val serialVersionUID = 200L
-	}
 }

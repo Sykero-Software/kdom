@@ -56,7 +56,6 @@
 
 package fi.sykero.kdom
 
-import java.io.Serializable
 import java.util.Collections
 
 /**
@@ -75,7 +74,7 @@ import java.util.Collections
  * @author Jason Hunter
  * @author Rolf Lear
  */
-abstract class Content protected constructor(type: CType) : CloneBase(), Serializable, NamespaceAware {
+abstract class Content protected constructor(type: CType) : CloneBase(), NamespaceAware {
 
     /**
      * An enumeration useful for identifying content types without
@@ -138,7 +137,6 @@ abstract class Content protected constructor(type: CType) : CloneBase(), Seriali
      * `@JvmField` so that `ContentList` and the other tree classes can set it, as package access did in Java.)
      */
     @JvmField
-    @Transient
     internal var parentRef: Parent? = null
 
     /**
@@ -282,11 +280,4 @@ abstract class Content protected constructor(type: CType) : CloneBase(), Seriali
 
     override val namespacesInherited: List<Namespace>
         get() = namespacesInScope // Element class will override
-
-    private companion object {
-        /**
-         * JDOM2 Serialization.
-         */
-        private const val serialVersionUID = 200L
-    }
 }

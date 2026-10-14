@@ -124,11 +124,4 @@ abstract class AbstractFilter<T> : Filter<T> {
     override fun <R> refine(filter: Filter<R>?): Filter<R> {
         return AndFilter<R>(this, filter)
     }
-
-    private companion object {
-        /**
-         * JDOM2 Serialization: Default mechanism
-         */
-        private const val serialVersionUID = 200L
-    }
 }

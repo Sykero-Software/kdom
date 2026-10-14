@@ -575,38 +575,6 @@ public final class TestDocument {
 
 	}
 
-	/**
-	 * Test that an Element properly handles default namespaces
-	 */
-    @Test
-	public void test_TCU__testSerialization() throws IOException {
-
-		//set up an element to test with
-		Element element= new Element("element", Namespace.getNamespace("http://foo"));
-		Element child1 = new Element("child1");
-		Element child2 = new Element("child2");
-
-		element.addContent(child1);
-		element.addContent(child2);
-
-		Document doc = new Document(element);
-
-
-
-		//here is what we expect in these two scenarios
-		//String bufWithNoNS = "<element xmlns=\"http://foo\"><child1 /><child2 /></element>";
-
-		String bufWithEmptyNS = "<element xmlns=\"http://foo\"><child1 xmlns=\"\" /><child2 xmlns=\"\" /></element>";
-
-		Document docIn = UnitTestUtil.deSerialize(doc);
-		element = docIn.getRootElement();
-
-		StringWriter sw = new StringWriter();
-		XMLOutputter op= new XMLOutputter(Format.getRawFormat());
-		op.output(element, sw);
-		assertTrue("Incorrect data after serialization", sw.toString().equals(bufWithEmptyNS));
-
-	}
 
 	/**
 	 * Test getContent

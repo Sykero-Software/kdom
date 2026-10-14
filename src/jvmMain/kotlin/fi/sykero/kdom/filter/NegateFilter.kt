@@ -106,11 +106,4 @@ internal class NegateFilter
             .append("]")
             .toString()
     }
-
-    private companion object {
-        /**
-         * JDOM2 Serialization: Default mechanism
-         */
-        private const val serialVersionUID = 200L
-    }
 }

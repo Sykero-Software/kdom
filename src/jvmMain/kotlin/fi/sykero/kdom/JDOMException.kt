@@ -87,9 +87,4 @@ open class JDOMException : Exception {
      * @param cause `Throwable` that caused this to be thrown.
      */
     constructor(message: String?, cause: Throwable?) : super(message, cause)
-
-    private companion object {
-        /** Standard JDOM2 Exception Serialization. Default. */
-        private const val serialVersionUID = 200L
-    }
 }
