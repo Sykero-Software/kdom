@@ -618,3 +618,11 @@ against jaxen (`AxesJaxenDifferentialTest`: every expression from every context 
 - Sequences are lazy; a caller that mutates the tree while iterating (e.g. `SwordContentFacade.addAnchors`) must `.toList()`
   first, as jaxen returned an eager list.
 - `precedingSiblingElements()` and `ancestorElements()` are nearest first (XPath reverse axes); the rest is document order.
+
+## M0 gate notes (Task 13)
+
+- **Corpus size (M4)**: the Task 12 corpus differential (`CorpusDifferentialTest`, `-Dkdom.corpus=.local/k5-corpus`) runs
+  17,386 XML inputs (OSIS and the ThML chain stages); the 2,827 GBF inputs of the dump are skipped (GBF's filter builds its
+  OSIS in code, there is nothing to parse), so the plan's "near 25,982" spike figure does not apply.
+- **Native execution (M3, waived by ruling R12)**: there is no linux_x64 Native smoke run in the container; Native test
+  execution is covered by the iOS CI job (`:kdom:iosSimulatorArm64Test`), whose reports are uploaded as an artifact.
