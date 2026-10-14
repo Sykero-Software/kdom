@@ -68,8 +68,6 @@ import fi.sykero.kdom.util.IteratorIterable
 import java.io.IOException
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
-import java.net.URI
-import java.net.URISyntaxException
 import java.util.ArrayList
 import java.util.Collections
 import java.util.Comparator
@@ -1932,74 +1930,6 @@ open class Element : Content, Parent {
 
     }
 
-
-    /**
-     * Simple method that supports getXMLBaseURI().
-     * @param uri 'currently' URI as a string
-     * @param relative the relative URI we are trying to make absolute
-     * @return the resulting URI, may be null.
-     * @throws URISyntaxException for URI problems.
-     */
-    @Throws(URISyntaxException::class)
-    private fun resolve(
-        uri: String?, relative: URI?
-    ): URI? {
-        if (uri == null) {
-            return relative
-        }
-        val n = URI(uri)
-        if (relative == null) {
-            return n
-        }
-        return n.resolve(relative)
-    }
-
-    /**
-     * Calculate the XMLBase URI for this Element using the rules defined in the
-     * XMLBase specification, as well as the values supplied in the xml:base
-     * attributes on this Element and its ancestry.
-     *
-     * This method assumes that all values in `xml:base` attributes
-     * are valid URI values according to the `java.net.URI`
-     * implementation. The same implementation is used to resolve relative URI
-     * values, and thus this code follows the assumptions in java.net.URI.
-     *
-     * This technically deviates from the XMLBase spec because to fully support
-     * legacy HTML the xml:base attribute could contain what is called a 'LIERI'
-     * which is a superset of true URI values, but for practical purposes JDOM
-     * users should never encounter such values because they are not processing
-     * raw HTML (but xhtml maybe).
-     *
-     * (Stays a function, a property rule exception: it walks the ancestry, resolves URIs and throws.)
-     *
-     * @return a URI representing the XMLBase value for the supplied Element, or
-     *         null if one could not be calculated.
-     * @throws URISyntaxException
-     *         if it is not possible to create java.net.URI values from the data
-     *         in the `xml:base` attributes.
-     */
-    @Throws(URISyntaxException::class)
-    fun getXMLBaseURI(): URI? {
-        var p: Parent? = this
-        var ret: URI? = null
-        while (p != null) {
-            if (p is Element) {
-                ret = resolve(
-                    p.getAttributeValue(
-                        "base",
-                        Namespace.XML_NAMESPACE
-                    ), ret
-                )
-            } else {
-                ret = resolve((p as Document).baseURI, ret)
-            }
-            if (ret != null && ret.isAbsolute) {
-                return ret
-            }
-            p = p.parent
-        }
-        return ret
-    }
 
     /**
      * Serialize out the Element.
