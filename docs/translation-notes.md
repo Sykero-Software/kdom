@@ -556,3 +556,18 @@ After Task 9 fix round 1: 58 classes / 773 tests / 2 skipped / 0 failures (+5 `K
   (Task 8: nothing to embed, see "Common tests").
 - Known stale string: `output/LineSeparator.java` javadoc/comment (lines ~109, ~171) still said
   `-Dorg.jdom2.output.LineSeparator`; Task 7 removed it together with `SystemProperty`.
+
+## Task 10 (SAX bridge)
+
+- `fi.sykero.kdom.sax.KdomEventProvider(Document)` / `(Element)` replays a tree as the event stream of jdom2's
+  `SAXOutputter(handler).output(doc)` with defaults (the `JDOMSAXEventProvider` setup); proven by
+  `KdomEventProviderDifferentialTest` (19 cases, event strings incl. per-call `characters` start/length/array size,
+  attribute probes by index and both name lookups). `DefaultHandler` and `AttributesImpl` mirror the JDK classes.
+- Rules found: `setDocumentLocator` once first (locator values -1/-1/null/null, never null), `startDocument`; only top-level
+  Element and ProcessingInstruction are reported (Comment, DocType dropped); `startPrefixMapping` for `NamespaceStack.addedForward()`
+  (element's namespace first), `endPrefixMapping` in `addedReverse()` order after `endElement`; no `xmlns` attributes;
+  attribute type `CDATA` for UNDECLARED else the enum name; `characters` once per Text/CDATA node with a fresh exact-size array
+  at offset 0, also for empty Text; EntityRef -> `skippedEntity`; comments inside elements dropped; `ignorableWhitespace` never.
+- `KdomEventProvider(Element)` is `element.document ?: Document(element)`: a detached element is wrapped (a parent-less element is
+  required), an attached one reports its whole document and is not detached.
+- The handler parameters are non-null (`prefix: String`, ...), unlike the JDK's platform types.
