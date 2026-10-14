@@ -69,8 +69,7 @@ import fi.sykero.kdom.ProcessingInstruction
 import fi.sykero.kdom.Text
 import fi.sykero.kdom.output.Format
 import fi.sykero.kdom.output.XMLOutputter
-import java.io.IOException
-import java.io.Writer
+import fi.sykero.kdom.internal.IOException
 
 /**
  * This interface provides a base support for the [XMLOutputter].
@@ -120,7 +119,7 @@ interface XMLOutputProcessor {
      *         if the input content is null
      */
     @Throws(IOException::class)
-    fun process(out: Writer, format: Format, doc: Document)
+    fun process(out: Appendable, format: Format, doc: Document)
 
     /**
      * Print out the `[DocType]`.
@@ -137,7 +136,7 @@ interface XMLOutputProcessor {
      *         if the input content is null
      */
     @Throws(IOException::class)
-    fun process(out: Writer, format: Format, doctype: DocType)
+    fun process(out: Appendable, format: Format, doctype: DocType)
 
     /**
      * Print out an `[Element]`, including its
@@ -155,7 +154,7 @@ interface XMLOutputProcessor {
      *         if the input content is null
      */
     @Throws(IOException::class)
-    fun process(out: Writer, format: Format, element: Element)
+    fun process(out: Appendable, format: Format, element: Element)
 
     /**
      * This will handle printing out a list of nodes. This can be useful for
@@ -176,7 +175,7 @@ interface XMLOutputProcessor {
      *         if any of the list members are not [Content]
      */
     @Throws(IOException::class)
-    fun process(out: Writer, format: Format, list: List<Content>)
+    fun process(out: Appendable, format: Format, list: List<Content>)
 
     /**
      * Print out a `[CDATA]` node.
@@ -193,7 +192,7 @@ interface XMLOutputProcessor {
      *         if the input content is null
      */
     @Throws(IOException::class)
-    fun process(out: Writer, format: Format, cdata: CDATA)
+    fun process(out: Appendable, format: Format, cdata: CDATA)
 
     /**
      * Print out a `[Text]` node. Performs the necessary entity
@@ -211,7 +210,7 @@ interface XMLOutputProcessor {
      *         if the input content is null
      */
     @Throws(IOException::class)
-    fun process(out: Writer, format: Format, text: Text)
+    fun process(out: Appendable, format: Format, text: Text)
 
     /**
      * Print out a `[Comment]`.
@@ -228,7 +227,7 @@ interface XMLOutputProcessor {
      *         if the input content is null
      */
     @Throws(IOException::class)
-    fun process(out: Writer, format: Format, comment: Comment)
+    fun process(out: Appendable, format: Format, comment: Comment)
 
     /**
      * Print out a `[ProcessingInstruction]`.
@@ -245,7 +244,7 @@ interface XMLOutputProcessor {
      *         if the input content is null
      */
     @Throws(IOException::class)
-    fun process(out: Writer, format: Format, pi: ProcessingInstruction)
+    fun process(out: Appendable, format: Format, pi: ProcessingInstruction)
 
     /**
      * Print out a `[EntityRef]`.
@@ -262,6 +261,6 @@ interface XMLOutputProcessor {
      *         if the input content is null
      */
     @Throws(IOException::class)
-    fun process(out: Writer, format: Format, entity: EntityRef)
+    fun process(out: Appendable, format: Format, entity: EntityRef)
 
 }

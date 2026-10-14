@@ -47,6 +47,7 @@ import fi.sykero.kdom.output.Format.TextMode;
 import fi.sykero.kdom.output.support.AbstractXMLOutputProcessor;
 import fi.sykero.kdom.output.support.XMLOutputProcessor;
 import fi.sykero.kdom.output.XMLOutputter;
+import fi.sykero.kdom.output.XMLOutputterJvmKt;
 
 @SuppressWarnings("javadoc")
 public final class TestXMLOutputter extends AbstractTestOutputter {
@@ -151,7 +152,7 @@ public final class TestXMLOutputter extends AbstractTestOutputter {
       Format format = Format.getCompactFormat().setEncoding("ISO-8859-1");
       XMLOutputter outputter = new XMLOutputter(format);
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      outputter.output(doc, baos);
+      XMLOutputterJvmKt.output(outputter, doc, baos); // K5: OutputStream overloads are JVM extensions
       String xml = baos.toString();
       assertEquals("<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>" + format.getLineSeparator() +
                    "<root>&#x10000; &#x10000;</root>" + format.getLineSeparator(), xml);
@@ -165,7 +166,7 @@ public final class TestXMLOutputter extends AbstractTestOutputter {
       Format format = Format.getCompactFormat().setEncoding("ISO-8859-1");
       XMLOutputter outputter = new XMLOutputter(format);
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      outputter.output(doc, baos);
+      XMLOutputterJvmKt.output(outputter, doc, baos); // K5: OutputStream overloads are JVM extensions
       String xml = baos.toString();
       assertEquals("<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>" + format.getLineSeparator() +
                    "<root att=\"&#x10000; &#x10000;\" />" + format.getLineSeparator(), xml);
@@ -179,7 +180,7 @@ public final class TestXMLOutputter extends AbstractTestOutputter {
       Format format = Format.getCompactFormat().setEncoding("ISO-8859-1");
       XMLOutputter outputter = new XMLOutputter(format);
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      outputter.output(doc, baos);
+      XMLOutputterJvmKt.output(outputter, doc, baos); // K5: OutputStream overloads are JVM extensions
       String xml = baos.toString();
       assertEquals("<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>" + format.getLineSeparator() +
                    "<root att=\"&#x10000; &#x10000;\" />" + format.getLineSeparator(), xml);
@@ -194,7 +195,7 @@ public final class TestXMLOutputter extends AbstractTestOutputter {
       Format format = Format.getCompactFormat().setEncoding("ISO-8859-1");
       XMLOutputter outputter = new XMLOutputter(format);
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      outputter.output(doc, baos);
+      XMLOutputterJvmKt.output(outputter, doc, baos); // K5: OutputStream overloads are JVM extensions
       String xml = baos.toString();
       assertEquals("<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>" + format.getLineSeparator() +
                    "<root>&#x10000;</root>" + format.getLineSeparator(), xml);
@@ -209,7 +210,7 @@ public final class TestXMLOutputter extends AbstractTestOutputter {
       Format format = Format.getCompactFormat().setEncoding("UTF-8");
       XMLOutputter outputter = new XMLOutputter(format);
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      outputter.output(doc, baos);
+      XMLOutputterJvmKt.output(outputter, doc, baos); // K5: OutputStream overloads are JVM extensions
       String xml = baos.toString();
       assertEquals("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + format.getLineSeparator() +
                    "<root>&#x10000;</root>" + format.getLineSeparator(), xml);
@@ -451,8 +452,10 @@ public final class TestXMLOutputter extends AbstractTestOutputter {
 		super.checkOutput(content, methodprefix, clazz, setup, raw, compact, pretty, tso, trimfw);
 		
 		Method mstring = getMethod(methodprefix + "String", clazz);
-		Method mstream = getMethod(methodprefix, clazz, OutputStream.class);
-		Method mwriter = getMethod(methodprefix, clazz, Writer.class);
+		// K5: the OutputStream overloads are JVM extension functions (static XMLOutputterJvmKt methods taking the
+		// outputter first), the Writer overloads take an Appendable.
+		Method mstream = getStreamMethod(methodprefix, clazz);
+		Method mwriter = getMethod(methodprefix, clazz, Appendable.class);
 		
 		String[] descn   = new String[] {"Raw", "Compact", "Pretty", "TrimFullWhite"};
 		Format ftrimfw = Format.getPrettyFormat();
@@ -474,7 +477,7 @@ public final class TestXMLOutputter extends AbstractTestOutputter {
 					assertEquals("outputString Format " + descn[i], result[i], rstring);
 				}
 				if (mstream != null) {
-					mstream.invoke(out, content, baos);
+					mstream.invoke(null, out, content, baos);
 					String rstream = new String(baos.toByteArray());
 					assertEquals("output OutputStream Format " + descn[i], result[i], rstream);
 				}
@@ -491,6 +494,16 @@ public final class TestXMLOutputter extends AbstractTestOutputter {
 		}
 	}
 	
+	private Method getStreamMethod(String name, Class<?> clazz) {
+		try {
+			return XMLOutputterJvmKt.class.getMethod(name, XMLOutputter.class, clazz, OutputStream.class);
+		} catch (Exception e) {
+			// ignore.
+			System.out.println("Can't find " + name + " on XMLOutputterJvmKt: " + e.getMessage());
+		}
+		return null;
+	}
+
 	private Method getMethod(String name, Class<?>...classes) {
 		try {
 			return XMLOutputter.class.getMethod(name, classes);

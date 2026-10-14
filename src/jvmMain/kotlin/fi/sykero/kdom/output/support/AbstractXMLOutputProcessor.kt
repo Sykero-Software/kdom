@@ -74,9 +74,8 @@ import fi.sykero.kdom.output.Format
 import fi.sykero.kdom.output.Format.TextMode
 import fi.sykero.kdom.output.XMLOutputter
 import fi.sykero.kdom.util.NamespaceStack
-import java.io.IOException
-import java.io.Writer
-import javax.xml.transform.Result
+import fi.sykero.kdom.internal.IOException
+import fi.sykero.kdom.internal.flushIfPossible
 
 /**
  * This class provides a concrete implementation of [XMLOutputProcessor]
@@ -170,38 +169,38 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      */
 
     @Throws(IOException::class)
-    override fun process(out: Writer, format: Format, doc: Document) {
+    override fun process(out: Appendable, format: Format, doc: Document) {
         printDocument(out, FormatStack(format), NamespaceStack(), doc)
-        out.flush()
+        flushIfPossible(out)
     }
 
     @Throws(IOException::class)
-    override fun process(out: Writer, format: Format, doctype: DocType) {
+    override fun process(out: Appendable, format: Format, doctype: DocType) {
         printDocType(out, FormatStack(format), doctype)
-        out.flush()
+        flushIfPossible(out)
     }
 
     @Throws(IOException::class)
-    override fun process(out: Writer, format: Format, element: Element) {
+    override fun process(out: Appendable, format: Format, element: Element) {
         // If this is the root element we could pre-initialize the
         // namespace stack with the namespaces
         printElement(
             out, FormatStack(format), NamespaceStack(),
             element
         )
-        out.flush()
+        flushIfPossible(out)
     }
 
     @Throws(IOException::class)
-    override fun process(out: Writer, format: Format, list: List<Content>) {
+    override fun process(out: Appendable, format: Format, list: List<Content>) {
         val fstack = FormatStack(format)
         val walker = buildWalker(fstack, list, true)
         printContent(out, fstack, NamespaceStack(), walker)
-        out.flush()
+        flushIfPossible(out)
     }
 
     @Throws(IOException::class)
-    override fun process(out: Writer, format: Format, cdata: CDATA) {
+    override fun process(out: Appendable, format: Format, cdata: CDATA) {
         // we use the powers of the Walker to manage text-like content.
         val list: List<CDATA> = java.util.Collections.singletonList(cdata)
         val fstack = FormatStack(format)
@@ -209,11 +208,11 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
         if (walker.hasNext()) {
             printContent(out, fstack, NamespaceStack(), walker)
         }
-        out.flush()
+        flushIfPossible(out)
     }
 
     @Throws(IOException::class)
-    override fun process(out: Writer, format: Format, text: Text) {
+    override fun process(out: Appendable, format: Format, text: Text) {
         // we use the powers of the Walker to manage text-like content.
         val list: List<Text> = java.util.Collections.singletonList(text)
         val fstack = FormatStack(format)
@@ -221,28 +220,28 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
         if (walker.hasNext()) {
             printContent(out, fstack, NamespaceStack(), walker)
         }
-        out.flush()
+        flushIfPossible(out)
     }
 
     @Throws(IOException::class)
-    override fun process(out: Writer, format: Format, comment: Comment) {
+    override fun process(out: Appendable, format: Format, comment: Comment) {
         printComment(out, FormatStack(format), comment)
-        out.flush()
+        flushIfPossible(out)
     }
 
     @Throws(IOException::class)
-    override fun process(out: Writer, format: Format, pi: ProcessingInstruction) {
+    override fun process(out: Appendable, format: Format, pi: ProcessingInstruction) {
         val fstack = FormatStack(format)
         // Output PI verbatim, disregarding TrAX escaping PIs.
         fstack.isIgnoreTrAXEscapingPIs = true
         printProcessingInstruction(out, fstack, pi)
-        out.flush()
+        flushIfPossible(out)
     }
 
     @Throws(IOException::class)
-    override fun process(out: Writer, format: Format, entity: EntityRef) {
+    override fun process(out: Appendable, format: Format, entity: EntityRef) {
         printEntityRef(out, FormatStack(format), entity)
-        out.flush()
+        flushIfPossible(out)
     }
 
     /*
@@ -264,11 +263,11 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      * if the out Writer fails.
      */
     @Throws(IOException::class)
-    protected open fun write(out: Writer, str: String?) {
+    protected open fun write(out: Appendable, str: String?) {
         if (str == null) {
             return
         }
-        out.write(str)
+        out.append(str)
     }
 
     /**
@@ -282,8 +281,8 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      * if the Writer fails.
      */
     @Throws(IOException::class)
-    protected open fun write(out: Writer, c: Char) {
-        out.write(c.code)
+    protected open fun write(out: Appendable, c: Char) {
+        out.append(c)
     }
 
     /*
@@ -321,7 +320,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      */
     @Throws(IOException::class)
     protected open fun attributeEscapedEntitiesFilter(
-        out: Writer,
+        out: Appendable,
         fstack: FormatStack, value: String?
     ) {
 
@@ -348,7 +347,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      * if the Writer fails.
      */
     @Throws(IOException::class)
-    protected open fun textRaw(out: Writer, str: String?) {
+    protected open fun textRaw(out: Appendable, str: String?) {
         write(out, str)
     }
 
@@ -366,7 +365,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      * if the Writer fails.
      */
     @Throws(IOException::class)
-    protected open fun textRaw(out: Writer, ch: Char) {
+    protected open fun textRaw(out: Appendable, ch: Char) {
         write(out, ch)
     }
 
@@ -381,7 +380,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      * if the Writer fails.
      */
     @Throws(IOException::class)
-    protected open fun textEntityRef(out: Writer, name: String?) {
+    protected open fun textEntityRef(out: Appendable, name: String?) {
         textRaw(out, '&')
         textRaw(out, name)
         textRaw(out, ';')
@@ -394,7 +393,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      * @throws IOException if the Writer fails.
      */
     @Throws(IOException::class)
-    protected open fun textCDATA(out: Writer, text: String?) {
+    protected open fun textCDATA(out: Appendable, text: String?) {
         textRaw(out, CDATAPRE)
         textRaw(out, text)
         textRaw(out, CDATAPOST)
@@ -424,7 +423,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      */
     @Throws(IOException::class)
     protected open fun printDocument(
-        out: Writer, fstack: FormatStack,
+        out: Appendable, fstack: FormatStack,
         nstack: NamespaceStack, doc: Document
     ) {
 
@@ -501,7 +500,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      * if the destination Writer fails
      */
     @Throws(IOException::class)
-    protected open fun printDeclaration(out: Writer, fstack: FormatStack) {
+    protected open fun printDeclaration(out: Appendable, fstack: FormatStack) {
 
         // Only print the declaration if it's not being omitted
         if (fstack.isOmitDeclaration) {
@@ -541,7 +540,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      */
     @Throws(IOException::class)
     protected open fun printDocType(
-        out: Writer, fstack: FormatStack,
+        out: Appendable, fstack: FormatStack,
         docType: DocType
     ) {
 
@@ -592,18 +591,18 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      */
     @Throws(IOException::class)
     protected open fun printProcessingInstruction(
-        out: Writer,
+        out: Appendable,
         fstack: FormatStack, pi: ProcessingInstruction
     ) {
         val target = pi.target
         var piProcessed = false
 
         if (fstack.isIgnoreTrAXEscapingPIs == false) {
-            if (target == Result.PI_DISABLE_OUTPUT_ESCAPING) {
+            if (target == PI_DISABLE_OUTPUT_ESCAPING) {
                 // special case... change the FormatStack
                 fstack.escapeOutput = false
                 piProcessed = true
-            } else if (target == Result.PI_ENABLE_OUTPUT_ESCAPING) {
+            } else if (target == PI_ENABLE_OUTPUT_ESCAPING) {
                 // special case... change the FormatStack
                 fstack.escapeOutput = true
                 piProcessed = true
@@ -641,7 +640,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      */
     @Throws(IOException::class)
     protected open fun printComment(
-        out: Writer, fstack: FormatStack,
+        out: Appendable, fstack: FormatStack,
         comment: Comment
     ) {
         write(out, "<!--")
@@ -663,7 +662,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      */
     @Throws(IOException::class)
     protected open fun printEntityRef(
-        out: Writer, fstack: FormatStack,
+        out: Appendable, fstack: FormatStack,
         entity: EntityRef
     ) {
         // EntityRefs are treated like text, not indented/newline content.
@@ -684,7 +683,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      */
     @Throws(IOException::class)
     protected open fun printCDATA(
-        out: Writer, fstack: FormatStack,
+        out: Appendable, fstack: FormatStack,
         cdata: CDATA
     ) {
         // CDATAs are treated like text, not indented/newline content.
@@ -705,7 +704,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      */
     @Throws(IOException::class)
     protected open fun printText(
-        out: Writer, fstack: FormatStack,
+        out: Appendable, fstack: FormatStack,
         text: Text
     ) {
         if (fstack.escapeOutput) {
@@ -740,7 +739,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      */
     @Throws(IOException::class)
     protected open fun printElement(
-        out: Writer, fstack: FormatStack,
+        out: Appendable, fstack: FormatStack,
         nstack: NamespaceStack, element: Element
     ) {
 
@@ -865,7 +864,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      */
     @Throws(IOException::class)
     protected open fun printContent(
-        out: Writer,
+        out: Appendable,
         fstack: FormatStack, nstack: NamespaceStack,
         walker: Walker
     ) {
@@ -910,7 +909,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      */
     @Throws(IOException::class)
     protected open fun printNamespace(
-        out: Writer, fstack: FormatStack,
+        out: Appendable, fstack: FormatStack,
         ns: Namespace
     ) {
         val prefix = ns.prefix
@@ -940,7 +939,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
      */
     @Throws(IOException::class)
     protected open fun printAttribute(
-        out: Writer, fstack: FormatStack,
+        out: Appendable, fstack: FormatStack,
         attribute: Attribute
     ) {
 
@@ -962,5 +961,11 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
 
         /** Simple constant for a close-CDATA  */
         protected const val CDATAPOST = "]]>"
+
+        /** `javax.xml.transform.Result.PI_DISABLE_OUTPUT_ESCAPING` (the JAXP constant's value, no JAXP in common code). */
+        private const val PI_DISABLE_OUTPUT_ESCAPING = "javax.xml.transform.disable-output-escaping"
+
+        /** `javax.xml.transform.Result.PI_ENABLE_OUTPUT_ESCAPING` (the JAXP constant's value). */
+        private const val PI_ENABLE_OUTPUT_ESCAPING = "javax.xml.transform.enable-output-escaping"
     }
 }

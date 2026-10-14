@@ -70,13 +70,8 @@ import fi.sykero.kdom.Text
 import fi.sykero.kdom.output.support.AbstractXMLOutputProcessor
 import fi.sykero.kdom.output.support.FormatStack
 import fi.sykero.kdom.output.support.XMLOutputProcessor
-import java.io.BufferedOutputStream
-import java.io.BufferedWriter
-import java.io.IOException
-import java.io.OutputStream
-import java.io.OutputStreamWriter
-import java.io.StringWriter
-import java.io.Writer
+import fi.sykero.kdom.internal.IOException
+import fi.sykero.kdom.internal.flushIfPossible
 
 /**
  * Outputs a JDOM document as a stream of bytes.
@@ -171,7 +166,7 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
          * @return The input String escaped as an attribute value.
          */
         fun escapeAttributeEntities(str: String, format: Format): String {
-            val sw = StringWriter()
+            val sw = StringBuilder()
             try {
                 super.attributeEscapedEntitiesFilter(sw, FormatStack(format), str)
             } catch (e: IOException) {
@@ -295,154 +290,6 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
 
     /*
      * =======================================================================
-     * API - Output to STREAM Methods ... All methods defer to the WRITER
-     * equivalents
-     * =======================================================================
-     */
-
-    /**
-     * This will print the Document to the given OutputStream. The characters are
-     * printed using the encoding specified in the constructor, or a default of UTF-8.
-     *
-     * @param doc the content to output.
-     * @param out `OutputStream` to use.
-     * @throws IOException if there's any problem writing.
-     * @throws NullPointerException if the specified content is null.
-     */
-    @Throws(IOException::class)
-    fun output(doc: Document, out: OutputStream) {
-        output(doc, makeWriter(out, myFormat))
-    }
-
-    /**
-     * This will print the DocType to the given OutputStream. The characters are
-     * printed using the encoding specified in the constructor, or a default of UTF-8.
-     *
-     * @param doctype the content to output.
-     * @param out `OutputStream` to use.
-     * @throws IOException if there's any problem writing.
-     * @throws NullPointerException if the specified content is null.
-     */
-    @Throws(IOException::class)
-    fun output(doctype: DocType, out: OutputStream) {
-        output(doctype, makeWriter(out, myFormat))
-    }
-
-    /**
-     * This will print the Element to the given OutputStream. The characters are
-     * printed using the encoding specified in the constructor, or a default of UTF-8.
-     *
-     * @param element the content to output.
-     * @param out `OutputStream` to use.
-     * @throws IOException if there's any problem writing.
-     * @throws NullPointerException if the specified content is null.
-     */
-    @Throws(IOException::class)
-    fun output(element: Element, out: OutputStream) {
-        output(element, makeWriter(out, myFormat))
-    }
-
-    /**
-     * This will handle printing out an [Element]'s content only, not including its tag, and attributes.
-     * This can be useful for printing the content of an element that contains
-     * HTML, like "&lt;description&gt;JDOM is &lt;b&gt;fun&gt;!&lt;/description&gt;".
-     *
-     * @param element `Element` to output.
-     * @param out `OutputStream` to use.
-     * @throws IOException if there's any problem writing.
-     * @throws NullPointerException if the specified content is null.
-     */
-    @Throws(IOException::class)
-    fun outputElementContent(element: Element, out: OutputStream) {
-        outputElementContent(element, makeWriter(out, myFormat))
-    }
-
-    /**
-     * This will print the list of Content to the given OutputStream. The characters are
-     * printed using the encoding specified in the constructor, or a default of UTF-8.
-     *
-     * @param list the content to output.
-     * @param out `OutputStream` to use.
-     * @throws IOException if there's any problem writing.
-     * @throws NullPointerException if the specified content is null.
-     */
-    @Throws(IOException::class)
-    fun output(list: List<Content>, out: OutputStream) {
-        output(list, makeWriter(out, myFormat)) // output() flushes
-    }
-
-    /**
-     * This will print the CDATA to the given OutputStream. The characters are
-     * printed using the encoding specified in the constructor, or a default of UTF-8.
-     *
-     * @param cdata the content to output.
-     * @param out `OutputStream` to use.
-     * @throws IOException if there's any problem writing.
-     * @throws NullPointerException if the specified content is null.
-     */
-    @Throws(IOException::class)
-    fun output(cdata: CDATA, out: OutputStream) {
-        output(cdata, makeWriter(out, myFormat)) // output() flushes
-    }
-
-    /**
-     * This will print the Text to the given OutputStream. The characters are
-     * printed using the encoding specified in the constructor, or a default of UTF-8.
-     *
-     * @param text the content to output.
-     * @param out `OutputStream` to use.
-     * @throws IOException if there's any problem writing.
-     * @throws NullPointerException if the specified content is null.
-     */
-    @Throws(IOException::class)
-    fun output(text: Text, out: OutputStream) {
-        output(text, makeWriter(out, myFormat)) // output() flushes
-    }
-
-    /**
-     * This will print the Comment to the given OutputStream. The characters are
-     * printed using the encoding specified in the constructor, or a default of UTF-8.
-     *
-     * @param comment the content to output.
-     * @param out `OutputStream` to use.
-     * @throws IOException if there's any problem writing.
-     * @throws NullPointerException if the specified content is null.
-     */
-    @Throws(IOException::class)
-    fun output(comment: Comment, out: OutputStream) {
-        output(comment, makeWriter(out, myFormat)) // output() flushes
-    }
-
-    /**
-     * This will print the ProcessingInstruction to the given OutputStream. The characters are
-     * printed using the encoding specified in the constructor, or a default of UTF-8.
-     *
-     * @param pi the content to output.
-     * @param out `OutputStream` to use.
-     * @throws IOException if there's any problem writing.
-     * @throws NullPointerException if the specified content is null.
-     */
-    @Throws(IOException::class)
-    fun output(pi: ProcessingInstruction, out: OutputStream) {
-        output(pi, makeWriter(out, myFormat)) // output() flushes
-    }
-
-    /**
-     * This will print the EntityRef to the given OutputStream. The characters are
-     * printed using the encoding specified in the constructor, or a default of UTF-8.
-     *
-     * @param entity the content to output.
-     * @param out `OutputStream` to use.
-     * @throws IOException if there's any problem writing.
-     * @throws NullPointerException if the specified content is null.
-     */
-    @Throws(IOException::class)
-    fun output(entity: EntityRef, out: OutputStream) {
-        output(entity, makeWriter(out, myFormat)) // output() flushes
-    }
-
-    /*
-     * =======================================================================
      * API - Output to STRING Methods ... All methods defer to the WRITER
      * equivalents
      * =======================================================================
@@ -456,7 +303,7 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * @return the content as a String.
      */
     fun outputString(doc: Document): String {
-        val out = StringWriter()
+        val out = StringBuilder()
         try {
             output(doc, out) // output() flushes
         } catch (e: IOException) {
@@ -473,7 +320,7 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * @return the content as a String.
      */
     fun outputString(doctype: DocType): String {
-        val out = StringWriter()
+        val out = StringBuilder()
         try {
             output(doctype, out) // output() flushes
         } catch (e: IOException) {
@@ -490,7 +337,7 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * @return the content as a String.
      */
     fun outputString(element: Element): String {
-        val out = StringWriter()
+        val out = StringBuilder()
         try {
             output(element, out) // output() flushes
         } catch (e: IOException) {
@@ -507,7 +354,7 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * @return the content as a String.
      */
     fun outputString(list: List<Content>): String {
-        val out = StringWriter()
+        val out = StringBuilder()
         try {
             output(list, out) // output() flushes
         } catch (e: IOException) {
@@ -524,7 +371,7 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * @return the content as a String.
      */
     fun outputString(cdata: CDATA): String {
-        val out = StringWriter()
+        val out = StringBuilder()
         try {
             output(cdata, out) // output() flushes
         } catch (e: IOException) {
@@ -541,7 +388,7 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * @return the content as a String.
      */
     fun outputString(text: Text): String {
-        val out = StringWriter()
+        val out = StringBuilder()
         try {
             output(text, out) // output() flushes
         } catch (e: IOException) {
@@ -558,7 +405,7 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * @return the content as a String.
      */
     fun outputString(comment: Comment): String {
-        val out = StringWriter()
+        val out = StringBuilder()
         try {
             output(comment, out) // output() flushes
         } catch (e: IOException) {
@@ -575,7 +422,7 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * @return the content as a String.
      */
     fun outputString(pi: ProcessingInstruction): String {
-        val out = StringWriter()
+        val out = StringBuilder()
         try {
             output(pi, out) // output() flushes
         } catch (e: IOException) {
@@ -592,7 +439,7 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * @return the content as a String.
      */
     fun outputString(entity: EntityRef): String {
-        val out = StringWriter()
+        val out = StringBuilder()
         try {
             output(entity, out) // output() flushes
         } catch (e: IOException) {
@@ -608,7 +455,7 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * @return the element content as a String.
      */
     fun outputElementContentString(element: Element): String {
-        val out = StringWriter()
+        val out = StringBuilder()
         try {
             outputElementContent(element, out) // output() flushes
         } catch (e: IOException) {
@@ -628,14 +475,14 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * Writer may cause the outputter's preferred character encoding to be ignored.
      *
      * @param doc the content to output.
-     * @param out `Writer` to use.
+     * @param out `Appendable` (for example a `Writer` or a `StringBuilder`) to use.
      * @throws IOException if there's any problem writing.
      * @throws NullPointerException if the specified content is null.
      */
     @Throws(IOException::class)
-    fun output(doc: Document, out: Writer) {
+    fun output(doc: Document, out: Appendable) {
         myProcessor.process(out, myFormat, doc)
-        out.flush()
+        flushIfPossible(out)
     }
 
     /**
@@ -643,14 +490,14 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * Writer may cause the outputter's preferred character encoding to be ignored.
      *
      * @param doctype the content to output.
-     * @param out `Writer` to use.
+     * @param out `Appendable` (for example a `Writer` or a `StringBuilder`) to use.
      * @throws IOException if there's any problem writing.
      * @throws NullPointerException if the specified content is null.
      */
     @Throws(IOException::class)
-    fun output(doctype: DocType, out: Writer) {
+    fun output(doctype: DocType, out: Appendable) {
         myProcessor.process(out, myFormat, doctype)
-        out.flush()
+        flushIfPossible(out)
     }
 
     /**
@@ -658,30 +505,30 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * Writer may cause the outputter's preferred character encoding to be ignored.
      *
      * @param element the content to output.
-     * @param out `Writer` to use.
+     * @param out `Appendable` (for example a `Writer` or a `StringBuilder`) to use.
      * @throws IOException if there's any problem writing.
      * @throws NullPointerException if the specified content is null.
      */
     @Throws(IOException::class)
-    fun output(element: Element, out: Writer) {
+    fun output(element: Element, out: Appendable) {
         // If this is the root element we could pre-initialize the
         // namespace stack with the namespaces
         myProcessor.process(out, myFormat, element)
-        out.flush()
+        flushIfPossible(out)
     }
 
     /**
      * This will handle printing out an [Element]'s content only, not including its tag, and attributes.
      *
      * @param element `Element` to output.
-     * @param out `Writer` to use.
+     * @param out `Appendable` (for example a `Writer` or a `StringBuilder`) to use.
      * @throws IOException if there's any problem writing.
      * @throws NullPointerException if the specified content is null.
      */
     @Throws(IOException::class)
-    fun outputElementContent(element: Element, out: Writer) {
+    fun outputElementContent(element: Element, out: Appendable) {
         myProcessor.process(out, myFormat, element.content)
-        out.flush()
+        flushIfPossible(out)
     }
 
     /**
@@ -689,14 +536,14 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * Writer may cause the outputter's preferred character encoding to be ignored.
      *
      * @param list the content to output.
-     * @param out `Writer` to use.
+     * @param out `Appendable` (for example a `Writer` or a `StringBuilder`) to use.
      * @throws IOException if there's any problem writing.
      * @throws NullPointerException if the specified content is null.
      */
     @Throws(IOException::class)
-    fun output(list: List<Content>, out: Writer) {
+    fun output(list: List<Content>, out: Appendable) {
         myProcessor.process(out, myFormat, list)
-        out.flush()
+        flushIfPossible(out)
     }
 
     /**
@@ -704,14 +551,14 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * Writer may cause the outputter's preferred character encoding to be ignored.
      *
      * @param cdata the content to output.
-     * @param out `Writer` to use.
+     * @param out `Appendable` (for example a `Writer` or a `StringBuilder`) to use.
      * @throws IOException if there's any problem writing.
      * @throws NullPointerException if the specified content is null.
      */
     @Throws(IOException::class)
-    fun output(cdata: CDATA, out: Writer) {
+    fun output(cdata: CDATA, out: Appendable) {
         myProcessor.process(out, myFormat, cdata)
-        out.flush()
+        flushIfPossible(out)
     }
 
     /**
@@ -719,14 +566,14 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * Writer may cause the outputter's preferred character encoding to be ignored.
      *
      * @param text the content to output.
-     * @param out `Writer` to use.
+     * @param out `Appendable` (for example a `Writer` or a `StringBuilder`) to use.
      * @throws IOException if there's any problem writing.
      * @throws NullPointerException if the specified content is null.
      */
     @Throws(IOException::class)
-    fun output(text: Text, out: Writer) {
+    fun output(text: Text, out: Appendable) {
         myProcessor.process(out, myFormat, text)
-        out.flush()
+        flushIfPossible(out)
     }
 
     /**
@@ -734,14 +581,14 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * Writer may cause the outputter's preferred character encoding to be ignored.
      *
      * @param comment the content to output.
-     * @param out `Writer` to use.
+     * @param out `Appendable` (for example a `Writer` or a `StringBuilder`) to use.
      * @throws IOException if there's any problem writing.
      * @throws NullPointerException if the specified content is null.
      */
     @Throws(IOException::class)
-    fun output(comment: Comment, out: Writer) {
+    fun output(comment: Comment, out: Appendable) {
         myProcessor.process(out, myFormat, comment)
-        out.flush()
+        flushIfPossible(out)
     }
 
     /**
@@ -749,14 +596,14 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * Writer may cause the outputter's preferred character encoding to be ignored.
      *
      * @param pi the content to output.
-     * @param out `Writer` to use.
+     * @param out `Appendable` (for example a `Writer` or a `StringBuilder`) to use.
      * @throws IOException if there's any problem writing.
      * @throws NullPointerException if the specified content is null.
      */
     @Throws(IOException::class)
-    fun output(pi: ProcessingInstruction, out: Writer) {
+    fun output(pi: ProcessingInstruction, out: Appendable) {
         myProcessor.process(out, myFormat, pi)
-        out.flush()
+        flushIfPossible(out)
     }
 
     /**
@@ -764,14 +611,14 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
      * Writer may cause the outputter's preferred character encoding to be ignored.
      *
      * @param entity the content to output.
-     * @param out `Writer` to use.
+     * @param out `Appendable` (for example a `Writer` or a `StringBuilder`) to use.
      * @throws IOException if there's any problem writing.
      * @throws NullPointerException if the specified content is null.
      */
     @Throws(IOException::class)
-    fun output(entity: EntityRef, out: Writer) {
+    fun output(entity: EntityRef, out: Appendable) {
         myProcessor.process(out, myFormat, entity)
-        out.flush()
+        flushIfPossible(out)
     }
     /*
      * =======================================================================
@@ -873,25 +720,6 @@ class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable 
          * Static content.
          * =====================================================================
          */
-
-        /**
-         * Get an OutputStreamWriter, use specified encoding.
-         *
-         * @param out
-         * The OutputStream to wrap in the writer
-         * @param format
-         * The format is used to obtain the Character Encoding.
-         * @return An Writer (Buffered) that delegates to the specified output steam
-         * @throws java.io.UnsupportedEncodingException
-         */
-        @Throws(java.io.UnsupportedEncodingException::class)
-        private fun makeWriter(out: OutputStream, format: Format): Writer {
-            return BufferedWriter(
-                OutputStreamWriter(
-                    BufferedOutputStream(out), format.encoding
-                )
-            )
-        }
 
         /**
          * This constant XMLOutputProcessor is used for all non-customised

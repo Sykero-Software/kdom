@@ -2,6 +2,7 @@ package fi.sykero.kdom.diff
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import fi.sykero.kdom.output.output
 
 /**
  * Light differential check of the Kotlin output package against jdom2 2.0.6.1 itself (the full outputter
