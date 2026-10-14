@@ -59,9 +59,6 @@ package fi.sykero.kdom.output
 
 import fi.sykero.kdom.IllegalDataException
 import fi.sykero.kdom.Verifier
-import java.nio.charset.Charset
-import java.nio.charset.CharsetEncoder
-import java.util.Locale
 
 /**
  * Class to encapsulate XMLOutputter format options.
@@ -93,20 +90,6 @@ import java.util.Locale
  * @author Rolf Lear
  */
 open class Format private constructor() : Cloneable {
-
-    /**
-     * Handles Charsets.
-     */
-    private class DefaultCharsetEscapeStrategy(private val encoder: CharsetEncoder) : EscapeStrategy {
-
-        override fun shouldEscape(ch: Char): Boolean {
-            if (Verifier.isHighSurrogate(ch)) {
-                return true // Safer this way per http://unicode.org/faq/utf_bom.html#utf8-4
-            }
-
-            return !encoder.canEncode(ch)
-        }
-    }
 
     /**
      * An EscapeStrategy suitable for UTF-8 an UTF-16. We want the class to
@@ -478,7 +461,8 @@ open class Format private constructor() : Cloneable {
         private val Bits7EscapeStrategy: EscapeStrategy = EscapeStrategy7Bits()
 
         /**
-         * An EscapeStrategy suitable for 'unknown' charsets
+         * An EscapeStrategy suitable for 'unknown' charsets (the initial value of [escapeStrategy], replaced by the
+         * constructor's `encoding = STANDARD_ENCODING`).
          */
         private val DefaultEscapeStrategy: EscapeStrategy = object : EscapeStrategy {
             override fun shouldEscape(ch: Char): Boolean {
@@ -850,7 +834,9 @@ open class Format private constructor() : Cloneable {
 
             // Note issue #149: https://github.com/hunterhacker/jdom/issues/149
             // require locale for case conversion to avoid potential security issue.
-            if (encoding.uppercase(Locale.ENGLISH).startsWith("ISO-8859-") ||
+            // (kdom: Kotlin's uppercase() is locale-invariant.)
+            val upper = encoding.uppercase()
+            if (upper.startsWith("ISO-8859-") ||
                 "Latin1".equals(encoding, ignoreCase = true)
             ) {
                 return Bits8EscapeStrategy
@@ -862,13 +848,18 @@ open class Format private constructor() : Cloneable {
                 return Bits7EscapeStrategy
             }
 
-            try {
-                val cse = Charset.forName(encoding).newEncoder()
-                return DefaultCharsetEscapeStrategy(cse)
-            } catch (e: Exception) {
-                // swallow that... and assume false.
+            // kdom: jdom2 asked java.nio.charset here (Charset.forName(encoding).newEncoder().canEncode(ch), and
+            // only high surrogates for an unknown charset name). Common code has no charset tables, so the
+            // remaining names are mapped explicitly (see translation-notes.md, Behaviour differences):
+            // other UTF names escape nothing beyond markup, ISO8859_1 is the 8-bit Latin-1, everything else
+            // escapes every non-ASCII character.
+            if (upper == "UTF8" || upper.startsWith("UTF-16") || upper.startsWith("UTF-32")) {
+                return UTFEscapeStrategy
             }
-            return DefaultEscapeStrategy
+            if (upper == "ISO8859_1") {
+                return Bits8EscapeStrategy
+            }
+            return Bits7EscapeStrategy
         }
     }
 }

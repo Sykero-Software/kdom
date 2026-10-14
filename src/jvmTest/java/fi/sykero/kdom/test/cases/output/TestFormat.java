@@ -208,16 +208,20 @@ public class TestFormat {
 	
 	@Test
 	public void testCharsetEncodingEscapes() {
+		// K5: kdom has no java.nio.charset; an encoding name outside its mapped list escapes every
+		// non-ASCII character (jdom2 kept (char)255 for windows-1252). See translation-notes.md.
 		checkBitEscape("windows-1252",
-				new char[] {'a', 'b', '\n', '!', (char)127, (char)255},
-				new char[] {(char)0xD800, (char)1234});
+				new char[] {'a', 'b', '\n', '!', (char)127},
+				new char[] {(char)0xD800, (char)1234, (char)128, (char)255});
 	}
 	
 	@Test
 	public void testIllegalEncodingEscapes() {
+		// K5: an unknown encoding name escapes every non-ASCII character (jdom2 escaped only high
+		// surrogates). See translation-notes.md.
 		checkBitEscape("junk",
-				new char[] {'a', 'b', '\n', '!', (char)128, (char)255, (char)1234},
-				new char[] {(char)0xD800});
+				new char[] {'a', 'b', '\n', '!'},
+				new char[] {(char)0xD800, (char)128, (char)255, (char)1234});
 	}
 	
 	private void checkBitEscape(String encoding, 
