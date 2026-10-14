@@ -52,89 +52,88 @@
 
  Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
 
+ Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
+
  */
+package fi.sykero.kdom.output
 
-package fi.sykero.kdom.output;
-
-import java.io.BufferedOutputStream;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.StringWriter;
-import java.io.Writer;
-import java.util.List;
-
-import fi.sykero.kdom.Attribute;
-import fi.sykero.kdom.CDATA;
-import fi.sykero.kdom.Comment;
-import fi.sykero.kdom.Content;
-import fi.sykero.kdom.DocType;
-import fi.sykero.kdom.Document;
-import fi.sykero.kdom.Element;
-import fi.sykero.kdom.EntityRef;
-import fi.sykero.kdom.ProcessingInstruction;
-import fi.sykero.kdom.Text;
-import fi.sykero.kdom.output.support.AbstractXMLOutputProcessor;
-import fi.sykero.kdom.output.support.FormatStack;
-import fi.sykero.kdom.output.support.XMLOutputProcessor;
+import fi.sykero.kdom.Attribute
+import fi.sykero.kdom.CDATA
+import fi.sykero.kdom.Comment
+import fi.sykero.kdom.Content
+import fi.sykero.kdom.DocType
+import fi.sykero.kdom.Document
+import fi.sykero.kdom.Element
+import fi.sykero.kdom.EntityRef
+import fi.sykero.kdom.ProcessingInstruction
+import fi.sykero.kdom.Text
+import fi.sykero.kdom.output.support.AbstractXMLOutputProcessor
+import fi.sykero.kdom.output.support.FormatStack
+import fi.sykero.kdom.output.support.XMLOutputProcessor
+import java.io.BufferedOutputStream
+import java.io.BufferedWriter
+import java.io.IOException
+import java.io.OutputStream
+import java.io.OutputStreamWriter
+import java.io.StringWriter
+import java.io.Writer
 
 /**
  * Outputs a JDOM document as a stream of bytes.
- * <p>
+ *
  * The XMLOutputter can manage many styles of document formatting, from
  * untouched to 'pretty' printed. The default is to output the document content
  * exactly as created, but this can be changed by setting a new Format object:
- * <ul>
- * <li>For pretty-print output, use
- * <code>{@link Format#getPrettyFormat()}</code>.
- * <li>For whitespace-normalised output, use
- * <code>{@link Format#getCompactFormat()}</code>.
- * <li>For unmodified-format output, use
- * <code>{@link Format#getRawFormat()}</code>.
- * </ul>
- * <p>
- * There are <code>{@link #output output(...)}</code> methods to print any of
+ *
+ *  * For pretty-print output, use
+ * [Format.getPrettyFormat].
+ *  * For whitespace-normalised output, use
+ * [Format.getCompactFormat].
+ *  * For unmodified-format output, use
+ * [Format.getRawFormat].
+ *
+ *
+ * There are [output] methods to print any of
  * the standard JDOM classes to either a Writer or an OutputStream.
- * <p>
- * <b>Warning</b>: When outputting to a Writer, make sure the writer's encoding
+ *
+ * **Warning**: When outputting to a Writer, make sure the writer's encoding
  * matches the encoding setting in the Format object. This ensures the encoding
  * in which the content is written (controlled by the Writer configuration)
  * matches the XML Character escaping as well as the encoding placed in the
  * document's XML declaration (controlled by the XMLOutputter).
  * Because a Writer cannot be queried for its encoding, the
  * information must be passed to the Format manually in its constructor or via
- * the <code>{@link Format#setEncoding}</code> method. The default encoding is
+ * the [Format.setEncoding] method. The default encoding is
  * UTF-8. If the default encoding of the platform is not UTF-8 and a default Format
  * encoding is used, then there may be incorrectly formed characters in the output.
- * <p>
- * The methods <code>{@link #outputString outputString(...)}</code> are for
- * convenience only; for top performance you should call one of the <code>{@link
- * #output output(...)}</code> methods and pass in your own Writer or
+ *
+ * The methods [outputString] are for
+ * convenience only; for top performance you should call one of the `{@link
+ * #output output(...)}` methods and pass in your own Writer or
  * OutputStream if possible.
- * <p>
- * <b>All</b> of the <code>output*(...)</code> methods will flush the
- * destination Writer or OutputStream before returning, and <b>none</b> of them
- * will <code>close()</code> the destination.
- * <p>
+ *
+ * **All** of the `output*(...)` methods will flush the
+ * destination Writer or OutputStream before returning, and **none** of them
+ * will `close()` the destination.
+ *
  * XML declarations are always printed on their own line followed by a line
  * separator (this doesn't change the semantics of the document). To omit
  * printing of the declaration use
- * <code>{@link Format#setOmitDeclaration}</code>. To omit printing of the
- * encoding in the declaration use <code>{@link Format#setOmitEncoding}</code>.
+ * [Format.setOmitDeclaration]. To omit printing of the
+ * encoding in the declaration use [Format.setOmitEncoding].
  * Unfortunately there is currently no way to know the original encoding of the
  * document.
- * <p>
+ *
  * Empty elements are by default printed as &lt;empty/&gt;, but this can be
- * configured with <code>{@link Format#setExpandEmptyElements}</code> to cause
+ * configured with [Format.setExpandEmptyElements] to cause
  * them to be expanded to &lt;empty&gt;&lt;/empty&gt;.
- * <p>
- * If changing the {@link Format} settings are insufficient for your output
+ *
+ * If changing the [Format] settings are insufficient for your output
  * needs you can customise this XMLOutputter further by setting a different
- * {@link XMLOutputProcessor} with the
- * {@link #setXMLOutputProcessor(XMLOutputProcessor)} method or an appropriate
+ * [XMLOutputProcessor] with the
+ * [setXMLOutputProcessor] method or an appropriate
  * constructor. A fully-enabled Abstract class
- * {@link AbstractXMLOutputProcessor} is available to be further extended to
+ * [AbstractXMLOutputProcessor] is available to be further extended to
  * your needs if all you want to do is tweak some details.
  * 
  * @author Brett McLaughlin
@@ -148,989 +147,756 @@ import fi.sykero.kdom.output.support.XMLOutputProcessor;
  * @author Bradley S. Huffman
  * @author Rolf Lear
  */
+class XMLOutputter(format: Format?, processor: XMLOutputProcessor?) : Cloneable {
 
-public final class XMLOutputter implements Cloneable {
+    /**
+     * Create a final and static instance of the AbstractXMLOutputProcessor The
+     * final part is important because it improves performance.
+     *
+     * The JDOM user can change the actual XMLOutputProcessor with the
+     * [XMLOutputter.setXMLOutputProcessor] method.
+     *
+     * @author rolf
+     */
+    private class DefaultXMLProcessor : AbstractXMLOutputProcessor() {
 
-	/*
-	 * =====================================================================
-	 * Static content.
-	 * =====================================================================
-	 */
+        /**
+         * A helper method to implement backward-compatibility with JDOM1
+         *
+         * @see XMLOutputter.escapeAttributeEntities
+         * @param str
+         * The String to output.
+         * @param format
+         * The format details to use.
+         * @return The input String escaped as an attribute value.
+         */
+        fun escapeAttributeEntities(str: String, format: Format): String {
+            val sw = StringWriter()
+            try {
+                super.attributeEscapedEntitiesFilter(sw, FormatStack(format), str)
+            } catch (e: IOException) {
+                // no IOException on StringWriter....
+            }
+            return sw.toString()
+        }
 
-	/**
-	 * Get an OutputStreamWriter, use specified encoding.
-	 * 
-	 * @param out
-	 *        The OutputStream to wrap in the writer
-	 * @param format
-	 *        The format is used to obtain the Character Encoding.
-	 * @return An Writer (Buffered) that delegates to the specified output steam
-	 * @throws java.io.UnsupportedEncodingException
-	 */
-	private static final Writer makeWriter(final OutputStream out,
-			final Format format)
-			throws java.io.UnsupportedEncodingException {
-		return new BufferedWriter(new OutputStreamWriter(
-				new BufferedOutputStream(out), format.getEncoding()));
-	}
+        /**
+         * A helper method to implement backward-compatibility with JDOM1
+         *
+         * @see XMLOutputter.escapeElementEntities
+         * @param str
+         * The String to output.
+         * @param format
+         * The format details to use.
+         * @return The input String escaped as an element text value.
+         */
+        fun escapeElementEntities(str: String, format: Format): String {
+            return Format.escapeText(
+                format.escapeStrategy,
+                format.lineSeparator, str
+            )
+        }
+    }
 
-	/**
-	 * Create a final and static instance of the AbstractXMLOutputProcessor The
-	 * final part is important because it improves performance.
-	 * <p>
-	 * The JDOM user can change the actual XMLOutputProcessor with the
-	 * {@link XMLOutputter#setXMLOutputProcessor(XMLOutputProcessor)} method.
-	 * 
-	 * @author rolf
-	 */
-	private static final class DefaultXMLProcessor
-			extends AbstractXMLOutputProcessor {
+    /*
+     * =====================================================================
+     * Instance content.
+     * =====================================================================
+     */
 
-		/**
-		 * A helper method to implement backward-compatibility with JDOM1
-		 * 
-		 * @see XMLOutputter#escapeAttributeEntities(String)
-		 * @param str
-		 *        The String to output.
-		 * @param format
-		 *        The format details to use.
-		 * @return The input String escaped as an attribute value.
-		 */
-		public String escapeAttributeEntities(String str, Format format) {
-			StringWriter sw = new StringWriter();
-			try {
-				super.attributeEscapedEntitiesFilter(sw, new FormatStack(format), str);
-			} catch (IOException e) {
-				// no IOException on StringWriter....
-			}
-			return sw.toString();
-		}
+    // For normal output
+    private var myFormat: Format = if (format == null) Format.getRawFormat() else format.clone()
 
-		/**
-		 * A helper method to implement backward-compatibility with JDOM1
-		 * 
-		 * @see XMLOutputter#escapeElementEntities(String)
-		 * @param str
-		 *        The String to output.
-		 * @param format
-		 *        The format details to use.
-		 * @return The input String escaped as an element text value.
-		 */
-		public final String escapeElementEntities(final String str,
-				final Format format) {
-			return Format.escapeText(format.getEscapeStrategy(),
-					format.getLineSeparator(), str);
-		}
+    // The actual XMLOutputProcessor to delegate to.
+    private var myProcessor: XMLOutputProcessor = processor ?: DEFAULTPROCESSOR
 
-	}
+    /*
+     * =====================================================================
+     * Constructors
+     * =====================================================================
+     */
 
-	/**
-	 * This constant XMLOutputProcessor is used for all non-customised
-	 * XMLOutputters
-	 */
-	private static final DefaultXMLProcessor DEFAULTPROCESSOR =
-			new DefaultXMLProcessor();
+    /**
+     * This will create an `XMLOutputter` with a default
+     * [Format] and [XMLOutputProcessor].
+     */
+    constructor() : this(null, null)
 
-	/*
-	 * =====================================================================
-	 * Instance content.
-	 * =====================================================================
-	 */
+    /**
+     * This will create an `XMLOutputter` with the same
+     * customisations set in the given `XMLOutputter` instance. Note
+     * that `XMLOutputter two = one.clone();` would work equally
+     * well.
+     *
+     * @param that
+     * the XMLOutputter to clone
+     */
+    constructor(that: XMLOutputter) : this(that.myFormat, null)
 
-	// For normal output
-	private Format myFormat = null;
+    /**
+     * This will create an `XMLOutputter` with the specified format
+     * characteristics.
+     *
+     * **Note:** the format object is cloned internally before use.
+     *
+     * @param format
+     * The Format instance to use. This instance will be cloned() and as
+     * a consequence, changes made to the specified format instance
+     * **will not** be reflected in this XMLOutputter. A null input
+     * format indicates that XMLOutputter should use the default
+     * [Format.getRawFormat]
+     */
+    constructor(format: Format?) : this(format, null)
 
-	// The actual XMLOutputProcessor to delegate to.
-	private XMLOutputProcessor myProcessor = null;
+    /**
+     * This will create an `XMLOutputter` with the specified
+     * XMLOutputProcessor.
+     *
+     * @param processor
+     * The XMLOutputProcessor to delegate output to. If null the
+     * XMLOutputter will use the default XMLOutputProcessor.
+     */
+    constructor(processor: XMLOutputProcessor?) : this(null, processor)
 
-	/*
-	 * =====================================================================
-	 * Constructors
-	 * =====================================================================
-	 */
+    /*
+     * =======================================================================
+     * API - Settings...
+     * =======================================================================
+     */
 
-	/**
-	 * This will create an <code>XMLOutputter</code> with the specified format
-	 * characteristics.
-	 * <p>
-	 * <b>Note:</b> the format object is cloned internally before use. If you
-	 * want to modify the Format after constructing the XMLOutputter you can
-	 * modify the Format instance {@link #getFormat()} returns.
-	 * 
-	 * @param format
-	 *        The Format instance to use. This instance will be cloned() and as
-	 *        a consequence, changes made to the specified format instance
-	 *        <b>will not</b> be reflected in this XMLOutputter. A null input
-	 *        format indicates that XMLOutputter should use the default
-	 *        {@link Format#getRawFormat()}
-	 * @param processor
-	 *        The XMLOutputProcessor to delegate output to. If null the
-	 *        XMLOutputter will use the default XMLOutputProcessor.
-	 */
-	public XMLOutputter(Format format, XMLOutputProcessor processor) {
-		myFormat = format == null ? Format.getRawFormat() : format.clone();
-		myProcessor = processor == null ? DEFAULTPROCESSOR : processor;
-	}
+    /**
+     * The current format in use by the XMLOutputter. Setting it sets the new
+     * format logic for the XMLOutputter: the Format object is
+     * cloned internally before use. Note the Format
+     * object returned by the getter is **not** a clone of the one used
+     * internally, thus, an XMLOutputter instance is able to have its Format
+     * changed by changing the settings on the Format instance returned.
+     */
+    var format: Format
+        get() = myFormat
+        set(newFormat) {
+            this.myFormat = newFormat.clone()
+        }
 
-	/**
-	 * This will create an <code>XMLOutputter</code> with a default
-	 * {@link Format} and {@link XMLOutputProcessor}.
-	 */
-	public XMLOutputter() {
-		this(null, null);
-	}
+    /**
+     * The current XMLOutputProcessor instance in use by the
+     * XMLOutputter. Setting it sets a new XMLOutputProcessor instance for this
+     * XMLOutputter. Note the processor object is expected to be thread-safe.
+     *
+     * (The JVM names stay `getXMLOutputProcessor`/`setXMLOutputProcessor`.)
+     */
+    var xmlOutputProcessor: XMLOutputProcessor
+        @JvmName("getXMLOutputProcessor")
+        get() = myProcessor
+        @JvmName("setXMLOutputProcessor")
+        set(processor) {
+            this.myProcessor = processor
+        }
 
-	/**
-	 * This will create an <code>XMLOutputter</code> with the same
-	 * customisations set in the given <code>XMLOutputter</code> instance. Note
-	 * that <code>XMLOutputter two = one.clone();</code> would work equally
-	 * well.
-	 * 
-	 * @param that
-	 *        the XMLOutputter to clone
-	 */
-	public XMLOutputter(XMLOutputter that) {
-		this(that.myFormat, null);
-	}
+    /*
+     * =======================================================================
+     * API - Output to STREAM Methods ... All methods defer to the WRITER
+     * equivalents
+     * =======================================================================
+     */
 
-	/**
-	 * This will create an <code>XMLOutputter</code> with the specified format
-	 * characteristics.
-	 * <p>
-	 * <b>Note:</b> the format object is cloned internally before use.
-	 * 
-	 * @param format
-	 *        The Format instance to use. This instance will be cloned() and as
-	 *        a consequence, changes made to the specified format instance
-	 *        <b>will not</b> be reflected in this XMLOutputter. A null input
-	 *        format indicates that XMLOutputter should use the default
-	 *        {@link Format#getRawFormat()}
-	 */
-	public XMLOutputter(Format format) {
-		this(format, null);
-	}
+    /**
+     * This will print the Document to the given OutputStream. The characters are
+     * printed using the encoding specified in the constructor, or a default of UTF-8.
+     *
+     * @param doc the content to output.
+     * @param out `OutputStream` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(doc: Document, out: OutputStream) {
+        output(doc, makeWriter(out, myFormat))
+    }
 
-	/**
-	 * This will create an <code>XMLOutputter</code> with the specified
-	 * XMLOutputProcessor.
-	 * 
-	 * @param processor
-	 *        The XMLOutputProcessor to delegate output to. If null the
-	 *        XMLOutputter will use the default XMLOutputProcessor.
-	 */
-	public XMLOutputter(XMLOutputProcessor processor) {
-		this(null, processor);
-	}
+    /**
+     * This will print the DocType to the given OutputStream. The characters are
+     * printed using the encoding specified in the constructor, or a default of UTF-8.
+     *
+     * @param doctype the content to output.
+     * @param out `OutputStream` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(doctype: DocType, out: OutputStream) {
+        output(doctype, makeWriter(out, myFormat))
+    }
 
-	/*
-	 * =======================================================================
-	 * API - Settings...
-	 * =======================================================================
-	 */
+    /**
+     * This will print the Element to the given OutputStream. The characters are
+     * printed using the encoding specified in the constructor, or a default of UTF-8.
+     *
+     * @param element the content to output.
+     * @param out `OutputStream` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(element: Element, out: OutputStream) {
+        output(element, makeWriter(out, myFormat))
+    }
 
-	/**
-	 * Sets the new format logic for the XMLOutputter. Note the Format object is
-	 * cloned internally before use.
-	 * 
-	 * @see #getFormat()
-	 * @param newFormat
-	 *        the format to use for subsequent output
-	 */
-	public void setFormat(Format newFormat) {
-		this.myFormat = newFormat.clone();
-	}
+    /**
+     * This will handle printing out an [Element]'s content only, not including its tag, and attributes.
+     * This can be useful for printing the content of an element that contains
+     * HTML, like "&lt;description&gt;JDOM is &lt;b&gt;fun&gt;!&lt;/description&gt;".
+     *
+     * @param element `Element` to output.
+     * @param out `OutputStream` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun outputElementContent(element: Element, out: OutputStream) {
+        outputElementContent(element, makeWriter(out, myFormat))
+    }
 
-	/**
-	 * Returns the current format in use by the XMLOutputter. Note the Format
-	 * object returned is <b>not</b> a clone of the one used internally, thus,
-	 * an XMLOutputter instance is able to have its Format changed by changing
-	 * the settings on the Format instance returned by this method.
-	 * 
-	 * @return the current Format instance used by this XMLOutputter.
-	 */
-	public Format getFormat() {
-		return myFormat;
-	}
+    /**
+     * This will print the list of Content to the given OutputStream. The characters are
+     * printed using the encoding specified in the constructor, or a default of UTF-8.
+     *
+     * @param list the content to output.
+     * @param out `OutputStream` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(list: List<Content>, out: OutputStream) {
+        output(list, makeWriter(out, myFormat)) // output() flushes
+    }
 
-	/**
-	 * Returns the current XMLOutputProcessor instance in use by the
-	 * XMLOutputter.
-	 * 
-	 * @return the current XMLOutputProcessor instance.
-	 */
-	public XMLOutputProcessor getXMLOutputProcessor() {
-		return myProcessor;
-	}
+    /**
+     * This will print the CDATA to the given OutputStream. The characters are
+     * printed using the encoding specified in the constructor, or a default of UTF-8.
+     *
+     * @param cdata the content to output.
+     * @param out `OutputStream` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(cdata: CDATA, out: OutputStream) {
+        output(cdata, makeWriter(out, myFormat)) // output() flushes
+    }
 
-	/**
-	 * Sets a new XMLOutputProcessor instance for this XMLOutputter. Note the
-	 * processor object is expected to be thread-safe.
-	 * 
-	 * @param processor
-	 *        the new XMLOutputProcesor to use for output
-	 */
-	public void setXMLOutputProcessor(XMLOutputProcessor processor) {
-		this.myProcessor = processor;
-	}
+    /**
+     * This will print the Text to the given OutputStream. The characters are
+     * printed using the encoding specified in the constructor, or a default of UTF-8.
+     *
+     * @param text the content to output.
+     * @param out `OutputStream` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(text: Text, out: OutputStream) {
+        output(text, makeWriter(out, myFormat)) // output() flushes
+    }
 
-	/*
-	 * =======================================================================
-	 * API - Output to STREAM Methods ... All methods defer to the WRITER
-	 * equivalents
-	 * =======================================================================
-	 */
+    /**
+     * This will print the Comment to the given OutputStream. The characters are
+     * printed using the encoding specified in the constructor, or a default of UTF-8.
+     *
+     * @param comment the content to output.
+     * @param out `OutputStream` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(comment: Comment, out: OutputStream) {
+        output(comment, makeWriter(out, myFormat)) // output() flushes
+    }
 
-	/**
-	 * This will print the <code>{@link Document}</code> to the given
-	 * OutputStream. The characters are printed using the encoding specified in
-	 * the constructor, or a default of UTF-8.
-	 * 
-	 * @param doc
-	 *        <code>Document</code> to format.
-	 * @param out
-	 *        <code>OutputStream</code> to use.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void output(Document doc, OutputStream out)
-			throws IOException {
-		output(doc, makeWriter(out, myFormat));
-	}
+    /**
+     * This will print the ProcessingInstruction to the given OutputStream. The characters are
+     * printed using the encoding specified in the constructor, or a default of UTF-8.
+     *
+     * @param pi the content to output.
+     * @param out `OutputStream` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(pi: ProcessingInstruction, out: OutputStream) {
+        output(pi, makeWriter(out, myFormat)) // output() flushes
+    }
 
-	/**
-	 * This will print the <code>{@link DocType}</code> to the given
-	 * OutputStream.
-	 * 
-	 * @param doctype
-	 *        <code>DocType</code> to output.
-	 * @param out
-	 *        <code>OutputStream</code> to use.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void output(DocType doctype, OutputStream out) throws IOException {
-		output(doctype, makeWriter(out, myFormat));
-	}
+    /**
+     * This will print the EntityRef to the given OutputStream. The characters are
+     * printed using the encoding specified in the constructor, or a default of UTF-8.
+     *
+     * @param entity the content to output.
+     * @param out `OutputStream` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(entity: EntityRef, out: OutputStream) {
+        output(entity, makeWriter(out, myFormat)) // output() flushes
+    }
 
-	/**
-	 * Print out an <code>{@link Element}</code>, including its
-	 * <code>{@link Attribute}</code>s, and all contained (child) elements, etc.
-	 * 
-	 * @param element
-	 *        <code>Element</code> to output.
-	 * @param out
-	 *        <code>OutputStream</code> to use.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void output(Element element, OutputStream out) throws IOException {
-		output(element, makeWriter(out, myFormat));
-	}
+    /*
+     * =======================================================================
+     * API - Output to STRING Methods ... All methods defer to the WRITER
+     * equivalents
+     * =======================================================================
+     */
 
-	/**
-	 * This will handle printing out an <code>{@link
-	 * Element}</code>'s content only, not including its tag, and attributes.
-	 * This can be useful for printing the content of an element that contains
-	 * HTML, like "&lt;description&gt;JDOM is
-	 * &lt;b&gt;fun&gt;!&lt;/description&gt;".
-	 * 
-	 * @param element
-	 *        <code>Element</code> to output.
-	 * @param out
-	 *        <code>OutputStream</code> to use.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void outputElementContent(Element element, OutputStream out)
-			throws IOException {
-		outputElementContent(element, makeWriter(out, myFormat));
-	}
+    /**
+     * Return a string representing the Document. Warning: a String is Unicode, which
+     * may not match the outputter's specified encoding.
+     *
+     * @param doc the content to output.
+     * @return the content as a String.
+     */
+    fun outputString(doc: Document): String {
+        val out = StringWriter()
+        try {
+            output(doc, out) // output() flushes
+        } catch (e: IOException) {
+            // swallow - will never happen.
+        }
+        return out.toString()
+    }
 
-	/**
-	 * This will handle printing out a list of nodes. This can be useful for
-	 * printing the content of an element that contains HTML, like
-	 * "&lt;description&gt;JDOM is &lt;b&gt;fun&gt;!&lt;/description&gt;".
-	 * <p>
-	 * The list is assumed to contain legal JDOM nodes. If other content is
-	 * coerced on to the list it will cause ClassCastExceptions, and null Lists
-	 * or null list members will cause NullPointerException.
-	 * 
-	 * @param list
-	 *        <code>List</code> of nodes.
-	 * @param out
-	 *        <code>OutputStream</code> to use.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws ClassCastException
-	 *         if non-{@link Content} is forced in to the list
-	 * @throws NullPointerException
-	 *         if the List is null or contains null members.
-	 */
-	public final void output(List<? extends Content> list, OutputStream out)
-			throws IOException {
-		output(list, makeWriter(out, myFormat)); // output() flushes
-	}
+    /**
+     * Return a string representing the DocType. Warning: a String is Unicode, which
+     * may not match the outputter's specified encoding.
+     *
+     * @param doctype the content to output.
+     * @return the content as a String.
+     */
+    fun outputString(doctype: DocType): String {
+        val out = StringWriter()
+        try {
+            output(doctype, out) // output() flushes
+        } catch (e: IOException) {
+            // swallow - will never happen.
+        }
+        return out.toString()
+    }
 
-	/**
-	 * Print out a <code>{@link CDATA}</code> node.
-	 * 
-	 * @param cdata
-	 *        <code>CDATA</code> to output.
-	 * @param out
-	 *        <code>OutputStream</code> to use.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void output(CDATA cdata, OutputStream out) throws IOException {
-		output(cdata, makeWriter(out, myFormat)); // output() flushes
-	}
+    /**
+     * Return a string representing the Element. Warning: a String is Unicode, which
+     * may not match the outputter's specified encoding.
+     *
+     * @param element the content to output.
+     * @return the content as a String.
+     */
+    fun outputString(element: Element): String {
+        val out = StringWriter()
+        try {
+            output(element, out) // output() flushes
+        } catch (e: IOException) {
+            // swallow - will never happen.
+        }
+        return out.toString()
+    }
 
-	/**
-	 * Print out a <code>{@link Text}</code> node. Performs the necessary entity
-	 * escaping and whitespace stripping.
-	 * 
-	 * @param text
-	 *        <code>Text</code> to output.
-	 * @param out
-	 *        <code>OutputStream</code> to use.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void output(Text text, OutputStream out) throws IOException {
-		output(text, makeWriter(out, myFormat)); // output() flushes
-	}
+    /**
+     * Return a string representing the list of Content. Warning: a String is Unicode, which
+     * may not match the outputter's specified encoding.
+     *
+     * @param list the content to output.
+     * @return the content as a String.
+     */
+    fun outputString(list: List<Content>): String {
+        val out = StringWriter()
+        try {
+            output(list, out) // output() flushes
+        } catch (e: IOException) {
+            // swallow - will never happen.
+        }
+        return out.toString()
+    }
 
-	/**
-	 * Print out a <code>{@link Comment}</code>.
-	 * 
-	 * @param comment
-	 *        <code>Comment</code> to output.
-	 * @param out
-	 *        <code>OutputStream</code> to use.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void output(Comment comment, OutputStream out) throws IOException {
-		output(comment, makeWriter(out, myFormat)); // output() flushes
-	}
+    /**
+     * Return a string representing the CDATA. Warning: a String is Unicode, which
+     * may not match the outputter's specified encoding.
+     *
+     * @param cdata the content to output.
+     * @return the content as a String.
+     */
+    fun outputString(cdata: CDATA): String {
+        val out = StringWriter()
+        try {
+            output(cdata, out) // output() flushes
+        } catch (e: IOException) {
+            // swallow - will never happen.
+        }
+        return out.toString()
+    }
 
-	/**
-	 * Print out a <code>{@link ProcessingInstruction}</code>.
-	 * 
-	 * @param pi
-	 *        <code>ProcessingInstruction</code> to output.
-	 * @param out
-	 *        <code>OutputStream</code> to use.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void output(ProcessingInstruction pi, OutputStream out)
-			throws IOException {
-		output(pi, makeWriter(out, myFormat)); // output() flushes
-	}
+    /**
+     * Return a string representing the Text. Warning: a String is Unicode, which
+     * may not match the outputter's specified encoding.
+     *
+     * @param text the content to output.
+     * @return the content as a String.
+     */
+    fun outputString(text: Text): String {
+        val out = StringWriter()
+        try {
+            output(text, out) // output() flushes
+        } catch (e: IOException) {
+            // swallow - will never happen.
+        }
+        return out.toString()
+    }
 
-	/**
-	 * Print out a <code>{@link EntityRef}</code>.
-	 * 
-	 * @param entity
-	 *        <code>EntityRef</code> to output.
-	 * @param out
-	 *        <code>OutputStream</code> to use.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public void output(EntityRef entity, OutputStream out) throws IOException {
-		output(entity, makeWriter(out, myFormat)); // output() flushes
-	}
+    /**
+     * Return a string representing the Comment. Warning: a String is Unicode, which
+     * may not match the outputter's specified encoding.
+     *
+     * @param comment the content to output.
+     * @return the content as a String.
+     */
+    fun outputString(comment: Comment): String {
+        val out = StringWriter()
+        try {
+            output(comment, out) // output() flushes
+        } catch (e: IOException) {
+            // swallow - will never happen.
+        }
+        return out.toString()
+    }
 
-	/*
-	 * =======================================================================
-	 * API - Output to STRING Methods ... All methods defer to the WRITER
-	 * equivalents
-	 * =======================================================================
-	 */
+    /**
+     * Return a string representing the ProcessingInstruction. Warning: a String is Unicode, which
+     * may not match the outputter's specified encoding.
+     *
+     * @param pi the content to output.
+     * @return the content as a String.
+     */
+    fun outputString(pi: ProcessingInstruction): String {
+        val out = StringWriter()
+        try {
+            output(pi, out) // output() flushes
+        } catch (e: IOException) {
+            // swallow - will never happen.
+        }
+        return out.toString()
+    }
 
-	/**
-	 * Return a string representing a {@link Document}. Uses an internal
-	 * StringWriter.
-	 * <p>
-	 * <b>Warning</b>: a String is Unicode, which may not match the outputter's
-	 * specified encoding.
-	 * 
-	 * @param doc
-	 *        <code>Document</code> to format.
-	 * @return the input content formatted as an XML String.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final String outputString(Document doc) {
-		StringWriter out = new StringWriter();
-		try {
-			output(doc, out); // output() flushes
-		} catch (IOException e) {
-			// swallow - will never happen.
-		}
-		return out.toString();
-	}
+    /**
+     * Return a string representing the EntityRef. Warning: a String is Unicode, which
+     * may not match the outputter's specified encoding.
+     *
+     * @param entity the content to output.
+     * @return the content as a String.
+     */
+    fun outputString(entity: EntityRef): String {
+        val out = StringWriter()
+        try {
+            output(entity, out) // output() flushes
+        } catch (e: IOException) {
+            // swallow - will never happen.
+        }
+        return out.toString()
+    }
 
-	/**
-	 * Return a string representing a {@link DocType}.
-	 * <p>
-	 * <b>Warning</b>: a String is Unicode, which may not match the outputter's
-	 * specified encoding.
-	 * 
-	 * @param doctype
-	 *        <code>DocType</code> to format.
-	 * @return the input content formatted as an XML String.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final String outputString(DocType doctype) {
-		StringWriter out = new StringWriter();
-		try {
-			output(doctype, out); // output() flushes
-		} catch (IOException e) {
-			// swallow - will never happen.
-		}
-		return out.toString();
-	}
+    /**
+     * Return a string representing an element's content only (no tag, no attributes).
+     *
+     * @param element `Element` to output.
+     * @return the element content as a String.
+     */
+    fun outputElementContentString(element: Element): String {
+        val out = StringWriter()
+        try {
+            outputElementContent(element, out) // output() flushes
+        } catch (e: IOException) {
+            // swallow - will never happen.
+        }
+        return out.toString()
+    }
 
-	/**
-	 * Return a string representing an {@link Element}.
-	 * <p>
-	 * <b>Warning</b>: a String is Unicode, which may not match the outputter's
-	 * specified encoding.
-	 * 
-	 * @param element
-	 *        <code>Element</code> to format.
-	 * @return the input content formatted as an XML String.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final String outputString(Element element) {
-		StringWriter out = new StringWriter();
-		try {
-			output(element, out); // output() flushes
-		} catch (IOException e) {
-			// swallow - will never happen.
-		}
-		return out.toString();
-	}
+    /*
+     * =======================================================================
+     * API - Output to WRITER Methods ... All methods defer to the processor.
+     * =======================================================================
+     */
 
-	/**
-	 * Return a string representing a List of {@link Content} nodes. <br>
-	 * The list is assumed to contain legal JDOM nodes. If other content is
-	 * coerced on to the list it will cause ClassCastExceptions, and null List
-	 * members will cause NullPointerException.
-	 * <p>
-	 * <b>Warning</b>: a String is Unicode, which may not match the outputter's
-	 * specified encoding.
-	 * 
-	 * @param list
-	 *        <code>List</code> to format.
-	 * @return the input content formatted as an XML String.
-	 * @throws ClassCastException
-	 *         if non-{@link Content} is forced in to the list
-	 * @throws NullPointerException
-	 *         if the List is null or contains null members.
-	 */
-	public final String outputString(List<? extends Content> list) {
-		StringWriter out = new StringWriter();
-		try {
-			output(list, out); // output() flushes
-		} catch (IOException e) {
-			// swallow - will never happen.
-		}
-		return out.toString();
-	}
+    /**
+     * This will print the Document to the given Writer. Warning: using your own
+     * Writer may cause the outputter's preferred character encoding to be ignored.
+     *
+     * @param doc the content to output.
+     * @param out `Writer` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(doc: Document, out: Writer) {
+        myProcessor.process(out, myFormat, doc)
+        out.flush()
+    }
 
-	/**
-	 * Return a string representing a {@link CDATA} node.
-	 * <p>
-	 * <b>Warning</b>: a String is Unicode, which may not match the outputter's
-	 * specified encoding.
-	 * 
-	 * @param cdata
-	 *        <code>CDATA</code> to format.
-	 * @return the input content formatted as an XML String.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final String outputString(CDATA cdata) {
-		StringWriter out = new StringWriter();
-		try {
-			output(cdata, out); // output() flushes
-		} catch (IOException e) {
-			// swallow - will never happen.
-		}
-		return out.toString();
-	}
+    /**
+     * This will print the DocType to the given Writer. Warning: using your own
+     * Writer may cause the outputter's preferred character encoding to be ignored.
+     *
+     * @param doctype the content to output.
+     * @param out `Writer` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(doctype: DocType, out: Writer) {
+        myProcessor.process(out, myFormat, doctype)
+        out.flush()
+    }
 
-	/**
-	 * Return a string representing a {@link Text} node.
-	 * <p>
-	 * <b>Warning</b>: a String is Unicode, which may not match the outputter's
-	 * specified encoding.
-	 * 
-	 * @param text
-	 *        <code>Text</code> to format.
-	 * @return the input content formatted as an XML String.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final String outputString(Text text) {
-		StringWriter out = new StringWriter();
-		try {
-			output(text, out); // output() flushes
-		} catch (IOException e) {
-			// swallow - will never happen.
-		}
-		return out.toString();
-	}
+    /**
+     * This will print the Element to the given Writer. Warning: using your own
+     * Writer may cause the outputter's preferred character encoding to be ignored.
+     *
+     * @param element the content to output.
+     * @param out `Writer` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(element: Element, out: Writer) {
+        // If this is the root element we could pre-initialize the
+        // namespace stack with the namespaces
+        myProcessor.process(out, myFormat, element)
+        out.flush()
+    }
 
-	/**
-	 * Return a string representing a {@link Comment}.
-	 * <p>
-	 * <b>Warning</b>: a String is Unicode, which may not match the outputter's
-	 * specified encoding.
-	 * 
-	 * @param comment
-	 *        <code>Comment</code> to format.
-	 * @return the input content formatted as an XML String.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final String outputString(Comment comment) {
-		StringWriter out = new StringWriter();
-		try {
-			output(comment, out); // output() flushes
-		} catch (IOException e) {
-			// swallow - will never happen.
-		}
-		return out.toString();
-	}
+    /**
+     * This will handle printing out an [Element]'s content only, not including its tag, and attributes.
+     *
+     * @param element `Element` to output.
+     * @param out `Writer` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun outputElementContent(element: Element, out: Writer) {
+        myProcessor.process(out, myFormat, element.content)
+        out.flush()
+    }
 
-	/**
-	 * Return a string representing a {@link ProcessingInstruction}.
-	 * <p>
-	 * <b>Warning</b>: a String is Unicode, which may not match the outputter's
-	 * specified encoding.
-	 * 
-	 * @param pi
-	 *        <code>ProcessingInstruction</code> to format.
-	 * @return the input content formatted as an XML String.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final String outputString(ProcessingInstruction pi) {
-		StringWriter out = new StringWriter();
-		try {
-			output(pi, out); // output() flushes
-		} catch (IOException e) {
-			// swallow - will never happen.
-		}
-		return out.toString();
-	}
+    /**
+     * This will print the list of Content to the given Writer. Warning: using your own
+     * Writer may cause the outputter's preferred character encoding to be ignored.
+     *
+     * @param list the content to output.
+     * @param out `Writer` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(list: List<Content>, out: Writer) {
+        myProcessor.process(out, myFormat, list)
+        out.flush()
+    }
 
-	/**
-	 * Return a string representing an {@link EntityRef}.
-	 * <p>
-	 * <b>Warning</b>: a String is Unicode, which may not match the outputter's
-	 * specified encoding.
-	 * 
-	 * @param entity
-	 *        <code>EntityRef</code> to format.
-	 * @return the input content formatted as an XML String.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final String outputString(EntityRef entity) {
-		StringWriter out = new StringWriter();
-		try {
-			output(entity, out); // output() flushes
-		} catch (IOException e) {
-			// swallow - will never happen.
-		}
-		return out.toString();
-	}
+    /**
+     * This will print the CDATA to the given Writer. Warning: using your own
+     * Writer may cause the outputter's preferred character encoding to be ignored.
+     *
+     * @param cdata the content to output.
+     * @param out `Writer` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(cdata: CDATA, out: Writer) {
+        myProcessor.process(out, myFormat, cdata)
+        out.flush()
+    }
 
-	/**
-	 * This will handle printing out an <code>{@link
-	 * Element}</code>'s content only, not including its tag, and attributes.
-	 * This can be useful for printing the content of an element that contains
-	 * HTML, like "&lt;description&gt;JDOM is
-	 * &lt;b&gt;fun&gt;!&lt;/description&gt;".
-	 * <p>
-	 * <b>Warning</b>: a String is Unicode, which may not match the outputter's
-	 * specified encoding.
-	 * 
-	 * @param element
-	 *        <code>Element</code> to output.
-	 * @return the input content formatted as an XML String.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final String outputElementContentString(Element element) {
-		StringWriter out = new StringWriter();
-		try {
-			outputElementContent(element, out); // output() flushes
-		} catch (IOException e) {
-			// swallow - will never happen.
-		}
-		return out.toString();
-	}
+    /**
+     * This will print the Text to the given Writer. Warning: using your own
+     * Writer may cause the outputter's preferred character encoding to be ignored.
+     *
+     * @param text the content to output.
+     * @param out `Writer` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(text: Text, out: Writer) {
+        myProcessor.process(out, myFormat, text)
+        out.flush()
+    }
 
-	/*
-	 * ========================================================================
-	 * API - Output to WRITER Methods ... These are the core methods that the
-	 * Stream and String output methods call. On the other hand, these methods
-	 * defer to the protected/override methods. These methods flush the writer.
-	 * ========================================================================
-	 */
+    /**
+     * This will print the Comment to the given Writer. Warning: using your own
+     * Writer may cause the outputter's preferred character encoding to be ignored.
+     *
+     * @param comment the content to output.
+     * @param out `Writer` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(comment: Comment, out: Writer) {
+        myProcessor.process(out, myFormat, comment)
+        out.flush()
+    }
 
-	/**
-	 * This will print the <code>Document</code> to the given Writer.
-	 * <p>
-	 * <strong>Note:</strong> ensure the character encoding of the
-	 * <code>out</code> Writer is set the same as the {@link Format}'s encoding
-	 * (see 'warning' on {@link XMLOutputter}).
-	 * 
-	 * @param doc
-	 *        <code>Document</code> to format.
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @throws IOException
-	 *         - if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void output(Document doc, Writer out) throws IOException {
-		myProcessor.process(out, myFormat, doc);
-		out.flush();
-	}
+    /**
+     * This will print the ProcessingInstruction to the given Writer. Warning: using your own
+     * Writer may cause the outputter's preferred character encoding to be ignored.
+     *
+     * @param pi the content to output.
+     * @param out `Writer` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(pi: ProcessingInstruction, out: Writer) {
+        myProcessor.process(out, myFormat, pi)
+        out.flush()
+    }
 
-	/**
-	 * Print out the <code>{@link DocType}</code>.
-	 * <p>
-	 * <strong>Note:</strong> ensure the character encoding of the
-	 * <code>out</code> Writer is set the same as the {@link Format}'s encoding
-	 * (see 'warning' on {@link XMLOutputter}).
-	 * 
-	 * @param doctype
-	 *        <code>DocType</code> to output.
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @throws IOException
-	 *         - if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void output(DocType doctype, Writer out) throws IOException {
-		myProcessor.process(out, myFormat, doctype);
-		out.flush();
-	}
+    /**
+     * This will print the EntityRef to the given Writer. Warning: using your own
+     * Writer may cause the outputter's preferred character encoding to be ignored.
+     *
+     * @param entity the content to output.
+     * @param out `Writer` to use.
+     * @throws IOException if there's any problem writing.
+     * @throws NullPointerException if the specified content is null.
+     */
+    @Throws(IOException::class)
+    fun output(entity: EntityRef, out: Writer) {
+        myProcessor.process(out, myFormat, entity)
+        out.flush()
+    }
+    /*
+     * =======================================================================
+     * API - Escaping
+     * =======================================================================
+     */
 
-	/**
-	 * Print out an <code>{@link Element}</code>, including its
-	 * <code>{@link Attribute}</code>s, and all contained (child) elements, etc.
-	 * <p>
-	 * <strong>Note:</strong> ensure the character encoding of the
-	 * <code>out</code> Writer is set the same as the {@link Format}'s encoding
-	 * (see 'warning' on {@link XMLOutputter}).
-	 * 
-	 * @param element
-	 *        <code>Element</code> to output.
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @throws IOException
-	 *         - if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void output(Element element, Writer out) throws IOException {
-		// If this is the root element we could pre-initialize the
-		// namespace stack with the namespaces
-		myProcessor.process(out, myFormat, element);
-		out.flush();
-	}
+    /**
+     * Escape any characters in the String that must be escaped in an attribute value.
+     * (JDOM1 backward-compatibility.)
+     *
+     * @param str The String to escape.
+     * @return the escaped String.
+     */
+    fun escapeAttributeEntities(str: String): String {
+        return DEFAULTPROCESSOR.escapeAttributeEntities(str, myFormat)
+    }
 
-	/**
-	 * This will handle printing out an <code>{@link
-	 * Element}</code>'s content only, not including its tag, and attributes.
-	 * This can be useful for printing the content of an element that contains
-	 * HTML, like "&lt;description&gt;JDOM is
-	 * &lt;b&gt;fun&gt;!&lt;/description&gt;".
-	 * <p>
-	 * <strong>Note:</strong> ensure the character encoding of the
-	 * <code>out</code> Writer is set the same as the {@link Format}'s encoding
-	 * (see 'warning' on {@link XMLOutputter}).
-	 * 
-	 * @param element
-	 *        <code>Element</code> to output.
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @throws IOException
-	 *         - if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void outputElementContent(Element element, Writer out)
-			throws IOException {
-		myProcessor.process(out, myFormat, element.getContent());
-		out.flush();
-	}
+    /**
+     * Escape any characters in the String that must be escaped in element text.
+     * (JDOM1 backward-compatibility.)
+     *
+     * @param str The String to escape.
+     * @return the escaped String.
+     */
+    fun escapeElementEntities(str: String): String {
+        return DEFAULTPROCESSOR.escapeElementEntities(str, myFormat)
+    }
 
-	/**
-	 * This will handle printing out a list of nodes. This can be useful for
-	 * printing the content of an element that contains HTML, like
-	 * "&lt;description&gt;JDOM is &lt;b&gt;fun&gt;!&lt;/description&gt;".
-	 * <p>
-	 * <strong>Note:</strong> ensure the character encoding of the
-	 * <code>out</code> Writer is set the same as the {@link Format}'s encoding
-	 * (see 'warning' on {@link XMLOutputter}).
-	 * 
-	 * @param list
-	 *        <code>List</code> of nodes.
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @throws IOException
-	 *         - if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void output(List<? extends Content> list, Writer out)
-			throws IOException {
-		myProcessor.process(out, myFormat, list);
-		out.flush();
-	}
+    /*
+     * =======================================================================
+     * Basic support methods.
+     * =======================================================================
+     */
 
-	/**
-	 * Print out a <code>{@link CDATA}</code> node.
-	 * <p>
-	 * <strong>Note:</strong> ensure the character encoding of the
-	 * <code>out</code> Writer is set the same as the {@link Format}'s encoding
-	 * (see 'warning' on {@link XMLOutputter}).
-	 * 
-	 * @param cdata
-	 *        <code>CDATA</code> to output.
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @throws IOException
-	 *         - if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void output(CDATA cdata, Writer out) throws IOException {
-		myProcessor.process(out, myFormat, cdata);
-		out.flush();
-	}
+    /**
+     * Returns a cloned copy of this XMLOutputter.
+     */
+    public override fun clone(): XMLOutputter {
+        // Implementation notes: Since all state of an XMLOutputter is
+        // embodied in simple private instance variables, Object.clone
+        // can be used. Note that since Object.clone is totally
+        // broken, we must catch an exception that will never be
+        // thrown.
+        try {
+            return super<Cloneable>.clone() as XMLOutputter
+        } catch (e: CloneNotSupportedException) {
+            // even though this should never ever happen, it's still
+            // possible to fool Java into throwing a
+            // CloneNotSupportedException. If that happens, we
+            // shouldn't swallow it.
+            throw RuntimeException(e.toString())
+        }
+    }
 
-	/**
-	 * Print out a <code>{@link Text}</code> node. Performs the necessary entity
-	 * escaping and whitespace stripping.
-	 * <p>
-	 * <strong>Note:</strong> ensure the character encoding of the
-	 * <code>out</code> Writer is set the same as the {@link Format}'s encoding
-	 * (see 'warning' on {@link XMLOutputter}).
-	 * 
-	 * @param text
-	 *        <code>Text</code> to output.
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @throws IOException
-	 *         - if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void output(Text text, Writer out) throws IOException {
-		myProcessor.process(out, myFormat, text);
-		out.flush();
-	}
+    /**
+     * Return a string listing of the settings for this
+     * XMLOutputter instance.
+     *
+     * @return a string listing the settings for this XMLOutputter instance
+     */
+    override fun toString(): String {
+        val buffer = StringBuilder()
+        buffer.append("XMLOutputter[omitDeclaration = ")
+        buffer.append(myFormat.omitDeclaration)
+        buffer.append(", ")
+        buffer.append("encoding = ")
+        buffer.append(myFormat.encoding)
+        buffer.append(", ")
+        buffer.append("omitEncoding = ")
+        buffer.append(myFormat.omitEncoding)
+        buffer.append(", ")
+        buffer.append("indent = '")
+        buffer.append(myFormat.indent)
+        buffer.append("'")
+        buffer.append(", ")
+        buffer.append("expandEmptyElements = ")
+        buffer.append(myFormat.expandEmptyElements)
+        buffer.append(", ")
+        buffer.append("lineSeparator = '")
+        for (ch in myFormat.lineSeparator!!.toCharArray()) {
+            when (ch) {
+                '\r' -> buffer.append("\\r")
+                '\n' -> buffer.append("\\n")
+                '\t' -> buffer.append("\\t")
+                else -> buffer.append("[" + ch.code + "]")
+            }
+        }
+        buffer.append("', ")
+        buffer.append("textMode = ")
+        buffer.append(myFormat.textMode.toString() + "]")
+        return buffer.toString()
+    }
 
-	/**
-	 * Print out a <code>{@link Comment}</code>.
-	 * <p>
-	 * <strong>Note:</strong> ensure the character encoding of the
-	 * <code>out</code> Writer is set the same as the {@link Format}'s encoding
-	 * (see 'warning' on {@link XMLOutputter}).
-	 * 
-	 * @param comment
-	 *        <code>Comment</code> to output.
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @throws IOException
-	 *         - if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void output(Comment comment, Writer out) throws IOException {
-		myProcessor.process(out, myFormat, comment);
-		out.flush();
-	}
+    private companion object {
 
-	/**
-	 * Print out a <code>{@link ProcessingInstruction}</code>.
-	 * <p>
-	 * <strong>Note:</strong> ensure the character encoding of the
-	 * <code>out</code> Writer is set the same as the {@link Format}'s encoding
-	 * (see 'warning' on {@link XMLOutputter}).
-	 * 
-	 * @param pi
-	 *        <code>ProcessingInstruction</code> to output.
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @throws IOException
-	 *         - if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void output(ProcessingInstruction pi, Writer out)
-			throws IOException {
-		myProcessor.process(out, myFormat, pi);
-		out.flush();
-	}
+        /*
+         * =====================================================================
+         * Static content.
+         * =====================================================================
+         */
 
-	/**
-	 * Print out an <code>{@link EntityRef}</code>.
-	 * <p>
-	 * <strong>Note:</strong> ensure the character encoding of the
-	 * <code>out</code> Writer is set the same as the {@link Format}'s encoding
-	 * (see 'warning' on {@link XMLOutputter}).
-	 * 
-	 * @param entity
-	 *        <code>EntityRef</code> to output.
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @throws IOException
-	 *         - if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the specified content is null.
-	 */
-	public final void output(EntityRef entity, Writer out) throws IOException {
-		myProcessor.process(out, myFormat, entity);
-		out.flush();
-	}
+        /**
+         * Get an OutputStreamWriter, use specified encoding.
+         *
+         * @param out
+         * The OutputStream to wrap in the writer
+         * @param format
+         * The format is used to obtain the Character Encoding.
+         * @return An Writer (Buffered) that delegates to the specified output steam
+         * @throws java.io.UnsupportedEncodingException
+         */
+        @Throws(java.io.UnsupportedEncodingException::class)
+        private fun makeWriter(out: OutputStream, format: Format): Writer {
+            return BufferedWriter(
+                OutputStreamWriter(
+                    BufferedOutputStream(out), format.encoding
+                )
+            )
+        }
 
-	/*
-	 * ========================================================================
-	 * SpecialCaseMethods for maintaining API Compatibility
-	 * ========================================================================
-	 */
-
-	/**
-	 * Escape any characters in the input string in such a way that the returned
-	 * value is valid as output in an XML Attribute value.
-	 * 
-	 * @param str
-	 *        the input String to escape
-	 * @return the escaped version of the input String
-	 */
-	public String escapeAttributeEntities(String str) {
-		return DEFAULTPROCESSOR.escapeAttributeEntities(str, myFormat);
-	}
-
-	/**
-	 * Escape any characters in the input string in such a way that the returned
-	 * value is valid as output in an XML Element text.
-	 * 
-	 * @param str
-	 *        the input String to escape
-	 * @return the escaped version of the input String
-	 */
-	public String escapeElementEntities(String str) {
-		return DEFAULTPROCESSOR.escapeElementEntities(str, myFormat);
-	}
-
-	/*
-	 * ========================================================================
-	 * Basic Support methods.
-	 * ========================================================================
-	 */
-
-	/**
-	 * Returns a cloned copy of this XMLOutputter.
-	 */
-	@Override
-	public XMLOutputter clone() {
-		// Implementation notes: Since all state of an XMLOutputter is
-		// embodied in simple private instance variables, Object.clone
-		// can be used. Note that since Object.clone is totally
-		// broken, we must catch an exception that will never be
-		// thrown.
-		try {
-			return (XMLOutputter) super.clone();
-		} catch (java.lang.CloneNotSupportedException e) {
-			// even though this should never ever happen, it's still
-			// possible to fool Java into throwing a
-			// CloneNotSupportedException. If that happens, we
-			// shouldn't swallow it.
-			throw new RuntimeException(e.toString());
-		}
-	}
-
-	/**
-	 * Return a string listing of the settings for this XMLOutputter instance.
-	 * 
-	 * @return a string listing the settings for this XMLOutputter instance
-	 */
-	@Override
-	public String toString() {
-		StringBuilder buffer = new StringBuilder();
-		buffer.append("XMLOutputter[omitDeclaration = ");
-		buffer.append(myFormat.getOmitDeclaration());
-		buffer.append(", ");
-		buffer.append("encoding = ");
-		buffer.append(myFormat.getEncoding());
-		buffer.append(", ");
-		buffer.append("omitEncoding = ");
-		buffer.append(myFormat.getOmitEncoding());
-		buffer.append(", ");
-		buffer.append("indent = '");
-		buffer.append(myFormat.getIndent());
-		buffer.append("'");
-		buffer.append(", ");
-		buffer.append("expandEmptyElements = ");
-		buffer.append(myFormat.getExpandEmptyElements());
-		buffer.append(", ");
-		buffer.append("lineSeparator = '");
-		for (char ch : myFormat.getLineSeparator().toCharArray()) {
-			switch (ch) {
-				case '\r':
-					buffer.append("\\r");
-					break;
-				case '\n':
-					buffer.append("\\n");
-					break;
-				case '\t':
-					buffer.append("\\t");
-					break;
-				default:
-					buffer.append("[" + ((int) ch) + "]");
-					break;
-			}
-		}
-		buffer.append("', ");
-		buffer.append("textMode = ");
-		buffer.append(myFormat.getTextMode() + "]");
-		return buffer.toString();
-	}
-
+        /**
+         * This constant XMLOutputProcessor is used for all non-customised
+         * XMLOutputters
+         */
+        private val DEFAULTPROCESSOR = DefaultXMLProcessor()
+    }
 }
