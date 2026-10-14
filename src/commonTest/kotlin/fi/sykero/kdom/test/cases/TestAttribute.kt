@@ -576,7 +576,7 @@ class TestAttribute {
     	assertFailsWith<IllegalDataException>("Attribute setValue didn't catch invalid comment string") {
     		val c: Char = 0x11.toChar()
     		val buffer = StringBuilder("hhhh")
-            buffer.setCharAt(2, c)
+            buffer[2] = c
     		attribute.setValue(buffer.toString())
     	}
 

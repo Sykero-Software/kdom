@@ -1,6 +1,7 @@
 /* Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software. */
 package fi.sykero.kdom.test.cases.output
 
+import kotlin.jvm.JvmStatic
 import kotlin.test.*
 import fi.sykero.kdom.test.util.nullT
 import fi.sykero.kdom.output.EscapeStrategy

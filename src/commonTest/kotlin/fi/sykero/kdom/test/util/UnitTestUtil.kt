@@ -12,6 +12,7 @@ import fi.sykero.kdom.Namespace
 import fi.sykero.kdom.NamespaceAware
 import fi.sykero.kdom.ProcessingInstruction
 import kotlin.reflect.KClass
+import kotlin.jvm.JvmStatic
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull

@@ -156,7 +156,7 @@ class TestComment {
 		assertFailsWith<IllegalDataException>("Comment setText didn't catch invalid comment string") {
 			val c: Char = 0x11.toChar()
 			val b = StringBuilder("hhhh")
-			b.setCharAt(2, c)
+			b[2] = c
 			theComment.setText(b.toString())
 		}
 

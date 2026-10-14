@@ -190,7 +190,7 @@ class TestCDATA {
         try {
             val c: Char = 0x11.toChar()
             val buffer = StringBuilder("hhhh")
-            buffer.setCharAt(2, c)
+            buffer[2] = c
 
             cdata.setText(buffer.toString())
             fail("Comment setText didn't catch invalid CDATA string")

@@ -279,7 +279,19 @@ common code uses only the Kotlin stdlib, no `java.*`/`javax.*`). API changes:
   (`windows-1252`, `Shift_JIS`, an unknown name, ...). The listed names give jdom2's answers. Pinned by `FormatEscapeStrategyTest`;
   `TestFormat#testCharsetEncodingEscapes` / `#testIllegalEncodingEscapes` were changed to expect the kdom answers.
 - **No line-separator system property** (Task 7): `-Dorg.jdom2.output.LineSeparator=...` (`fi.sykero.kdom.output.LineSeparator`) is
-  ignored; `LineSeparator.DEFAULT` is always `"\r\n"`. Pinned by `LineSeparatorTest`.
+  ignored; `LineSeparator.DEFAULT` is always `"\r\n"`. Pinned by `LineSeparatorTest`: `defaultIgnoresTheJdom2SystemProperty` sets
+  the property (the jdom2 name `org.jdom2.output.LineSeparator` and the renamed `fi.sykero.kdom.output.LineSeparator`) to `"\n"`
+  in a try/finally, loads a fresh copy of `LineSeparator` through a class loader of its own (the class of the test JVM is
+  already initialised, so only a fresh load would read the property) and asserts that `DEFAULT` stays `"\r\n"`.
+- **`output(x, System.out)` binds to the `Appendable` member** (Task 7 review, pinned in Task 8): a `PrintStream` is an
+  `OutputStream` and an `Appendable`, and a member always wins over an extension function. `outputter.output(doc, System.out)` (and
+  any `PrintStream`) therefore calls the member `output(x, Appendable)`: the stream's own encoding encodes the text and
+  `Format.encoding` is ignored for the characters (it only names the encoding in the XML declaration). jdom2 routed every
+  `OutputStream` through `OutputStreamWriter(format.encoding)`. Only a value whose static type is `OutputStream` (a raw
+  `ByteArrayOutputStream`, or a `PrintStream` held in an `OutputStream` variable) reaches the extension
+  `XMLOutputter.output(x, OutputStream)` (`import fi.sykero.kdom.output.output`), which keeps jdom2's behaviour. Pinned by
+  `OutputStreamBindingTest` (jvmTest, three tests with a `PrintStream(.., "UTF-8"/"ISO-8859-1")` and a raw
+  `ByteArrayOutputStream`).
 - **Null passed to a non-null setter** (Task 6 shape, pinned in Task 7): `Format.setTextMode(null)`, `Format.setEscapeStrategy(null)`,
   `XMLOutputter.setFormat(null)` and `setXMLOutputProcessor(null)` throw `NullPointerException` at the call (Kotlin parameter check);
   jdom2 stored the null and failed with a `NullPointerException` later, at output (`setFormat(null)` failed at once in jdom2 too).
@@ -293,6 +305,74 @@ common code uses only the Kotlin stdlib, no `java.*`/`javax.*`). API changes:
 - **Error messages on iOS** (Task 7): class names in `ContentList` messages and `ClassFilter.toString()` are Kotlin qualified names on
   iOS (unchanged on the JVM). `Attribute.floatValue/doubleValue` parse with Kotlin's `toFloat()/toDouble()`, the JDK parser on the JVM;
   the iOS parser's grammar for unusual inputs (hex floats, `f`/`d` suffixes) is not verified here.
+- **`sortWith` on a live list on iOS** (Task 7 review): `AttributeList`, `ContentList` and `ContentList.FilterList` extend
+  `KdomMutableList`, whose JVM actual keeps jdom2's `List.sort(Comparator)` override (the in-place sort that Kotlin's `sortWith`
+  reaches on the JVM). Common code has no `List.sort` member, so on iOS `MutableList.sortWith` falls back to the stdlib's
+  generic implementation, which sorts a copy and writes it back through a list iterator calling `set`. kdom's `set` rejects content
+  that already has a parent (`IllegalAddException`), and every element of the list has one, so `sortWith` on a live
+  `ContentList`/`AttributeList` fails loudly at the first move on iOS (it works on the JVM). `Element.sortContent`,
+  `sortChildren` and `sortAttributes` work on every platform and are the supported way to sort.
+
+## Common tests (Task 8)
+
+The jdom2 tests listed in the plan moved from `src/jvmTest/java` to `src/commonTest/kotlin` (same package `fi.sykero.kdom.test...`,
+same class and method names, assertion messages kept; `try { ..; fail() } catch (X e) { }` became `assertFailsWith<X>("msg") { .. }`,
+the catch-all `catch (Exception e) { fail(..) }` that followed it is covered by `assertFailsWith`). The conversion was mechanical
+(a token-based Java-to-Kotlin script) followed by compiler-driven fixes; a translated test replaced its Java original one to one.
+
+Translated (Java `@Test` methods -> Kotlin, base classes count their own methods; subclasses inherit them):
+`TestText` 10 -> 9, `TestCDATA` 11 -> 11, `TestComment` 10 -> 9, `TestProcessingInstruction` 30 -> 29, `TestNamespace` 15 -> 15,
+`TestAttribute` 31 -> 30, `AbstractTestList` 19 -> 19 (inherited by `TestAttributeList` 5 -> 5 and `TestContentList` 1 -> 1), `TestDocument` 28 -> 28,
+`TestElement` 110 -> 109, `TestVerifier` 16 -> 16, `AbstractTestFilter` 0 -> 0 (`TestFilters` 22 -> 22, `TestElementFilter` 5 -> 5, plus
+`TestContentFilter` 11 -> 11 and `TestAtributeFilter` 5 -> 5, translated with them because they extend the base), `TestFormat` 22 -> 22,
+`AbstractTestOutputter` 63 -> 63 (`TestXMLOutputter` 20 -> 20, of which 7 `@Ignore`d). The five missing methods are the raw-instance tests
+(below). `UnitTestUtil` is a common `object` (`@JvmStatic` members), plus top-level `javaAsList` and `nullT`.
+
+Stay in `jvmTest` (Java), with the reason:
+- `RawInstanceTest` (new, 5 tests cut unchanged from `TestText#testText`, `TestComment#test_TCC`, `TestProcessingInstruction#testProcessingInstruction`,
+  `TestAttribute#test_TCC`, `TestElement#test_TCC`): a raw instance returns `null` from properties typed non-null (see "Raw instances"); the
+  `== null` on a non-null type is undefined on Native. `TestEntityRef` and `TestDocType` keep theirs. `TestCDATA#test_TCC` has no null
+  assertion and is common.
+- `TestPassThroughFilter`: it calls `add` on the filter result, which is a Kotlin read-only list; the Java test expects the JVM's
+  `UnsupportedOperationException` from it (Kotlin `as MutableList` would give `ClassCastException`, see "Read-only lists and Kotlin casts").
+- `JvmTestUtil` (new): the `Class` flavoured `failNoException`/`checkException`/`failException` used by the Java tests that were not
+  translated (`TestEntityRef`, `TestDescendantIterator`, `TestArrayCopy`, `TestPassThroughFilter`, `TestFilterList`), and `deSerialize`.
+  The jdom2 "Android" switch (`setAndroid`) had no caller and was dropped.
+- Not in the plan's list, unchanged: `TestVerifierCharacters` (generated by `VerifierTestBuilder`, reflection), `TestDocType`, `TestEntityRef`,
+  `TestNamespaceAware`, `TestDescendantIterator`, `TestDescendantFilterIterator`, `TestJDOMExceptn`, `TestFilterList`, `TestFilterListText`,
+  `TestFilterListElement`, `TestElementFilterList`, `util/ListTest` (these extend `AbstractTestList`: they pass `JvmClassMappingKt.getKotlinClass(X.class)`),
+  `TestXMLOutputProcessor` (`java.io.Writer`), `TestArrayCopy`, `TestNamespaceStack`, `special/TestIssue173ContentCount` (keeps its
+  `@Ignore` and `// K5: needs KdomBuilder (Task 9)` marker, ruling R4).
+
+Differences from the Java tests (none changes an expectation):
+- **R4 markers.** kotlin.test's `@Ignore` takes no argument, so the seven `TestXMLOutputter` tests read
+  `// K5: needs KdomBuilder (Task 9)` then `@Ignore /* needs KdomBuilder, Task 9 */ @Test fun ...`, and keep the private placeholder
+  `parseWithKdomBuilder(String)` (throws `UnsupportedOperationException`). Task 9 fills the placeholder and removes the `@Ignore`s. Their
+  `ByteArrayOutputStream` output now goes through `outputToString` (the OutputStream form on the JVM through the `outputViaStream` hook, the
+  Appendable form on iOS).
+- **No reflection.** `TestXMLOutputter.checkOutput` found `outputString`/`output(Writer)`/the stream method by reflection; it dispatches on the
+  content type now (`outputStringOf`, `outputToAppendable`), and the OutputStream form is the common `expect fun outputViaStream` (JVM actual in
+  `jvmTest`: the `XMLOutputterJvm.kt` extensions; iOS actual: `null`, no stream form). `AbstractTestOutputter` replaced its table of class-keyed
+  runners by a `when`; `checkOutput` lost its `Class` parameter.
+- **`AbstractTestFilter` twins** (Task 7 review minor): `exercise`/`exerciseAtt` take a second, separately constructed filter that is equal
+  to the first (`twin`) instead of a deserialized copy (which Task 7 had replaced by the same instance, losing the equal-but-not-identical
+  case). It checks `twin !== af` and `assertFilterEquals(af, twin)`, exercises the twin, and builds every derived filter (`negate`,
+  `or`, `and`, `refine`) a second time from it; `exerciseCore(ef, cf, ..)` takes the equal copy where `deSerialize(ef)` was used. The callers
+  construct the twin (`ElementFilter(name)` twice, `ContentFilter(mask)` as the twin of the flag-by-flag `cfa`). `TestFilters#checkFilter` keeps
+  its Task 7 form (no deserialized-copy equality line).
+- **`AbstractTestList`** takes a `KClass<*>` (`isInstance`), `buildArray` copies the sample array (`copyOf`) instead of `Array.newInstance`,
+  `ArrayCopy` calls are the stdlib `copyOf`/`copyOfRange`; a `null` that jdom2 passed as `(T) null`, or a `null` collection, is `nullT()`
+  (`fi.sykero.kdom.internal.unsafeNull`: an erased null, so the callee's own null check is what is exercised). `testIllegalClassContent` returns
+  at once when `checksErasedCasts` is false (`expect val` in `TestPlatform.kt`, true on the JVM, false on iOS): Kotlin/Native does not check an erased
+  cast at the typed call, so the wrong-class object would enter the typed list unchecked; the other 18 inherited tests run on both platforms.
+- Java statics became instance state (`private static final Element base`, the `static {}` format setup of `AbstractTestOutputter`): each test
+  instance builds its own, which is what JUnit's per-method instances give anyway; `TestFormat.checkEquals` is a `@JvmStatic` companion
+  function (`TestXMLOutputter` calls it). `LinkedList` became `ArrayList`, `Collections.EMPTY_LIST` `emptyList<Any?>()`, `String.format`
+  string templates, Java `==` on references `===`, an `int` argument that took a `char` (`Verifier.isXMLCharacter('x')`) `'x'.code`, a
+  `switch` a `when` (`Content.CType` entries), a `char[]` write `sb[i] = c`.
+- Null passed where Java passed a typed `null` variable (`element.addContent((CDATA) null)`, `setAttribute(null)`): `nullT<Content>()` /
+  `nullT()`, which reaches the callee's parameter check; the expected `NullPointerException` is unchanged.
+- `xmlchars.xml` is read by none of the kept or translated tests, so nothing is embedded; the file stays in `src/jvmTest/resources`.
 
 ## Task 5 traps (met while translating)
 
@@ -403,13 +483,15 @@ Each parse goes through a private placeholder `parseWithKdomBuilder(String)` in 
 (716 - 5 serialization tests - 7 `getXMLBaseURI` tests + 20 new: `NamespaceCacheConcurrencyTest` 3 (common), `FormatEscapeStrategyTest` 2,
 `LineSeparatorTest` 2, `CloneTest` 5, `CommonCollectionsTest` 3, `CommonHelpersTest` 3, `NullSetterTest` 2).
 This number may only grow (apart from the listed removals); the 8 K5 ignores return in Task 9.
+After Task 8 (common tests; 5 raw-instance tests moved into `RawInstanceTest`, the totals of the translated classes are unchanged): 52 classes / 728 tests
+(724 + `LineSeparatorTest#defaultIgnoresTheJdom2SystemProperty` + 3 `OutputStreamBindingTest`) / 10 skipped / 0 failures.
 
 ### Import notes (fix round 1)
 
 - `TestDescendantIterator`, `TestDescendantFilterIterator` and `TestJDOMExceptn` (17 tests) use only imported classes and are
   imported unchanged under `test/cases/`; all run green (none ignored).
 - Line endings: the CRLF originals of `UnitTestUtil.java` and `complex.xml` were normalised to LF by git.
-- `xmlchars.xml` and `complex.xml` are copied to `src/jvmTest/resources` but are currently unused by the kept tests
-  (Task 8 embeds xmlchars).
+- `xmlchars.xml` and `complex.xml` are copied to `src/jvmTest/resources` but are unused by the kept and the translated tests
+  (Task 8: nothing to embed, see "Common tests").
 - Known stale string: `output/LineSeparator.java` javadoc/comment (lines ~109, ~171) still said
   `-Dorg.jdom2.output.LineSeparator`; Task 7 removed it together with `SystemProperty`.

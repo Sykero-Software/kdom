@@ -233,8 +233,7 @@ abstract class AbstractTestList<T>(private val i_tclass: KClass<*>, private val 
 		
 		for (i in 0 until content.size) {
 			if (list.get(i) !== content[i]) {
-				fail(String.format("We expect element in list at position %d to be %s",
-						i, content[i]))
+				fail("We expect element in list at position $i to be ${content[i]}")
 			}
 			val pos: Int = list.indexOf(content[i])
 			assertTrue(pos >= 0)
