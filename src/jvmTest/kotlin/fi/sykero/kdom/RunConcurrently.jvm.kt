@@ -2,11 +2,8 @@ package fi.sykero.kdom
 
 import java.util.concurrent.CountDownLatch
 
-/**
- * Runs [block] on [workers] threads that all start together (a start gate), and returns each worker's result
- * in worker order. Rethrows the first worker failure.
- */
-fun <T> runConcurrently(workers: Int, block: () -> T): List<T> {
+/** JVM: one thread per worker, released together by a [CountDownLatch]. */
+actual fun <T> runConcurrently(workers: Int, block: () -> T): List<T> {
     val gate = CountDownLatch(1)
     val results = arrayOfNulls<Any?>(workers)
     val failures = arrayOfNulls<Throwable>(workers)
