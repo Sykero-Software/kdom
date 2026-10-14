@@ -1,4 +1,4 @@
-/*--
+/*-- 
 
  Copyright (C) 2000-2012 Jason Hunter & Brett McLaughlin.
  All rights reserved.
@@ -11,8 +11,8 @@
     notice, this list of conditions, and the following disclaimer.
 
  2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions, and the disclaimer that follows
-    these conditions in the documentation and/or other materials
+    notice, this list of conditions, and the disclaimer that follows 
+    these conditions in the documentation and/or other materials 
     provided with the distribution.
 
  3. The name "JDOM" must not be used to endorse or promote products
@@ -23,12 +23,12 @@
     may "JDOM" appear in their name, without prior written permission
     from the JDOM Project Management <request_AT_jdom_DOT_org>.
 
- In addition, we request (but do not require) that you include in the
- end-user documentation provided with the redistribution and/or in the
+ In addition, we request (but do not require) that you include in the 
+ end-user documentation provided with the redistribution and/or in the 
  software itself an acknowledgement equivalent to the following:
      "This product includes software developed by the
       JDOM Project (http://www.jdom.org/)."
- Alternatively, the acknowledgment may be graphical using the logos
+ Alternatively, the acknowledgment may be graphical using the logos 
  available at http://www.jdom.org/images/logos.
 
  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
@@ -44,8 +44,8 @@
  OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  SUCH DAMAGE.
 
- This software consists of voluntary contributions made by many
- individuals on behalf of the JDOM Project and was originally
+ This software consists of voluntary contributions made by many 
+ individuals on behalf of the JDOM Project and was originally 
  created by Jason Hunter <jhunter_AT_jdom_DOT_org> and
  Brett McLaughlin <brett_AT_jdom_DOT_org>.  For more information
  on the JDOM Project, please see <http://www.jdom.org/>.
@@ -54,8 +54,7 @@
 
  */
 
-package fi.sykero.kdom;
-
+package fi.sykero.kdom
 
 /**
  * An XML comment. Methods allow the user to get and set the text of the
@@ -64,104 +63,94 @@ package fi.sykero.kdom;
  * @author  Brett McLaughlin
  * @author  Jason Hunter
  */
-public class Comment extends Content {
-	
-	/**
-	 * JDOM2 Serialization. In this case, Comment is simple. 
-	 */
-	private static final long serialVersionUID = 200L;
-	
-	/** Text of the <code>Comment</code> */
-	protected String text;
+open class Comment : Content {
 
-	/**
-	 * Default, no-args constructor for implementations to use if needed.
-	 */
-	protected Comment() {
-		super(CType.Comment);
-	}
+    /**
+     * This returns the textual data within the `Comment`.
+     * (`Text` of the `Comment`; `null` for a raw instance made by the protected
+     * no-args constructor. Was the protected field `text`.)
+     *
+     * @return `String` - text of comment.
+     */
+    var text: String? = null
+        private set
 
-	/**
-	 * This creates the comment with the supplied text.
-	 *
-	 * @param text <code>String</code> content of comment.
-	 */
-	public Comment(String text) {
-		super(CType.Comment);
-		setText(text);
-	}
+    /**
+     * Default, no-args constructor for implementations to use if needed.
+     */
+    protected constructor() : super(CType.Comment)
 
+    /**
+     * This creates the comment with the supplied text.
+     *
+     * @param text `String` content of comment.
+     */
+    constructor(text: String?) : super(CType.Comment) {
+        setText(text)
+    }
 
-	/**
-	 * Returns the XPath 1.0 string value of this element, which is the
-	 * text of this comment.
-	 *
-	 * @return the text of this comment
-	 */
-	@Override
-	public String getValue() {
-		return text;
-	}
+    /**
+     * Returns the XPath 1.0 string value of this element, which is the
+     * text of this comment.
+     *
+     * @return the text of this comment
+     */
+    override val value: String?
+        get() = text
 
-	/**
-	 * This returns the textual data within the <code>Comment</code>.
-	 *
-	 * @return <code>String</code> - text of comment.
-	 */
-	public String getText() {
-		return text;
-	}
+    /**
+     * This will set the value of the `Comment`.
+     *
+     * @param text `String` text for comment.
+     * @return `Comment` - this Comment modified.
+     * @throws IllegalDataException if the given text is illegal for a
+     *         Comment.
+     */
+    open fun setText(text: String?): Comment {
+        val reason: String? = Verifier.checkCommentData(text)
+        if (reason != null) {
+            throw IllegalDataException(text, "comment", reason)
+        }
 
-	/**
-	 * This will set the value of the <code>Comment</code>.
-	 *
-	 * @param text <code>String</code> text for comment.
-	 * @return <code>Comment</code> - this Comment modified.
-	 * @throws IllegalDataException if the given text is illegal for a
-	 *         Comment.
-	 */
-	public Comment setText(String text) {
-		String reason;
-		if ((reason = Verifier.checkCommentData(text)) != null) {
-			throw new IllegalDataException(text, "comment", reason);
-		}
+        this.text = text
+        return this
+    }
 
-		this.text = text;
-		return this;
-	}
+    override fun clone(): Comment {
+        return super.clone() as Comment
+    }
 
-	@Override
-	public Comment clone() {
-		return (Comment)super.clone();
-	}
-	
-	@Override
-	public Comment detach() {
-		return (Comment)super.detach();
-	}
+    override fun detach(): Comment {
+        return super.detach() as Comment
+    }
 
-	@Override
-	public Comment setParent(Parent parent) {
-		return (Comment)super.setParent(parent);
-	}
+    override fun setParent(parent: Parent?): Comment {
+        return super.setParent(parent) as Comment
+    }
 
-	/**
-	 * This returns a <code>String</code> representation of the
-	 * <code>Comment</code>, suitable for debugging. If the XML
-	 * representation of the <code>Comment</code> is desired,
-	 * {@link fi.sykero.kdom.output.XMLOutputter#outputString(Comment)}
-	 * should be used.
-	 *
-	 * @return <code>String</code> - information about the
-	 *         <code>Comment</code>
-	 */
-	@Override
-	public String toString() {
-		return new StringBuilder()
-		.append("[Comment: ")
-		.append(new fi.sykero.kdom.output.XMLOutputter().outputString(this))
-		.append("]")
-		.toString();
-	}
+    /**
+     * This returns a `String` representation of the
+     * `Comment`, suitable for debugging. If the XML
+     * representation of the `Comment` is desired,
+     * [fi.sykero.kdom.output.XMLOutputter.outputString]
+     * should be used.
+     *
+     * @return `String` - information about the
+     *         `Comment`
+     */
+    override fun toString(): String {
+        return StringBuilder()
+            .append("[Comment: ")
+            .append(fi.sykero.kdom.output.XMLOutputter().outputString(this))
+            .append("]")
+            .toString()
+    }
+
+    private companion object {
+        /**
+         * JDOM2 Serialization. In this case, Comment is simple.
+         */
+        private const val serialVersionUID = 200L
+    }
 
 }

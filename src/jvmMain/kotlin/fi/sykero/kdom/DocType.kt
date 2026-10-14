@@ -1,4 +1,4 @@
-/*--
+/*-- 
 
  Copyright (C) 2000-2012 Jason Hunter & Brett McLaughlin.
  All rights reserved.
@@ -11,8 +11,8 @@
     notice, this list of conditions, and the following disclaimer.
 
  2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions, and the disclaimer that follows
-    these conditions in the documentation and/or other materials
+    notice, this list of conditions, and the disclaimer that follows 
+    these conditions in the documentation and/or other materials 
     provided with the distribution.
 
  3. The name "JDOM" must not be used to endorse or promote products
@@ -23,12 +23,12 @@
     may "JDOM" appear in their name, without prior written permission
     from the JDOM Project Management <request_AT_jdom_DOT_org>.
 
- In addition, we request (but do not require) that you include in the
- end-user documentation provided with the redistribution and/or in the
+ In addition, we request (but do not require) that you include in the 
+ end-user documentation provided with the redistribution and/or in the 
  software itself an acknowledgement equivalent to the following:
      "This product includes software developed by the
       JDOM Project (http://www.jdom.org/)."
- Alternatively, the acknowledgment may be graphical using the logos
+ Alternatively, the acknowledgment may be graphical using the logos 
  available at http://www.jdom.org/images/logos.
 
  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
@@ -44,8 +44,8 @@
  OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  SUCH DAMAGE.
 
- This software consists of voluntary contributions made by many
- individuals on behalf of the JDOM Project and was originally
+ This software consists of voluntary contributions made by many 
+ individuals on behalf of the JDOM Project and was originally 
  created by Jason Hunter <jhunter_AT_jdom_DOT_org> and
  Brett McLaughlin <brett_AT_jdom_DOT_org>.  For more information
  on the JDOM Project, please see <http://www.jdom.org/>.
@@ -54,7 +54,7 @@
 
  */
 
-package fi.sykero.kdom;
+package fi.sykero.kdom
 
 /**
  * An XML DOCTYPE declaration.  Method allow the user to get and set the
@@ -63,258 +63,215 @@ package fi.sykero.kdom;
  * @author Brett McLaughlin
  * @author Jason Hunter
  */
-public class DocType extends Content {
-	
-	/**
-	 * JDOM2 Serialization. In this case, DocType is simple. 
-	 */
-	private static final long serialVersionUID = 200L;
-	
-	/**
-	 * The element being constrained
-	 * @serialField The root element name
-	 */
-	protected String elementName;
+open class DocType : Content {
 
-	/**
-	 * The public ID of the DOCTYPE
-	 * @serialField The PublicID, may be null
-	 */
-	protected String publicID;
+    /**
+     * The element being constrained
+     * This will retrieve the element name being constrained.
+     * (`null` for a raw instance made by the protected no-args constructor. Was the protected
+     * field `elementName`.)
+     *
+     * @return `String` - element name for DOCTYPE
+     */
+    var elementName: String? = null
+        private set
 
-	/**
-	 * The system ID of the DOCTYPE
-	 * @serialField The SystemID, may be null
-	 */
-	protected String systemID;
+    /**
+     * The public ID of the DOCTYPE
+     * This will retrieve the public ID of an externally
+     * referenced DTD, or an empty `String` if
+     * none is referenced.
+     * (May be null. Was the protected field `publicID`.)
+     *
+     * @return `String` - public ID of referenced DTD.
+     */
+    var publicID: String? = null
+        private set
 
-	/**
-	 * The internal subset of the DOCTYPE
-	 * @serialField The InternalSubset, may be null
-	 */
-	protected String internalSubset;
+    /**
+     * The system ID of the DOCTYPE
+     * This will retrieve the system ID of an externally
+     * referenced DTD, or an empty `String` if
+     * none is referenced.
+     * (May be null. Was the protected field `systemID`.)
+     *
+     * @return `String` - system ID of referenced DTD.
+     */
+    var systemID: String? = null
+        private set
 
-	/**
-	 * Default, no-args constructor for implementations to use if needed.
-	 */
-	protected DocType() {
-		super(CType.DocType);
-	}
+    /**
+     * The internal subset of the DOCTYPE.
+     * This sets the data for the internal subset, and returns it.
+     * (May be null. Was the protected field `internalSubset`, with `setInternalSubset(String)`
+     * and `getInternalSubset()`.)
+     */
+    var internalSubset: String? = null
 
-	/*
-	 * XXX:
-	 *   We need to take care of entities and notations here.
-	 */
+    /**
+     * Default, no-args constructor for implementations to use if needed.
+     */
+    protected constructor() : super(CType.DocType)
 
-	/**
-	 * This will create the <code>DocType</code> with
-	 * the specified element name and a reference to an
-	 * external DTD.
-	 *
-	 * @param elementName <code>String</code> name of
-	 *        element being constrained.
-	 * @param publicID <code>String</code> public ID of
-	 *        referenced DTD
-	 * @param systemID <code>String</code> system ID of
-	 *        referenced DTD
-	 * @throws IllegalDataException if the given system ID is not a legal
-	 *         system literal or the public ID is not a legal public ID.
-	 * @throws IllegalNameException if the given root element name is not a
-	 *         legal XML element name.
-	 */
-	public DocType(String elementName, String publicID, String systemID) {
-		super(CType.DocType);
-		setElementName(elementName);
-		setPublicID(publicID);
-		setSystemID(systemID);
-	}
+    /*
+     * XXX:
+     *   We need to take care of entities and notations here.
+     */
 
-	/**
-	 * This will create the <code>DocType</code> with
-	 * the specified element name and reference to an
-	 * external DTD.
-	 *
-	 * @param elementName <code>String</code> name of
-	 *        element being constrained.
-	 * @param systemID <code>String</code> system ID of
-	 *        referenced DTD
-	 * @throws IllegalDataException if the given system ID is not a legal
-	 *         system literal.
-	 * @throws IllegalNameException if the given root element name is not a
-	 *         legal XML element name.
-	 */
-	public DocType(String elementName, String systemID) {
-		this(elementName, null, systemID);
-	}
+    /**
+     * This will create the `DocType` with
+     * the specified element name and a reference to an
+     * external DTD.
+     *
+     * @param elementName `String` name of
+     *        element being constrained.
+     * @param publicID `String` public ID of
+     *        referenced DTD
+     * @param systemID `String` system ID of
+     *        referenced DTD
+     * @throws IllegalDataException if the given system ID is not a legal
+     *         system literal or the public ID is not a legal public ID.
+     * @throws IllegalNameException if the given root element name is not a
+     *         legal XML element name.
+     */
+    constructor(elementName: String?, publicID: String?, systemID: String?) : super(CType.DocType) {
+        setElementName(elementName)
+        setPublicID(publicID)
+        setSystemID(systemID)
+    }
 
-	/**
-	 * This will create the <code>DocType</code> with
-	 * the specified element name
-	 *
-	 * @param elementName <code>String</code> name of
-	 *        element being constrained.
-	 * @throws IllegalNameException if the given root element name is not a
-	 *         legal XML element name.
-	 */
-	public DocType(String elementName) {
-		this(elementName, null, null);
-	}
+    /**
+     * This will create the `DocType` with
+     * the specified element name and reference to an
+     * external DTD.
+     *
+     * @param elementName `String` name of
+     *        element being constrained.
+     * @param systemID `String` system ID of
+     *        referenced DTD
+     * @throws IllegalDataException if the given system ID is not a legal
+     *         system literal.
+     * @throws IllegalNameException if the given root element name is not a
+     *         legal XML element name.
+     */
+    constructor(elementName: String?, systemID: String?) : this(elementName, null, systemID)
 
-	/**
-	 * This will retrieve the element name being constrained.
-	 *
-	 * @return <code>String</code> - element name for DOCTYPE
-	 */
-	public String getElementName() {
-		return elementName;
-	}
+    /**
+     * This will create the `DocType` with
+     * the specified element name
+     *
+     * @param elementName `String` name of
+     *        element being constrained.
+     * @throws IllegalNameException if the given root element name is not a
+     *         legal XML element name.
+     */
+    constructor(elementName: String?) : this(elementName, null, null)
 
-	/**
-	 * This will set the root element name declared by this
-	 * DOCTYPE declaration.
-	 *
-	 * @return this <code>DocType</code> instance
-	 * @param elementName <code>String</code> name of
-	 *        root element being constrained.
-	 * @throws IllegalNameException if the given root element name is not a
-	 *         legal XML element name.
-	 */
-	public DocType setElementName(String elementName) {
-		// This can contain a colon so we use checkXMLName()
-		// instead of checkElementName()
-		String reason = Verifier.checkXMLName(elementName);
-		if (reason != null) {
-			throw new IllegalNameException(elementName, "DocType", reason);
-		}
-		this.elementName = elementName;
-		return this;
-	}
+    /**
+     * This will set the root element name declared by this
+     * DOCTYPE declaration.
+     *
+     * @return this `DocType` instance
+     * @param elementName `String` name of
+     *        root element being constrained.
+     * @throws IllegalNameException if the given root element name is not a
+     *         legal XML element name.
+     */
+    open fun setElementName(elementName: String?): DocType {
+        // This can contain a colon so we use checkXMLName()
+        // instead of checkElementName()
+        val reason = Verifier.checkXMLName(elementName)
+        if (reason != null) {
+            throw IllegalNameException(elementName, "DocType", reason)
+        }
+        this.elementName = elementName
+        return this
+    }
 
-	/**
-	 * This will retrieve the public ID of an externally
-	 * referenced DTD, or an empty <code>String</code> if
-	 * none is referenced.
-	 *
-	 * @return <code>String</code> - public ID of referenced DTD.
-	 */
-	public String getPublicID() {
-		return publicID;
-	}
+    /**
+     * This will set the public ID of an externally
+     * referenced DTD.
+     *
+     * @param publicID id to set
+     * @return DocType `DocType` this DocType object
+     * @throws IllegalDataException if the given public ID is not a legal
+     *         public ID.
+     */
+    open fun setPublicID(publicID: String?): DocType {
+        val reason = Verifier.checkPublicID(publicID)
+        if (reason != null) {
+            throw IllegalDataException(publicID, "DocType", reason)
+        }
+        this.publicID = publicID
 
-	/**
-	 * This will set the public ID of an externally
-	 * referenced DTD.
-	 *
-	 * @param publicID id to set
-	 * @return DocType <code>DocType</code> this DocType object
-	 * @throws IllegalDataException if the given public ID is not a legal
-	 *         public ID.
-	 */
-	public DocType setPublicID(String publicID) {
-		String reason = Verifier.checkPublicID(publicID);
-		if (reason != null) {
-			throw new IllegalDataException(publicID, "DocType", reason);
-		}
-		this.publicID = publicID;
+        return this
+    }
 
-		return this;
-	}
+    /**
+     * This will set the system ID of an externally
+     * referenced DTD.
+     *
+     * @param systemID id to set
+     * @return systemID `String` system ID of
+     *                  referenced DTD.
+     * @throws IllegalDataException if the given system ID is not a legal
+     *         system literal.
+     */
+    open fun setSystemID(systemID: String?): DocType {
+        val reason = Verifier.checkSystemLiteral(systemID)
+        if (reason != null) {
+            throw IllegalDataException(systemID, "DocType", reason)
+        }
+        this.systemID = systemID
 
-	/**
-	 * This will retrieve the system ID of an externally
-	 * referenced DTD, or an empty <code>String</code> if
-	 * none is referenced.
-	 *
-	 * @return <code>String</code> - system ID of referenced DTD.
-	 */
-	public String getSystemID() {
-		return systemID;
-	}
+        return this
+    }
 
-	/**
-	 * This will set the system ID of an externally
-	 * referenced DTD.
-	 *
-	 * @param systemID id to set
-	 * @return systemID <code>String</code> system ID of
-	 *                  referenced DTD.
-	 * @throws IllegalDataException if the given system ID is not a legal
-	 *         system literal.
-	 */
-	public DocType setSystemID(String systemID) {
-		String reason = Verifier.checkSystemLiteral(systemID);
-		if (reason != null) {
-			throw new IllegalDataException(systemID, "DocType", reason);
-		}
-		this.systemID = systemID;
+    /**
+     * Returns the empty string since doctypes don't have an XPath
+     * 1.0 string value.
+     * @return the empty string
+     */
+    override val value: String
+        get() = "" // doctypes don't have an XPath string value
 
-		return this;
-	}
+    /**
+     * This returns a `String` representation of the
+     * `DocType`, suitable for debugging.
+     *
+     * @return `String` - information about the
+     *         `DocType`
+     */
+    override fun toString(): String {
+        return StringBuilder()
+            .append("[DocType: ")
+            .append(fi.sykero.kdom.output.XMLOutputter().outputString(this))
+            .append("]")
+            .toString()
+    }
 
-	/**
-	 * Returns the empty string since doctypes don't have an XPath
-	 * 1.0 string value.
-	 * @return the empty string
-	 */
-	@Override
-	public String getValue() {
-		return "";  // doctypes don't have an XPath string value
-	}
+    override fun clone(): DocType {
+        return super.clone() as DocType
+    }
 
-	/**
-	 * This sets the data for the internal subset.
-	 *
-	 * @param newData data for the internal subset, as a
-	 *        <code>String</code>.
-	 */
-	public void setInternalSubset(String newData) {
-		internalSubset = newData;
-	}
+    override fun detach(): DocType {
+        return super.detach() as DocType
+    }
 
-	/**
-	 * This returns the data for the internal subset.
-	 *
-	 * @return <code>String</code> - the internal subset
-	 */
-	public String getInternalSubset() {
-		return internalSubset;
-	}
+    override fun setParent(parent: Parent?): DocType {
+        return super.setParent(parent) as DocType
+    }
 
-	/**
-	 * This returns a <code>String</code> representation of the
-	 * <code>DocType</code>, suitable for debugging.
-	 *
-	 * @return <code>String</code> - information about the
-	 *         <code>DocType</code>
-	 */
-	@Override
-	public String toString() {
-		return new StringBuilder()
-		.append("[DocType: ")
-		.append(new fi.sykero.kdom.output.XMLOutputter().outputString(this))
-		.append("]")
-		.toString();
-	}
-	
-	@Override
-	public DocType clone() {
-		return (DocType)super.clone();
-	}
+    override val parent: Document?
+        get() =
+            // because DocType can only be attached to a Document.
+            super.parent as Document?
 
-	@Override
-	public DocType detach() {
-		return (DocType)super.detach();
-	}
+    private companion object {
+        /**
+         * JDOM2 Serialization. In this case, DocType is simple.
+         */
+        private const val serialVersionUID = 200L
+    }
 
-	@Override
-	public DocType setParent(Parent parent) {
-		return (DocType)super.setParent(parent);
-	}
-	
-	@Override
-	public Document getParent() {
-		// because DocType can only be attached to a Document.
-		return (Document)super.getParent();
-	}
-	
 }

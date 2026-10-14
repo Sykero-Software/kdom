@@ -1,4 +1,4 @@
-/*--
+/*-- 
 
  Copyright (C) 2000-2012 Jason Hunter & Brett McLaughlin.
  All rights reserved.
@@ -11,8 +11,8 @@
     notice, this list of conditions, and the following disclaimer.
 
  2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions, and the disclaimer that follows
-    these conditions in the documentation and/or other materials
+    notice, this list of conditions, and the disclaimer that follows 
+    these conditions in the documentation and/or other materials 
     provided with the distribution.
 
  3. The name "JDOM" must not be used to endorse or promote products
@@ -23,12 +23,12 @@
     may "JDOM" appear in their name, without prior written permission
     from the JDOM Project Management <request_AT_jdom_DOT_org>.
 
- In addition, we request (but do not require) that you include in the
- end-user documentation provided with the redistribution and/or in the
+ In addition, we request (but do not require) that you include in the 
+ end-user documentation provided with the redistribution and/or in the 
  software itself an acknowledgement equivalent to the following:
      "This product includes software developed by the
       JDOM Project (http://www.jdom.org/)."
- Alternatively, the acknowledgment may be graphical using the logos
+ Alternatively, the acknowledgment may be graphical using the logos 
  available at http://www.jdom.org/images/logos.
 
  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
@@ -44,8 +44,8 @@
  OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  SUCH DAMAGE.
 
- This software consists of voluntary contributions made by many
- individuals on behalf of the JDOM Project and was originally
+ This software consists of voluntary contributions made by many 
+ individuals on behalf of the JDOM Project and was originally 
  created by Jason Hunter <jhunter_AT_jdom_DOT_org> and
  Brett McLaughlin <brett_AT_jdom_DOT_org>.  For more information
  on the JDOM Project, please see <http://www.jdom.org/>.
@@ -54,25 +54,24 @@
 
  */
 
-package fi.sykero.kdom;
+package fi.sykero.kdom
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.TreeMap;
+import java.io.Serializable
+import java.util.ArrayList
+import java.util.Collections
+import java.util.TreeMap
 
 /**
  * An XML attribute. Methods allow the user to obtain the value of the attribute
  * as well as namespace and type information.
- * <p>
- * <strong>JDOM 1.x Compatibility Note:</strong><br>
+ *
+ * **JDOM 1.x Compatibility Note:**<br>
  * The Attribute class in JDOM 1.x had a number of int Constants declared to
  * represent different Attribute Types. JDOM2 has introduced an AttributeType
  * enumeration instead. To facilitate compatibility and to simplify JDOM 1.x
  * migrations, the replacement AttributeType enums are referenced still using
  * the JDOM 1.x constant names. In JDOM 1.x these names referenced constant
- * int values. In JDOM2 these names reference Enum constants. 
+ * int values. In JDOM2 these names reference Enum constants.
  *
  * @author  Brett McLaughlin
  * @author  Jason Hunter
@@ -81,707 +80,700 @@ import java.util.TreeMap;
  * @author  Victor Toni
  * @author  Rolf Lear
  */
-public class Attribute extends CloneBase
-	implements NamespaceAware, Serializable, Cloneable {
+open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
 
-	/**
-	 * JDOM 2.0.0 Serialization version. Attribute is simple
-	 */
-	private static final long serialVersionUID = 200L;
+    /**
+     * This will retrieve the local name of the
+     * `Attribute`. For any XML attribute
+     * which appears as
+     * `[namespacePrefix]:[attributeName]`,
+     * the local name of the attribute would be
+     * `[attributeName]`. When the attribute
+     * has no namespace, the local name is simply the attribute
+     * name.
+     *
+     * To obtain the namespace prefix for this
+     * attribute, the
+     * `[namespacePrefix]`
+     * method should be used.
+     *
+     * (The local name of the `Attribute`; `null` for a raw instance made by the protected
+     * no-args constructor. Was the protected field `name`.)
+     *
+     * @return `String` - name of this attribute,
+     *                               without any namespace prefix.
+     */
+    var name: String? = null
+        private set
 
-	// Keep the old constant names for one beta cycle to help migration
-	
-	/** JDOM 1.x compatible reference to {@link AttributeType#UNDECLARED} */
-	public final static AttributeType UNDECLARED_TYPE = AttributeType.UNDECLARED;
+    /**
+     * This will return this `Attribute`'s
+     * `[Namespace]`.
+     * (Was the protected field `namespace`; not initialised for a raw instance made by the
+     * protected no-args constructor.)
+     *
+     * @return `Namespace` - Namespace object for this `Attribute`
+     */
+    lateinit var namespace: Namespace
+        private set
 
-	/** JDOM 1.x compatible reference to {@link AttributeType#CDATA} */
-	public final static AttributeType CDATA_TYPE = AttributeType.CDATA;
+    /**
+     * This will return the actual textual value of this
+     * `Attribute`.  This will include all text
+     * within the quotation marks.
+     * (Was the protected field `value`; `null` for a raw instance.)
+     *
+     * @return `String` - value for this attribute.
+     */
+    var value: String? = null
+        private set
 
-	/** JDOM 1.x compatible reference to {@link AttributeType#ID} */
-	public final static AttributeType ID_TYPE = AttributeType.ID;
+    /**
+     * This will return the declared type of this `Attribute`.
+     * (Was the protected field `type`.)
+     *
+     * @return `AttributeType` - type for this attribute.
+     */
+    var attributeType: AttributeType = AttributeType.UNDECLARED
+        private set
 
-	/** JDOM 1.x compatible reference to {@link AttributeType#IDREF} */
-	public final static AttributeType IDREF_TYPE = AttributeType.IDREF;
+    /**
+     * Specified attributes are part of the XML,
+     * unspecified attributes are 'defaulted' from a DTD.
+     *
+     * Get the 'specified' flag. True values indicate this attribute
+     * was part of an XML document, false indicates it was defaulted
+     * from a DTD.
+     * (Was the protected field `specified`, with `isSpecified()` and `setSpecified(boolean)`.)
+     * @since JDOM2
+     */
+    var isSpecified: Boolean = true
 
-	/** JDOM 1.x compatible reference to {@link AttributeType#IDREFS} */
-	public final static AttributeType IDREFS_TYPE = AttributeType.IDREFS;
+    /**
+     * The parent to which this Attribute belongs. Change it with
+     * [setParent]
+     * (Was the protected field `parent`; renamed because `parent` is now the property.
+     * `internal` + `@JvmField` so that `AttributeList` can set it, as package access did in Java.)
+     */
+    @JvmField
+    @Transient
+    internal var parentRef: Element? = null
 
-	/** JDOM 1.x compatible reference to {@link AttributeType#ENTITY} */
-	public final static AttributeType ENTITY_TYPE = AttributeType.ENTITY;
+    /**
+     * Default, no-args constructor for implementations to use if needed.
+     */
+    protected constructor() : super()
 
-	/** JDOM 1.x compatible reference to {@link AttributeType#ENTITIES} */
-	public final static AttributeType ENTITIES_TYPE = AttributeType.ENTITIES;
+    /**
+     * This will create a new `Attribute` with the
+     * specified (local) name and value, and in the provided
+     * `[Namespace]`.
+     *
+     * @param name `String` name of `Attribute`.
+     * @param value `String` value for new attribute.
+     * @param namespace `Namespace` namespace for new attribute.
+     * @throws IllegalNameException if the given name is illegal as an
+     *         attribute name or if if the new namespace is the default
+     *         namespace. Attributes cannot be in a default namespace.
+     * @throws IllegalDataException if the given attribute value is
+     *         illegal character data (as determined by
+     *         [fi.sykero.kdom.Verifier.checkCharacterData]).
+     */
+    constructor(name: String?, value: String?, namespace: Namespace?) :
+        this(name, value, AttributeType.UNDECLARED, namespace)
 
-	/** JDOM 1.x compatible reference to {@link AttributeType#NMTOKEN} */
-	public final static AttributeType NMTOKEN_TYPE = AttributeType.NMTOKEN;
+    /**
+     * This will create a new `Attribute` with the
+     * specified (local) name, value, and type, and in the provided
+     * `[Namespace]`.
+     *
+     * @param name `String` name of `Attribute`.
+     * @param value `String` value for new attribute.
+     * @param type `int` type for new attribute.
+     * @param namespace `Namespace` namespace for new attribute.
+     * @throws IllegalNameException if the given name is illegal as an
+     *         attribute name or if if the new namespace is the default
+     *         namespace. Attributes cannot be in a default namespace.
+     * @throws IllegalDataException if the given attribute value is
+     *         illegal character data (as determined by
+     *         [fi.sykero.kdom.Verifier.checkCharacterData]) or
+     *         if the given attribute type is not one of the
+     *         supported types.
+     */
+    @Suppress("DEPRECATION")
+    @Deprecated("Use Attribute(String, String, AttributeType, Namespace).")
+    constructor(name: String?, value: String?, type: Int, namespace: Namespace?) :
+        this(name, value, AttributeType.byIndex(type), namespace)
 
-	/** JDOM 1.x compatible reference to {@link AttributeType#NMTOKENS} */
-	public final static AttributeType NMTOKENS_TYPE = AttributeType.NMTOKENS;
+    /**
+     * This will create a new `Attribute` with the
+     * specified (local) name, value, and type, and in the provided
+     * `[Namespace]`.
+     *
+     * @param name `String` name of `Attribute`.
+     * @param value `String` value for new attribute.
+     * @param type `AttributeType` for new attribute.
+     * @param namespace `Namespace` namespace for new attribute.
+     * @throws IllegalNameException if the given name is illegal as an
+     *         attribute name or if if the new namespace is the default
+     *         namespace. Attributes cannot be in a default namespace.
+     * @throws IllegalDataException if the given attribute value is
+     *         illegal character data (as determined by
+     *         [fi.sykero.kdom.Verifier.checkCharacterData]) or
+     *         if the given attribute type is not one of the
+     *         supported types.
+     */
+    constructor(name: String?, value: String?, type: AttributeType?, namespace: Namespace?) : super() {
+        setName(name)
+        setValue(value)
+        setAttributeType(type)
+        setNamespace(namespace)
+    }
 
-	/** JDOM 1.x compatible reference to {@link AttributeType#NOTATION} */
-	public final static AttributeType NOTATION_TYPE = AttributeType.NOTATION;
+    /**
+     * This will create a new `Attribute` with the
+     * specified (local) name and value, and does not place
+     * the attribute in a `[Namespace]`.
+     *
+     * **Note**: This actually explicitly puts the
+     * `Attribute` in the "empty" `Namespace`
+     * (`[Namespace.NO_NAMESPACE]`).
+     *
+     * @param name `String` name of `Attribute`.
+     * @param value `String` value for new attribute.
+     * @throws IllegalNameException if the given name is illegal as an
+     *         attribute name.
+     * @throws IllegalDataException if the given attribute value is
+     *         illegal character data (as determined by
+     *         [fi.sykero.kdom.Verifier.checkCharacterData]).
+     */
+    constructor(name: String?, value: String?) :
+        this(name, value, AttributeType.UNDECLARED, Namespace.NO_NAMESPACE)
 
-	/** JDOM 1.x compatible reference to {@link AttributeType#ENUMERATION} */
-	public final static AttributeType ENUMERATED_TYPE = AttributeType.ENUMERATION;
+    /**
+     * This will create a new `Attribute` with the
+     * specified (local) name, value and type, and does not place
+     * the attribute in a `[Namespace]`.
+     *
+     * **Note**: This actually explicitly puts the
+     * `Attribute` in the "empty" `Namespace`
+     * (`[Namespace.NO_NAMESPACE]`).
+     *
+     * @param name `String` name of `Attribute`.
+     * @param value `String` value for new attribute.
+     * @param type `AttributeType` for new attribute.
+     * @throws IllegalNameException if the given name is illegal as an
+     *         attribute name.
+     * @throws IllegalDataException if the given attribute value is
+     *         illegal character data (as determined by
+     *         [fi.sykero.kdom.Verifier.checkCharacterData]) or
+     *         if the given attribute type is not one of the
+     *         supported types.
+     */
+    constructor(name: String?, value: String?, type: AttributeType?) :
+        this(name, value, type, Namespace.NO_NAMESPACE)
 
+    /**
+     * This will create a new `Attribute` with the
+     * specified (local) name, value and type, and does not place
+     * the attribute in a `[Namespace]`.
+     *
+     * **Note**: This actually explicitly puts the
+     * `Attribute` in the "empty" `Namespace`
+     * (`[Namespace.NO_NAMESPACE]`).
+     *
+     * @param name `String` name of `Attribute`.
+     * @param value `String` value for new attribute.
+     * @param type `int` type for new attribute.
+     * @throws IllegalNameException if the given name is illegal as an
+     *         attribute name.
+     * @throws IllegalDataException if the given attribute value is
+     *         illegal character data (as determined by
+     *         [fi.sykero.kdom.Verifier.checkCharacterData]) or
+     *         if the given attribute type is not one of the
+     *         supported types.
+     */
+    @Suppress("DEPRECATION")
+    @Deprecated("Use Attribute(String, String, AttributeType).")
+    constructor(name: String?, value: String?, type: Int) :
+        this(name, value, type, Namespace.NO_NAMESPACE)
 
+    /**
+     * This will return the parent of this `Attribute`.
+     * If there is no parent, then this returns `null`.
+     * Use return-type covariance to override Content's getParent() method
+     * to return an Element, not just a Parent
+     *
+     * @return parent of this `Attribute`
+     */
+    val parent: Element?
+        get() = parentRef
 
+    /**
+     * Get this Attribute's Document.
+     * @return The document to which this Attribute is associated, may be null.
+     */
+    val document: Document?
+        get() = parentRef?.document
 
-	/** The local name of the <code>Attribute</code> */
-	protected String name;
+    /**
+     * This sets the local name of the `Attribute`.
+     *
+     * @param name the new local name to set
+     * @return `Attribute` - the attribute modified.
+     * @throws IllegalNameException if the given name is illegal as an
+     *         attribute name.
+     */
+    open fun setName(name: String?): Attribute {
+        if (name == null) {
+            throw NullPointerException(
+                "Can not set a null name for an Attribute."
+            )
+        }
+        val reason = Verifier.checkAttributeName(name)
+        if (reason != null) {
+            throw IllegalNameException(name, "attribute", reason)
+        }
+        this.name = name
+        isSpecified = true
+        return this
+    }
 
-	/** The <code>{@link Namespace}</code> of the <code>Attribute</code> */
-	protected Namespace namespace;
+    /**
+     * This will retrieve the qualified name of the `Attribute`.
+     * For any XML attribute whose name is
+     * `[namespacePrefix]:[elementName]`,
+     * the qualified name of the attribute would be
+     * everything (both namespace prefix and
+     * element name). When the attribute has no
+     * namespace, the qualified name is simply the attribute's
+     * local name.
+     *
+     * To obtain the local name of the attribute, the
+     * `[name]` method should be used.
+     *
+     * To obtain the namespace prefix for this attribute,
+     * the `[namespacePrefix]`
+     * method should be used.
+     *
+     * @return `String` - full name for this element.
+     */
+    val qualifiedName: String?
+        get() {
+            // Note: Any changes here should be reflected in
+            // XMLOutputter.printQualifiedName()
+            val prefix = namespace.prefix
 
-	/** The value of the <code>Attribute</code> */
-	protected String value;
+            // no prefix found
+            if ("" == prefix) {
+                return name
+            }
+            return StringBuilder(prefix)
+                .append(':')
+                .append(name)
+                .toString()
+        }
 
-	/** The type of the <code>Attribute</code> */
-	protected AttributeType type = AttributeType.UNDECLARED;
-	
-	/**
-	 * Specified attributes are part of the XML,
-	 * unspecified attributes are 'defaulted' from a DTD.
-	 */
-	protected boolean specified = true;
+    /**
+     * This will retrieve the namespace prefix of the
+     * `Attribute`. For any XML attribute
+     * which appears as
+     * `[namespacePrefix]:[attributeName]`,
+     * the namespace prefix of the attribute would be
+     * `[namespacePrefix]`. When the attribute
+     * has no namespace, an empty `String` is returned.
+     *
+     * @return `String` - namespace prefix of this
+     *                               attribute.
+     */
+    val namespacePrefix: String
+        get() = namespace.prefix
 
-	/**
-	 * The parent to which this Attribute belongs. Change it with
-	 * {@link #setParent(Element)}
-	 */
-	protected transient Element parent;
+    /**
+     * This returns the URI mapped to this `Attribute`'s
+     * prefix. If no mapping is found, an empty `String` is
+     * returned.
+     *
+     * @return `String` - namespace URI for this `Attribute`.
+     */
+    val namespaceURI: String
+        get() = namespace.uri
 
-	/**
-	 * Default, no-args constructor for implementations to use if needed.
-	 */
-	protected Attribute() {
-	}
+    /**
+     * This sets this `Attribute`'s `[Namespace]`.
+     * If the provided namespace is null, the attribute will have no namespace.
+     * The namespace must have a prefix.
+     *
+     * @param namespace the new namespace
+     * @return `Element` - the element modified.
+     * @throws IllegalNameException if the new namespace is the default
+     *         namespace. Attributes cannot be in a default namespace.
+     */
+    open fun setNamespace(namespace: Namespace?): Attribute {
+        var namespace = namespace
+        if (namespace == null) {
+            namespace = Namespace.NO_NAMESPACE
+        }
 
-	/**
-	 * This will create a new <code>Attribute</code> with the
-	 * specified (local) name and value, and in the provided
-	 * <code>{@link Namespace}</code>.
-	 *
-	 * @param name <code>String</code> name of <code>Attribute</code>.
-	 * @param value <code>String</code> value for new attribute.
-	 * @param namespace <code>Namespace</code> namespace for new attribute.
-	 * @throws IllegalNameException if the given name is illegal as an
-	 *         attribute name or if if the new namespace is the default
-	 *         namespace. Attributes cannot be in a default namespace.
-	 * @throws IllegalDataException if the given attribute value is
-	 *         illegal character data (as determined by
-	 *         {@link fi.sykero.kdom.Verifier#checkCharacterData}).
-	 */
-	public Attribute(final String name, final String value, final Namespace namespace) {
-		this(name, value, AttributeType.UNDECLARED, namespace);
-	}
+        // Verify the attribute isn't trying to be in a default namespace
+        // Attributes can't be in a default namespace
+        if (namespace !== Namespace.NO_NAMESPACE &&
+            "" == namespace.prefix
+        ) {
+            throw IllegalNameException(
+                "", "attribute namespace",
+                "An attribute namespace without a prefix can only be the " +
+                        "NO_NAMESPACE namespace"
+            )
+        }
+        this.namespace = namespace
+        isSpecified = true
+        return this
+    }
 
-	/**
-	 * This will create a new <code>Attribute</code> with the
-	 * specified (local) name, value, and type, and in the provided
-	 * <code>{@link Namespace}</code>.
-	 *
-	 * @param name <code>String</code> name of <code>Attribute</code>.
-	 * @param value <code>String</code> value for new attribute.
-	 * @param type <code>int</code> type for new attribute.
-	 * @param namespace <code>Namespace</code> namespace for new attribute.
-	 * @throws IllegalNameException if the given name is illegal as an
-	 *         attribute name or if if the new namespace is the default
-	 *         namespace. Attributes cannot be in a default namespace.
-	 * @throws IllegalDataException if the given attribute value is
-	 *         illegal character data (as determined by
-	 *         {@link fi.sykero.kdom.Verifier#checkCharacterData}) or
-	 *         if the given attribute type is not one of the
-	 *         supported types.
-	 * @deprecated Use {@link #Attribute(String, String, AttributeType, Namespace)}.
-	 */
-	@Deprecated
-	public Attribute(final String name, final String value, final int type, final Namespace namespace) {
-		this(name, value, AttributeType.byIndex(type), namespace);
-	}
-	
-	/**
-	 * This will create a new <code>Attribute</code> with the
-	 * specified (local) name, value, and type, and in the provided
-	 * <code>{@link Namespace}</code>.
-	 *
-	 * @param name <code>String</code> name of <code>Attribute</code>.
-	 * @param value <code>String</code> value for new attribute.
-	 * @param type <code>AttributeType</code> for new attribute.
-	 * @param namespace <code>Namespace</code> namespace for new attribute.
-	 * @throws IllegalNameException if the given name is illegal as an
-	 *         attribute name or if if the new namespace is the default
-	 *         namespace. Attributes cannot be in a default namespace.
-	 * @throws IllegalDataException if the given attribute value is
-	 *         illegal character data (as determined by
-	 *         {@link fi.sykero.kdom.Verifier#checkCharacterData}) or
-	 *         if the given attribute type is not one of the
-	 *         supported types.
-	 */
-	public Attribute(final String name, final String value, final AttributeType type, final Namespace namespace) {
-		setName(name);
-		setValue(value);
-		setAttributeType(type);
-		setNamespace(namespace);
-	}
+    /**
+     * This will set the value of the `Attribute`.
+     *
+     * @param value `String` value for the attribute.
+     * @return `Attribute` - this Attribute modified.
+     * @throws IllegalDataException if the given attribute value is
+     *         illegal character data (as determined by
+     *         [fi.sykero.kdom.Verifier.checkCharacterData]).
+     */
+    open fun setValue(value: String?): Attribute {
+        if (value == null) {
+            throw NullPointerException(
+                "Can not set a null value for an Attribute"
+            )
+        }
+        val reason = Verifier.checkCharacterData(value)
+        if (reason != null) {
+            throw IllegalDataException(value, "attribute", reason)
+        }
+        this.value = value
+        isSpecified = true
+        return this
+    }
 
-	/**
-	 * This will create a new <code>Attribute</code> with the
-	 * specified (local) name and value, and does not place
-	 * the attribute in a <code>{@link Namespace}</code>.
-	 * <p>
-	 * <b>Note</b>: This actually explicitly puts the
-	 * <code>Attribute</code> in the "empty" <code>Namespace</code>
-	 * (<code>{@link Namespace#NO_NAMESPACE}</code>).
-	 *
-	 * @param name <code>String</code> name of <code>Attribute</code>.
-	 * @param value <code>String</code> value for new attribute.
-	 * @throws IllegalNameException if the given name is illegal as an
-	 *         attribute name.
-	 * @throws IllegalDataException if the given attribute value is
-	 *         illegal character data (as determined by
-	 *         {@link fi.sykero.kdom.Verifier#checkCharacterData}).
-	 */
-	public Attribute(final String name, final String value) {
-		this(name, value, AttributeType.UNDECLARED, Namespace.NO_NAMESPACE);
-	}
+    /**
+     * This will set the type of the `Attribute`.
+     *
+     * @param type `int` type for the attribute.
+     * @return `Attribute` - this Attribute modified.
+     * @throws IllegalDataException if the given attribute type is
+     *         not one of the supported types.
+     */
+    open fun setAttributeType(type: AttributeType?): Attribute {
+        this.attributeType = type ?: AttributeType.UNDECLARED
+        isSpecified = true
+        return this
+    }
 
-	/**
-	 * This will create a new <code>Attribute</code> with the
-	 * specified (local) name, value and type, and does not place
-	 * the attribute in a <code>{@link Namespace}</code>.
-	 * <p>
-	 * <b>Note</b>: This actually explicitly puts the
-	 * <code>Attribute</code> in the "empty" <code>Namespace</code>
-	 * (<code>{@link Namespace#NO_NAMESPACE}</code>).
-	 *
-	 * @param name <code>String</code> name of <code>Attribute</code>.
-	 * @param value <code>String</code> value for new attribute.
-	 * @param type <code>AttributeType</code> for new attribute.
-	 * @throws IllegalNameException if the given name is illegal as an
-	 *         attribute name.
-	 * @throws IllegalDataException if the given attribute value is
-	 *         illegal character data (as determined by
-	 *         {@link fi.sykero.kdom.Verifier#checkCharacterData}) or
-	 *         if the given attribute type is not one of the
-	 *         supported types.
-	 */
-	public Attribute(final String name, final String value, final AttributeType type) {
-		this(name, value, type, Namespace.NO_NAMESPACE);
-	}
+    /**
+     * This will set the type of the `Attribute`.
+     *
+     * @param type `int` type for the attribute.
+     * @return `Attribute` - this Attribute modified.
+     * @throws IllegalDataException if the given attribute type is
+     *         not one of the supported types.
+     */
+    @Suppress("DEPRECATION")
+    @Deprecated("use setAttributeType(AttributeType)")
+    open fun setAttributeType(type: Int): Attribute {
+        setAttributeType(AttributeType.byIndex(type))
+        return this
+    }
 
-	/**
-	 * This will create a new <code>Attribute</code> with the
-	 * specified (local) name, value and type, and does not place
-	 * the attribute in a <code>{@link Namespace}</code>.
-	 * <p>
-	 * <b>Note</b>: This actually explicitly puts the
-	 * <code>Attribute</code> in the "empty" <code>Namespace</code>
-	 * (<code>{@link Namespace#NO_NAMESPACE}</code>).
-	 *
-	 * @param name <code>String</code> name of <code>Attribute</code>.
-	 * @param value <code>String</code> value for new attribute.
-	 * @param type <code>int</code> type for new attribute.
-	 * @throws IllegalNameException if the given name is illegal as an
-	 *         attribute name.
-	 * @throws IllegalDataException if the given attribute value is
-	 *         illegal character data (as determined by
-	 *         {@link fi.sykero.kdom.Verifier#checkCharacterData}) or
-	 *         if the given attribute type is not one of the
-	 *         supported types.
-	 * @deprecated Use {@link #Attribute(String, String, AttributeType)}
-	 */
-	@Deprecated
-	public Attribute(final String name, final String value, final int type) {
-		this(name, value, type, Namespace.NO_NAMESPACE);
-	}
+    /**
+     * This returns a `String` representation of the
+     * `Attribute`, suitable for debugging.
+     *
+     * @return `String` - information about the
+     *         `Attribute`
+     */
+    override fun toString(): String {
+        return StringBuilder()
+            .append("[Attribute: ")
+            .append(qualifiedName)
+            .append("=\"")
+            .append(value)
+            .append("\"")
+            .append("]")
+            .toString()
+    }
 
-	/**
-	 * This will return the parent of this <code>Attribute</code>.
-	 * If there is no parent, then this returns <code>null</code>.
-	 * Use return-type covariance to override Content's getParent() method
-	 * to return an Element, not just a Parent
-	 *
-	 * @return parent of this <code>Attribute</code>
-	 */
-	public Element getParent() {
-		return parent;
-	}
-	
-	/**
-	 * Get this Attribute's Document.
-	 * @return The document to which this Attribute is associated, may be null.
-	 */
-	public Document getDocument() {
-		return parent == null ? null : parent.getDocument();
-	}
-	
-	/**
-	 * This will retrieve the local name of the
-	 * <code>Attribute</code>. For any XML attribute
-	 * which appears as
-	 * <code>[namespacePrefix]:[attributeName]</code>,
-	 * the local name of the attribute would be
-	 * <code>[attributeName]</code>. When the attribute
-	 * has no namespace, the local name is simply the attribute
-	 * name.
-	 * <p>
-	 * To obtain the namespace prefix for this
-	 * attribute, the
-	 * <code>{@link #getNamespacePrefix()}</code>
-	 * method should be used.
-	 *
-	 * @return <code>String</code> - name of this attribute,
-	 *                               without any namespace prefix.
-	 */
-	public String getName() {
-		return name;
-	}
+    override fun clone(): Attribute {
+        val clone = super<CloneBase>.clone() as Attribute
+        clone.parentRef = null
+        return clone
+    }
 
-	/**
-	 * This sets the local name of the <code>Attribute</code>.
-	 *
-	 * @param name the new local name to set
-	 * @return <code>Attribute</code> - the attribute modified.
-	 * @throws IllegalNameException if the given name is illegal as an
-	 *         attribute name.
-	 */
-	public Attribute setName(final String name) {
-		if (name == null) {
-			throw new NullPointerException(
-					"Can not set a null name for an Attribute.");
-		}
-		final String reason  = Verifier.checkAttributeName(name);
-		if (reason != null) {
-			throw new IllegalNameException(name, "attribute", reason);
-		}
-		this.name = name;
-		specified = true;
-		return this;
-	}
+    /**
+     * Detach this Attribute from its parent.
+     * @return this Attribute (detached).
+     */
+    open fun detach(): Attribute {
+        parentRef?.removeAttribute(this)
+        return this
+    }
 
-	/**
-	 * This will retrieve the qualified name of the <code>Attribute</code>.
-	 * For any XML attribute whose name is
-	 * <code>[namespacePrefix]:[elementName]</code>,
-	 * the qualified name of the attribute would be
-	 * everything (both namespace prefix and
-	 * element name). When the attribute has no
-	 * namespace, the qualified name is simply the attribute's
-	 * local name.
-	 * <p>
-	 * To obtain the local name of the attribute, the
-	 * <code>{@link #getName()}</code> method should be used.
-	 * <p>
-	 * To obtain the namespace prefix for this attribute,
-	 * the <code>{@link #getNamespacePrefix()}</code>
-	 * method should be used.
-	 *
-	 * @return <code>String</code> - full name for this element.
-	 */
-	public String getQualifiedName() {
-		// Note: Any changes here should be reflected in
-		// XMLOutputter.printQualifiedName()
-		final String prefix = namespace.getPrefix();
-
-		// no prefix found
-		if ("".equals(prefix)) {
-			return getName();
-		}
-		return new StringBuilder(prefix)
-		.append(':')
-		.append(getName())
-		.toString();
-	}
-
-	/**
-	 * This will retrieve the namespace prefix of the
-	 * <code>Attribute</code>. For any XML attribute
-	 * which appears as
-	 * <code>[namespacePrefix]:[attributeName]</code>,
-	 * the namespace prefix of the attribute would be
-	 * <code>[namespacePrefix]</code>. When the attribute
-	 * has no namespace, an empty <code>String</code> is returned.
-	 *
-	 * @return <code>String</code> - namespace prefix of this
-	 *                               attribute.
-	 */
-	public String getNamespacePrefix() {
-		return namespace.getPrefix();
-	}
-
-	/**
-	 * This returns the URI mapped to this <code>Attribute</code>'s
-	 * prefix. If no mapping is found, an empty <code>String</code> is
-	 * returned.
-	 *
-	 * @return <code>String</code> - namespace URI for this <code>Attribute</code>.
-	 */
-	public String getNamespaceURI() {
-		return namespace.getURI();
-	}
-
-	/**
-	 * This will return this <code>Attribute</code>'s
-	 * <code>{@link Namespace}</code>.
-	 *
-	 * @return <code>Namespace</code> - Namespace object for this <code>Attribute</code>
-	 */
-	public Namespace getNamespace() {
-		return namespace;
-	}
-
-	/**
-	 * This sets this <code>Attribute</code>'s <code>{@link Namespace}</code>.
-	 * If the provided namespace is null, the attribute will have no namespace.
-	 * The namespace must have a prefix.
-	 *
-	 * @param namespace the new namespace
-	 * @return <code>Element</code> - the element modified.
-	 * @throws IllegalNameException if the new namespace is the default
-	 *         namespace. Attributes cannot be in a default namespace.
-	 */
-	public Attribute setNamespace(Namespace namespace) {
-		if (namespace == null) {
-			namespace = Namespace.NO_NAMESPACE;
-		}
-
-		// Verify the attribute isn't trying to be in a default namespace
-		// Attributes can't be in a default namespace
-		if (namespace != Namespace.NO_NAMESPACE &&
-				"".equals(namespace.getPrefix())) {
-			throw new IllegalNameException("", "attribute namespace",
-					"An attribute namespace without a prefix can only be the " +
-					"NO_NAMESPACE namespace");
-		}
-		this.namespace = namespace;
-		specified = true;
-		return this;
-	}
-
-	/**
-	 * This will return the actual textual value of this
-	 * <code>Attribute</code>.  This will include all text
-	 * within the quotation marks.
-	 *
-	 * @return <code>String</code> - value for this attribute.
-	 */
-	public String getValue() {
-		return value;
-	}
-
-	/**
-	 * This will set the value of the <code>Attribute</code>.
-	 *
-	 * @param value <code>String</code> value for the attribute.
-	 * @return <code>Attribute</code> - this Attribute modified.
-	 * @throws IllegalDataException if the given attribute value is
-	 *         illegal character data (as determined by
-	 *         {@link fi.sykero.kdom.Verifier#checkCharacterData}).
-	 */
-	public Attribute setValue(final String value) {
-		if (value == null) {
-			throw new NullPointerException(
-					"Can not set a null value for an Attribute");
-		}
-		final String reason = Verifier.checkCharacterData(value);
-		if (reason != null) {
-			throw new IllegalDataException(value, "attribute", reason);
-		}
-		this.value = value;
-		specified = true;
-		return this;
-	}
-
-	/**
-	 * This will return the declared type of this <code>Attribute</code>.
-	 *
-	 * @return <code>AttributeType</code> - type for this attribute.
-	 */
-	public AttributeType getAttributeType() {
-		return type;
-	}
-
-	/**
-	 * This will set the type of the <code>Attribute</code>.
-	 *
-	 * @param type <code>int</code> type for the attribute.
-	 * @return <code>Attribute</code> - this Attribute modified.
-	 * @throws IllegalDataException if the given attribute type is
-	 *         not one of the supported types.
-	 */
-	public Attribute setAttributeType(final AttributeType type) {
-		this.type = type == null ? AttributeType.UNDECLARED : type;
-		specified = true;
-		return this;
-	}
-
-	/**
-	 * This will set the type of the <code>Attribute</code>.
-	 *
-	 * @param type <code>int</code> type for the attribute.
-	 * @return <code>Attribute</code> - this Attribute modified.
-	 * @throws IllegalDataException if the given attribute type is
-	 *         not one of the supported types.
-	 * @deprecated use {@link #setAttributeType(AttributeType)}
-	 */
-	@Deprecated
-	public Attribute setAttributeType(final int type) {
-		setAttributeType(AttributeType.byIndex(type));
-		return this;
-	}
-	
-	/**
-	 * Get the 'specified' flag. True values indicate this attribute
-	 * was part of an XML document, false indicates it was defaulted
-	 * from a DTD.
-	 * @return the specified flag.
-	 * @since JDOM2
-	 */
-	public boolean isSpecified() {
-		return specified;
-	}
-	
-	/**
-	 * Change the specified flag to the given value.
-	 * @param specified The value to set the specified flag to.
-	 * @since JDOM2
-	 */
-	public void setSpecified(boolean specified) {
-		this.specified = specified;
-	}
-	
-	/**
-	 * This returns a <code>String</code> representation of the
-	 * <code>Attribute</code>, suitable for debugging.
-	 *
-	 * @return <code>String</code> - information about the
-	 *         <code>Attribute</code>
-	 */
-	@Override
-	public String toString() {
-		return new StringBuilder()
-		.append("[Attribute: ")
-		.append(getQualifiedName())
-		.append("=\"")
-		.append(value)
-		.append("\"")
-		.append("]")
-		.toString();
-	}
-
-	@Override
-	public Attribute clone() {
-		final Attribute clone = (Attribute) super.clone();
-		clone.parent = null;
-		return clone;
-	}
-
-	/**
-	 * Detach this Attribute from its parent.
-	 * @return this Attribute (detached).
-	 */
-	public Attribute detach() {
-		if (parent != null) {
-			parent.removeAttribute(this);
-		}
-		return this;
-	}
-
-	/**
-	 * Set this Attribute's parent. This is not public!
-	 * @param parent The parent to set
-	 * @return this Attribute (state may be indeterminate depending on whether
-	 * this has been included in the Element's list yet).
-	 */
-	protected Attribute setParent(Element parent) {
-		this.parent = parent;
-		return this;
-	}
-
-	
-	/////////////////////////////////////////////////////////////////
-	// Convenience Methods below here
-	/////////////////////////////////////////////////////////////////
-
-	/**
-	 * This gets the value of the attribute, in
-	 * <code>int</code> form, and if no conversion
-	 * can occur, throws a
-	 * <code>{@link DataConversionException}</code>
-	 *
-	 * @return <code>int</code> value of attribute.
-	 * @throws DataConversionException when conversion fails.
-	 */
-	public int getIntValue() throws DataConversionException {
-		try {
-			return Integer.parseInt(value.trim());
-		} catch (final NumberFormatException e) {
-			throw new DataConversionException(name, "int");
-		}
-	}
-
-	/**
-	 * This gets the value of the attribute, in
-	 * <code>long</code> form, and if no conversion
-	 * can occur, throws a
-	 * <code>{@link DataConversionException}</code>
-	 *
-	 * @return <code>long</code> value of attribute.
-	 * @throws DataConversionException when conversion fails.
-	 */
-	public long getLongValue() throws DataConversionException {
-		try {
-			return Long.parseLong(value.trim());
-		} catch (final NumberFormatException e) {
-			throw new DataConversionException(name, "long");
-		}
-	}
-
-	/**
-	 * This gets the value of the attribute, in
-	 * <code>float</code> form, and if no conversion
-	 * can occur, throws a
-	 * <code>{@link DataConversionException}</code>
-	 *
-	 * @return <code>float</code> value of attribute.
-	 * @throws DataConversionException when conversion fails.
-	 */
-	public float getFloatValue() throws DataConversionException {
-		try {
-			// Avoid Float.parseFloat() to support JDK 1.1
-			return Float.valueOf(value.trim()).floatValue();
-		} catch (final NumberFormatException e) {
-			throw new DataConversionException(name, "float");
-		}
-	}
-
-	/**
-	 * This gets the value of the attribute, in
-	 * <code>double</code> form, and if no conversion
-	 * can occur, throws a
-	 * <code>{@link DataConversionException}</code>
-	 *
-	 * @return <code>double</code> value of attribute.
-	 * @throws DataConversionException when conversion fails.
-	 */
-	public double getDoubleValue() throws DataConversionException {
-		try {
-			// Avoid Double.parseDouble() to support JDK 1.1
-			return Double.valueOf(value.trim()).doubleValue();
-		} catch (final NumberFormatException e) {
-			// Specially handle INF and -INF that Double.valueOf doesn't do
-			String v = value.trim();
-			if ("INF".equals(v)) {
-				return Double.POSITIVE_INFINITY;
-			}
-			if ("-INF".equals(v)) {
-				return Double.NEGATIVE_INFINITY;
-			}
-			throw new DataConversionException(name, "double");
-		}
-	}
-
-	/**
-	 * This gets the effective boolean value of the attribute, or throws a
-	 * <code>{@link DataConversionException}</code> if a conversion can't be
-	 * performed.  True values are: "true", "on", "1", and "yes".  False
-	 * values are: "false", "off", "0", and "no".  Values are trimmed before
-	 * comparison.  Values other than those listed here throw the exception.
-	 *
-	 * @return <code>boolean</code> value of attribute.
-	 * @throws DataConversionException when conversion fails.
-	 */
-	public boolean getBooleanValue() throws DataConversionException {
-		final String valueTrim = value.trim();
-		if (
-				(valueTrim.equalsIgnoreCase("true")) ||
-				(valueTrim.equalsIgnoreCase("on")) ||
-				(valueTrim.equalsIgnoreCase("1")) ||
-				(valueTrim.equalsIgnoreCase("yes"))) {
-			return true;
-		} else if (
-				(valueTrim.equalsIgnoreCase("false")) ||
-				(valueTrim.equalsIgnoreCase("off")) ||
-				(valueTrim.equalsIgnoreCase("0")) ||
-				(valueTrim.equalsIgnoreCase("no"))
-				) {
-			return false;
-		} else {
-			throw new DataConversionException(name, "boolean");
-		}
-	}
-
-	/**
-	 * Get the namespaces that are in-scope on this Attribute.
-	 * <p>
-	 * Attribute has peculiarities that affect the in-scope Namespaces because
-	 * there are conditions in which the Attribute's scope is different to its
-	 * parent Element's scope. Specifically, if the parent Element is in a
-	 * 'default' Namespace that is not the empty Namespace (e.g.
-	 * xmlns="someurl") and this Attribute is also in the default Namespace (has
-	 * no prefix - but for Attributes that means the Namespace URL is ""), then
-	 * this Attribute has a different namespace scope from its parent Element
-	 * because it does not include the 'someurl' Namespace.
-	 * <p>
-	 * In the above conditions (no-prefix Attribute in an Element with a
-	 * non-empty no-prefix Namespace) this Attribute effectively re-binds the ""
-	 * prefix to the "" URL, thus the Attribute 'introduces' the Namespace.
-	 * It follows then that the getNamespacesIntroduced() will return a list
-	 * with the single member {@link Namespace#NO_NAMESPACE}.
-	 * <p>
-	 * Note that the Attribute's Namespace will always be reported first.
-	 * <p>
-	 * <strong>Description copied from</strong>
-	 * {@link NamespaceAware#getNamespacesInScope()}:
-	 * <p>
-	 * {@inheritDoc}
-	 */
-	@Override
-	public List<Namespace> getNamespacesInScope() {
-		if (getParent() == null) {
-			ArrayList<Namespace> ret = new ArrayList<Namespace>(3);
-			ret.add(getNamespace());
-			ret.add(Namespace.XML_NAMESPACE);
-			return Collections.unmodifiableList(ret);
-		}
-		return orderFirst(getNamespace(), getParent().getNamespacesInScope());
-	}
-
-	@Override
-	public List<Namespace> getNamespacesIntroduced() {
-		if (getParent() == null) {
-			return Collections.singletonList(getNamespace());
-		}
-		return Collections.emptyList();
-	}
-
-	@Override
-	public List<Namespace> getNamespacesInherited() {
-		if (getParent() == null) {
-			return Collections.singletonList(Namespace.XML_NAMESPACE);
-		}
-		return orderFirst(getNamespace(), getParent().getNamespacesInScope());
-	}
+    /**
+     * Set this Attribute's parent. This is not public!
+     * (Was protected, i.e. package access in Java; public here because `AttributeList` calls it.)
+     * @param parent The parent to set
+     * @return this Attribute (state may be indeterminate depending on whether
+     * this has been included in the Element's list yet).
+     */
+    open fun setParent(parent: Element?): Attribute {
+        this.parentRef = parent
+        return this
+    }
 
 
-	private static final List<Namespace> orderFirst(final Namespace nsa, 
-			final List<Namespace> nsl) {
-		if (nsl.get(0) == nsa) {
-			return nsl;
-		}
-		// OK, we have our namespace list, but our's is not the first.
-		// we need the Attribute's Namespace to be up front.
-		TreeMap<String,Namespace> tm = new TreeMap<String, Namespace>();
-		for (Namespace ns : nsl) {
-			if (ns != nsa) {
-				tm.put(ns.getPrefix(), ns);
-			}
-		}
-		ArrayList<Namespace> ret = new ArrayList<Namespace>(tm.size() + 1);
-		ret.add(nsa);
-		ret.addAll(tm.values());
-		return Collections.unmodifiableList(ret);
-	}
+    /////////////////////////////////////////////////////////////////
+    // Convenience Methods below here
+    /////////////////////////////////////////////////////////////////
+
+    /**
+     * This gets the value of the attribute, in
+     * `int` form, and if no conversion
+     * can occur, throws a
+     * `[DataConversionException]`
+     *
+     * @return `int` value of attribute.
+     * @throws DataConversionException when conversion fails.
+     */
+    @get:Throws(DataConversionException::class)
+    val intValue: Int
+        get() {
+            try {
+                return value!!.trim { it <= ' ' }.toInt()
+            } catch (e: NumberFormatException) {
+                throw DataConversionException(name, "int")
+            }
+        }
+
+    /**
+     * This gets the value of the attribute, in
+     * `long` form, and if no conversion
+     * can occur, throws a
+     * `[DataConversionException]`
+     *
+     * @return `long` value of attribute.
+     * @throws DataConversionException when conversion fails.
+     */
+    @get:Throws(DataConversionException::class)
+    val longValue: Long
+        get() {
+            try {
+                return value!!.trim { it <= ' ' }.toLong()
+            } catch (e: NumberFormatException) {
+                throw DataConversionException(name, "long")
+            }
+        }
+
+    /**
+     * This gets the value of the attribute, in
+     * `float` form, and if no conversion
+     * can occur, throws a
+     * `[DataConversionException]`
+     *
+     * @return `float` value of attribute.
+     * @throws DataConversionException when conversion fails.
+     */
+    @get:Throws(DataConversionException::class)
+    val floatValue: Float
+        get() {
+            try {
+                // Avoid Float.parseFloat() to support JDK 1.1
+                return java.lang.Float.valueOf(value!!.trim { it <= ' ' }).toFloat()
+            } catch (e: NumberFormatException) {
+                throw DataConversionException(name, "float")
+            }
+        }
+
+    /**
+     * This gets the value of the attribute, in
+     * `double` form, and if no conversion
+     * can occur, throws a
+     * `[DataConversionException]`
+     *
+     * @return `double` value of attribute.
+     * @throws DataConversionException when conversion fails.
+     */
+    @get:Throws(DataConversionException::class)
+    val doubleValue: Double
+        get() {
+            try {
+                // Avoid Double.parseDouble() to support JDK 1.1
+                return java.lang.Double.valueOf(value!!.trim { it <= ' ' }).toDouble()
+            } catch (e: NumberFormatException) {
+                // Specially handle INF and -INF that Double.valueOf doesn't do
+                val v = value!!.trim { it <= ' ' }
+                if ("INF" == v) {
+                    return Double.POSITIVE_INFINITY
+                }
+                if ("-INF" == v) {
+                    return Double.NEGATIVE_INFINITY
+                }
+                throw DataConversionException(name, "double")
+            }
+        }
+
+    /**
+     * This gets the effective boolean value of the attribute, or throws a
+     * `[DataConversionException]` if a conversion can't be
+     * performed.  True values are: "true", "on", "1", and "yes".  False
+     * values are: "false", "off", "0", and "no".  Values are trimmed before
+     * comparison.  Values other than those listed here throw the exception.
+     *
+     * @return `boolean` value of attribute.
+     * @throws DataConversionException when conversion fails.
+     */
+    @get:Throws(DataConversionException::class)
+    val booleanValue: Boolean
+        get() {
+            val valueTrim = value!!.trim { it <= ' ' }
+            if (
+                (valueTrim.equals("true", ignoreCase = true)) ||
+                (valueTrim.equals("on", ignoreCase = true)) ||
+                (valueTrim.equals("1", ignoreCase = true)) ||
+                (valueTrim.equals("yes", ignoreCase = true))
+            ) {
+                return true
+            } else if (
+                (valueTrim.equals("false", ignoreCase = true)) ||
+                (valueTrim.equals("off", ignoreCase = true)) ||
+                (valueTrim.equals("0", ignoreCase = true)) ||
+                (valueTrim.equals("no", ignoreCase = true))
+            ) {
+                return false
+            } else {
+                throw DataConversionException(name, "boolean")
+            }
+        }
+
+    /**
+     * Get the namespaces that are in-scope on this Attribute.
+     *
+     * Attribute has peculiarities that affect the in-scope Namespaces because
+     * there are conditions in which the Attribute's scope is different to its
+     * parent Element's scope. Specifically, if the parent Element is in a
+     * 'default' Namespace that is not the empty Namespace (e.g.
+     * xmlns="someurl") and this Attribute is also in the default Namespace (has
+     * no prefix - but for Attributes that means the Namespace URL is ""), then
+     * this Attribute has a different namespace scope from its parent Element
+     * because it does not include the 'someurl' Namespace.
+     *
+     * In the above conditions (no-prefix Attribute in an Element with a
+     * non-empty no-prefix Namespace) this Attribute effectively re-binds the ""
+     * prefix to the "" URL, thus the Attribute 'introduces' the Namespace.
+     * It follows then that the getNamespacesIntroduced() will return a list
+     * with the single member [Namespace.NO_NAMESPACE].
+     *
+     * Note that the Attribute's Namespace will always be reported first.
+     *
+     * **Description copied from**
+     * [NamespaceAware.namespacesInScope]:
+     */
+    override val namespacesInScope: List<Namespace>
+        get() {
+            val p = parent
+            if (p == null) {
+                val ret = ArrayList<Namespace>(3)
+                ret.add(namespace)
+                ret.add(Namespace.XML_NAMESPACE)
+                return Collections.unmodifiableList(ret)
+            }
+            return orderFirst(namespace, p.namespacesInScope)
+        }
+
+    override val namespacesIntroduced: List<Namespace>
+        get() {
+            if (parent == null) {
+                return Collections.singletonList(namespace)
+            }
+            return Collections.emptyList()
+        }
+
+    override val namespacesInherited: List<Namespace>
+        get() {
+            val p = parent
+            if (p == null) {
+                return Collections.singletonList(Namespace.XML_NAMESPACE)
+            }
+            return orderFirst(namespace, p.namespacesInScope)
+        }
+
+    companion object {
+        /**
+         * JDOM 2.0.0 Serialization version. Attribute is simple
+         */
+        private const val serialVersionUID = 200L
+
+        // Keep the old constant names for one beta cycle to help migration
+
+        /** JDOM 1.x compatible reference to [AttributeType.UNDECLARED]  */
+        @JvmField
+        val UNDECLARED_TYPE: AttributeType = AttributeType.UNDECLARED
+
+        /** JDOM 1.x compatible reference to [AttributeType.CDATA]  */
+        @JvmField
+        val CDATA_TYPE: AttributeType = AttributeType.CDATA
+
+        /** JDOM 1.x compatible reference to [AttributeType.ID]  */
+        @JvmField
+        val ID_TYPE: AttributeType = AttributeType.ID
+
+        /** JDOM 1.x compatible reference to [AttributeType.IDREF]  */
+        @JvmField
+        val IDREF_TYPE: AttributeType = AttributeType.IDREF
+
+        /** JDOM 1.x compatible reference to [AttributeType.IDREFS]  */
+        @JvmField
+        val IDREFS_TYPE: AttributeType = AttributeType.IDREFS
+
+        /** JDOM 1.x compatible reference to [AttributeType.ENTITY]  */
+        @JvmField
+        val ENTITY_TYPE: AttributeType = AttributeType.ENTITY
+
+        /** JDOM 1.x compatible reference to [AttributeType.ENTITIES]  */
+        @JvmField
+        val ENTITIES_TYPE: AttributeType = AttributeType.ENTITIES
+
+        /** JDOM 1.x compatible reference to [AttributeType.NMTOKEN]  */
+        @JvmField
+        val NMTOKEN_TYPE: AttributeType = AttributeType.NMTOKEN
+
+        /** JDOM 1.x compatible reference to [AttributeType.NMTOKENS]  */
+        @JvmField
+        val NMTOKENS_TYPE: AttributeType = AttributeType.NMTOKENS
+
+        /** JDOM 1.x compatible reference to [AttributeType.NOTATION]  */
+        @JvmField
+        val NOTATION_TYPE: AttributeType = AttributeType.NOTATION
+
+        /** JDOM 1.x compatible reference to [AttributeType.ENUMERATION]  */
+        @JvmField
+        val ENUMERATED_TYPE: AttributeType = AttributeType.ENUMERATION
+
+        private fun orderFirst(nsa: Namespace, nsl: List<Namespace>): List<Namespace> {
+            if (nsl[0] === nsa) {
+                return nsl
+            }
+            // OK, we have our namespace list, but our's is not the first.
+            // we need the Attribute's Namespace to be up front.
+            val tm = TreeMap<String, Namespace>()
+            for (ns in nsl) {
+                if (ns !== nsa) {
+                    tm.put(ns.prefix, ns)
+                }
+            }
+            val ret = ArrayList<Namespace>(tm.size + 1)
+            ret.add(nsa)
+            ret.addAll(tm.values)
+            return Collections.unmodifiableList(ret)
+        }
+    }
 
 }

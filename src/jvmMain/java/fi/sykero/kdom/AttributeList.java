@@ -121,7 +121,7 @@ final class AttributeList extends AbstractList<Attribute>
 	 *        an Attribute to add without any checks
 	 */
 	final void uncheckedAddAttribute(final Attribute a) {
-		a.parent = parent;
+		a.parentRef = parent;
 		ensureCapacity(size + 1);
 		attributeData[size++] = a;
 		modCount++;
