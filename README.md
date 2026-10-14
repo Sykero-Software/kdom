@@ -27,8 +27,24 @@ New: `fi.sykero.kdom.input.KdomBuilder`, `fi.sykero.kdom.input.XmlEventParser`, 
 
 Every jdom2 public no-argument `getX()`/`isX()` is a Kotlin property `x`/`isX` (`var` when jdom2 has
 a single-argument `setX`). Overloads with parameters stay functions (`getChildren(name)`,
-`setAttribute(name, value)`). A fluent jdom2 setter becomes the property setter and returns `Unit`.
-Exceptions are listed in `docs/translation-notes.md`.
+`setAttribute(name, value)`).
+
+Dual setter API: a fluent jdom2 setter is kept as jdom2 shaped it, `open fun setX(v): Self` (returns the
+receiver, so `Element("a").setText("1")` chains and Java callers are unchanged), **and** the property is a
+`var` whose setter (`@JvmSynthetic`, hidden from Java) calls `setX`, so Kotlin can write `e.text = "1"`.
+Void jdom2 setters are plain `var` properties. Exceptions and details are listed in
+`docs/translation-notes.md` ("Property rule exceptions").
+
+## Parsing and DOCTYPE policy
+
+`KdomBuilder` (jdom2 `SAXBuilder` replacement) and `XmlEventParser` (SAX-shaped events) read XML with
+xmlutil and reject every input a JAXP SAX parser rejects. By default they are **strict**: any DOCTYPE
+is a parse error, which is what JSword's OSIS/ThML/GBF parsing relies on (a malformed verse keeps
+taking its fallback chain). For EPUB XHTML/OPF/NCX and other non-Sword XML, `KdomBuilder(allowDocType =
+true)` / `XmlEventParser(namespaceAware, allowDocType = true)` accept a DOCTYPE and build a `DocType`
+node as jdom2 does; the external subset is never loaded (no network, no files), internal-subset
+entities are expanded, and an undeclared entity under an unread external subset becomes an
+`EntityRef`. Details: `docs/xmlutil-probes.md` ("DOCTYPE policy") and `docs/translation-notes.md`.
 
 ## Build
 
