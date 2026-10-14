@@ -91,13 +91,19 @@ class AxesTest {
 
     @Test fun sequencesAreLazy() {
         val d = doc()
-        val seq = d.allElements().filter { it.name == "a" }
-        d.rootElement.addContent(Element("a", d.rootElement.namespace))   // mutate before consuming
-        assertEquals(3, seq.count())
         var touched = 0
         val s = d.rootElement.descendantElements().onEach { touched++ }
         assertEquals(0, touched)
         s.first()
         assertEquals(1, touched)
+    }
+
+    @Test fun childStepsKeepDocumentOrderWithNestedParents() {
+        val d = KdomBuilder().build("""<n xmlns="urn:x"><np id="o"><np id="i"><c src="inner"/></np><c src="outer"/></np></n>""")
+        assertEquals(listOf("inner", "outer"), d.findChildrenOf("np", x, "c", x).map { it.getAttribute("src")!!.value })
+        assertEquals(listOf("outer"), d.findChildrenOf("np", x, "c", x) { it.attributeIs("src", "outer") }.map { it.getAttribute("src")!!.value })
+        assertEquals(emptyList(), d.findChildrenOf("n", x, "c", x))          // c is not a child of n
+        assertEquals(emptyList(), d.findChildrenOf("np", x, "c", Namespace.NO_NAMESPACE))
+        assertEquals(emptyList(), d.rootElement.clone().let { (it as Element).findChildrenOf("np", x, "c", x) })
     }
 }

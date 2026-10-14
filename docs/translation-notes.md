@@ -547,6 +547,8 @@ After Task 9 (XmlEventParser, KdomBuilder): 58 classes / 766 tests / 2 skipped /
 After Task 9 fix round 1: 58 classes / 773 tests / 2 skipped / 0 failures (+5 `KdomBuilderTest`, +1 `XmlEventParserProbeTest`,
 +1 `KdomBuilderDifferentialTest`; new cases added to the existing differential lists).
 
+After Task 11 (query axes): 62 classes / 808 tests / 2 skipped / 0 failures (+`AxesTest` 10, +`AxesJaxenDifferentialTest` 2; fix round 1 added one `AxesTest`).
+
 ### Import notes (fix round 1)
 
 - `TestDescendantIterator`, `TestDescendantFilterIterator` and `TestJDOMExceptn` (17 tests) use only imported classes and are
@@ -583,4 +585,9 @@ against jaxen (`AxesJaxenDifferentialTest`: every expression from every context 
   (`.//x`, `../x`, `descendant::`, `ancestor::`, siblings) work on detached trees exactly as in jaxen (ruling R10).
 - Name tests compare localName and namespace URI (never the prefix); `NO_NAMESPACE` matches no-namespace elements only, so the
   unprefixed XPath name `note` is `isNamed("note", Namespace.NO_NAMESPACE)`.
+- Multi-step paths (`//a/b`) are composed by filtering the document-ordered `allElements()` on the element and its
+  `parentElement`, never by `flatMap { childElements() }` over the parents (nested parents would be grouped by parent and
+  lose document order, which jaxen keeps); `findChildrenOf` is that composition.
+- Sequences are lazy; a caller that mutates the tree while iterating (e.g. `SwordContentFacade.addAnchors`) must `.toList()`
+  first, as jaxen returned an eager list.
 - `precedingSiblingElements()` and `ancestorElements()` are nearest first (XPath reverse axes); the rest is document order.

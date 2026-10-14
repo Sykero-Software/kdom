@@ -10,10 +10,17 @@ import fi.sykero.kdom.Text
 /*
  * XPath-replacing axis helpers (new kdom code, no jdom2 counterpart). They reproduce what jaxen returned for the
  * expressions `:app` evaluated through jdom2's XPathFactory: results are in document order unless the function says
- * "nearest first" (XPath's reverse axes), name tests compare the namespace URI (never the prefix), and the double-slash descendant step is
- * absolute: [xpathRoot] is the node it searches from, whatever the context node.
+ * "nearest first" (XPath's reverse axes), name tests compare the namespace URI (never the prefix), and the
+ * double-slash descendant step is absolute: [xpathRoot] is the node it searches from, whatever the context node.
  *
- * `Sequence` results are lazy; do not consume one after mutating the tree it walks.
+ * `Sequence` results are lazy (nothing is evaluated until an element is requested) and walk the live tree. A caller that
+ * mutates the tree while iterating (detaching, inserting, renaming) must evaluate EAGERLY first with `.toList()`, as
+ * jaxen returned an eager list (e.g. `SwordContentFacade.addAnchors`).
+ *
+ * A multi-step path such as `//a/b` must be composed by filtering the document-ordered sequence on the parent
+ * (`allElements().filter { it.isNamed("b", ..) && it.parentElement?.isNamed("a", ..) == true }`), NOT by
+ * `flatMap { it.childElements() }` over the parents: with nested parents that groups the result by parent and breaks
+ * document order. [findChildrenOf] is that composition.
  */
 
 /**
@@ -78,6 +85,18 @@ public fun Element.attributeIs(name: String, value: String): Boolean = getAttrib
 /** Convenience for the common `//ns:name` from any context (absolute, like XPath). */
 public fun Parent.findAll(localName: String, ns: Namespace): List<Element> =
     xpathRoot()?.allElements()?.filter { it.isNamed(localName, ns) }?.toList() ?: emptyList()
+
+/**
+ * `//parent/child` from any context (absolute like XPath, empty when there is no [xpathRoot]), in document order even
+ * when [parentName] elements are nested. [predicate] is the optional `[...]` step on the child.
+ */
+public fun Parent.findChildrenOf(
+    parentName: String, parentNs: Namespace, childName: String, childNs: Namespace,
+    predicate: (Element) -> Boolean = { true },
+): List<Element> =
+    xpathRoot()?.allElements()?.filter {
+        it.isNamed(childName, childNs) && it.parentElement?.isNamed(parentName, parentNs) == true && predicate(it)
+    }?.toList() ?: emptyList()
 
 private fun Parent.contentSequence(): Sequence<Content> = sequence {
     var i = 0

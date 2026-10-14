@@ -7,6 +7,7 @@ import fi.sykero.kdom.query.attributeIs
 import fi.sykero.kdom.query.childElements
 import fi.sykero.kdom.query.descendantElements
 import fi.sykero.kdom.query.descendantTexts
+import fi.sykero.kdom.query.findChildrenOf
 import fi.sykero.kdom.query.followingSiblingElements
 import fi.sykero.kdom.query.hasAttribute
 import fi.sykero.kdom.query.isNamed
@@ -79,6 +80,12 @@ class AxesJaxenDifferentialTest {
   <img src="j.png"/><a name="z"/></div>
 </body></html>"""
 
+        /** Nested parents: the outer navPoint's content FOLLOWS the nested ones (document order vs grouping by parent). */
+        val NESTED_NCX_XML = """<ncx xmlns="$NCX"><navPoint id="o"><navPoint id="i"><navLabel><text>I</text></navLabel><content src="inner"/></navPoint><navLabel><text>O</text></navLabel><content src="outer"/></navPoint></ncx>"""
+
+        val NESTED_OPF_XML = """<package xmlns="$OPF"><manifest id="m1"><manifest id="m2"><item id="toc" href="a" media-type="application/x-dtbncx+xml" properties="nav"/></manifest><item id="toc" href="b" media-type="application/x-dtbncx+xml" properties="nav"/></manifest>
+<spine><itemref idref="x"/><spine><itemref idref="y"/></spine><itemref idref="z"/></spine></package>"""
+
         val NAMESPACES = listOf(OPF, XHTML, NCX, CONTAINER, DC, SVG, "urn:none")
     }
 
@@ -124,24 +131,23 @@ class AxesJaxenDifferentialTest {
         val out = ArrayList<Case>()
         out += Case("//ns:rootfile") { c, ns -> c.root().filter { it.isNamed("rootfile", ns) }.toList() }
         out += Case("//ns:manifest/ns:item") { c, ns ->
-            c.root().filter { it.isNamed("manifest", ns) }
-                .flatMap { it.childElements() }.filter { it.isNamed("item", ns) }.toList()
+            c.root().filter { it.isNamed("item", ns) && it.parentElement?.isNamed("manifest", ns) == true }.toList()
         }
         out += Case("//ns:manifest/ns:item[@media-type='application/x-dtbncx+xml']") { c, ns ->
-            c.root().filter { it.isNamed("manifest", ns) }.flatMap { it.childElements() }
-                .filter { it.isNamed("item", ns) && it.attributeIs("media-type", "application/x-dtbncx+xml") }.toList()
+            c.root().filter { it.isNamed("item", ns) && it.parentElement?.isNamed("manifest", ns) == true && it.attributeIs("media-type", "application/x-dtbncx+xml") }.toList()
         }
         out += Case("//ns:manifest/ns:item[@id='toc']") { c, ns ->
-            c.root().filter { it.isNamed("manifest", ns) }.flatMap { it.childElements() }
-                .filter { it.isNamed("item", ns) && it.attributeIs("id", "toc") }.toList()
+            c.root().filter { it.isNamed("item", ns) && it.parentElement?.isNamed("manifest", ns) == true && it.attributeIs("id", "toc") }.toList()
         }
         out += Case("//ns:manifest/ns:item[@properties='nav']") { c, ns ->
-            c.root().filter { it.isNamed("manifest", ns) }.flatMap { it.childElements() }
-                .filter { it.isNamed("item", ns) && it.attributeIs("properties", "nav") }.toList()
+            c.root().filter { it.isNamed("item", ns) && it.parentElement?.isNamed("manifest", ns) == true && it.attributeIs("properties", "nav") }.toList()
         }
         out += Case("//ns:navPoint/ns:content") { c, ns ->
-            c.root().filter { it.isNamed("navPoint", ns) }.flatMap { it.childElements() }
-                .filter { it.isNamed("content", ns) }.toList()
+            c.root().filter { it.isNamed("content", ns) && it.parentElement?.isNamed("navPoint", ns) == true }.toList()
+        }
+        out += Case("//ns:navPoint/ns:content (findChildrenOf)") { c, ns -> c.findChildrenOf("navPoint", ns, "content", ns) }
+        out += Case("//ns:manifest/ns:item[@id='toc'] (findChildrenOf)") { c, ns ->
+            c.findChildrenOf("manifest", ns, "item", ns) { it.attributeIs("id", "toc") }
         }
         out += Case("../ns:navLabel/ns:text", elementContextOnly = true) { c, ns ->
             (c as fi.sykero.kdom.Element).parentElement?.childElements().orEmpty()
@@ -152,8 +158,7 @@ class AxesJaxenDifferentialTest {
             out += Case("//dc:$k") { c, _ -> c.root().filter { it.isNamed(k, dc) }.toList() }
         }
         out += Case("//ns:spine/ns:itemref") { c, ns ->
-            c.root().filter { it.isNamed("spine", ns) }.flatMap { it.childElements() }
-                .filter { it.isNamed("itemref", ns) }.toList()
+            c.root().filter { it.isNamed("itemref", ns) && it.parentElement?.isNamed("spine", ns) == true }.toList()
         }
         out += Case("//ns:BVA") { c, ns -> c.root().filter { it.isNamed("BVA", ns) }.toList() }
         out += Case(".//ns:BVA") { c, ns -> c.descendantElements().filter { it.isNamed("BVA", ns) }.toList() }
@@ -211,7 +216,7 @@ class AxesJaxenDifferentialTest {
     }
 
     @Test fun axesMatchJaxen() {
-        val fixtures = listOf(CONTAINER_XML, OPF_XML, NCX_XML, XHTML_XML)
+        val fixtures = listOf(CONTAINER_XML, OPF_XML, NCX_XML, XHTML_XML, NESTED_NCX_XML, NESTED_OPF_XML)
         val cases = cases()
         val nonEmpty = HashMap<String, Int>()
         val mismatches = ArrayList<String>()
@@ -227,11 +232,11 @@ class AxesJaxenDifferentialTest {
                 val kns = fi.sykero.kdom.Namespace.getNamespace("ns", nsUri)
                 for (case in cases) {
                     val xp = if (case.text)
-                        XPathFactory.instance().compile(case.xpath, Filters.text(), null, jns,
+                        XPathFactory.instance().compile(case.xpath.removeSuffix(" (findChildrenOf)"), Filters.text(), null, jns,
                             org.jdom2.Namespace.getNamespace("dc", DC), org.jdom2.Namespace.getNamespace("svg", SVG),
                             org.jdom2.Namespace.getNamespace("xlink", XLINK))
                     else
-                        XPathFactory.instance().compile(case.xpath, Filters.element(), null, jns,
+                        XPathFactory.instance().compile(case.xpath.removeSuffix(" (findChildrenOf)"), Filters.element(), null, jns,
                             org.jdom2.Namespace.getNamespace("dc", DC), org.jdom2.Namespace.getNamespace("svg", SVG),
                             org.jdom2.Namespace.getNamespace("xlink", XLINK))
                     for (i in jc.indices) {
@@ -239,7 +244,14 @@ class AxesJaxenDifferentialTest {
                         val expected = xp.evaluate(jc[i]).map { key(it as org.jdom2.Content) }
                         val actual = case.axes(kc[i] as fi.sykero.kdom.Parent, kns).map { key(it) }
                         compared++
-                        if (expected.isNotEmpty()) nonEmpty.merge(case.xpath, 1, Int::plus)
+                        if (expected.isNotEmpty()) {
+                            nonEmpty.merge(case.xpath, 1, Int::plus)
+                            if (xml == XHTML_XML && nsUri == XHTML) {
+                                val cls = when { jc[i] is org.jdom2.Document -> "document"; !detached -> "attached element"
+                                    i == 0 -> "detached body"; else -> "detached sub-element" }
+                                nonEmpty.merge(case.xpath + "|" + cls, 1, Int::plus)
+                            }
+                        }
                         if (expected != actual) {
                             mismatches += "${case.xpath} ns=$nsUri detached=$detached ctx#$i ${if (jc[i] is org.jdom2.Element) key(jc[i] as org.jdom2.Element) else "document"}\n  jaxen: $expected\n  axes : $actual"
                         }
@@ -250,6 +262,9 @@ class AxesJaxenDifferentialTest {
         assertTrue("${mismatches.size} mismatches of $compared:\n" + mismatches.distinctBy { it.substringBefore(" ctx#") }.take(40).joinToString("\n"), mismatches.isEmpty())
         // Guard against a vacuous test: every expression must select something from at least one context.
         for (c in cases) if (c.xpath.contains("'99'")) continue else assertTrue("never non-empty: ${c.xpath}", (nonEmpty[c.xpath] ?: 0) > 0)
+        for (x in listOf(".//ns:BVA", ".//text()[not(ancestor::note)]", "descendant::*"))
+            for (cls in listOf("document", "attached element", "detached body", "detached sub-element"))
+                assertTrue("relative $x never non-empty from a $cls", (nonEmpty["$x|$cls"] ?: 0) > 0)
         assertTrue(compared > 5000)
     }
 
