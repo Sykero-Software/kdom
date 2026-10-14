@@ -1,5 +1,6 @@
 package fi.sykero.kdom.input
 
+import fi.sykero.kdom.Verifier
 import fi.sykero.kdom.sax.SAXParseException
 
 /** XML 1.0 white space (`S` production). */
@@ -110,7 +111,7 @@ internal class SourceScanner(private val s: String, private val namespaceAware: 
             s.startsWith("<![CDATA[", i) -> i = skipPast("]]>", i + 9, "CDATA section")
             s.startsWith("<!DOCTYPE", i) -> fail(i, "DOCTYPE is not allowed (kdom does not process DTDs).")
             s.startsWith("<!", i) -> fail(i, "The markup in the document must be well-formed.")
-            s.startsWith("<?", i) -> i = skipPast("?>", i + 2, "processing instruction")
+            s.startsWith("<?", i) -> processingInstruction()
             s.startsWith("</", i) -> endTag()
             else -> startTag()
         }
@@ -120,6 +121,65 @@ internal class SourceScanner(private val s: String, private val namespaceAware: 
         val end = s.indexOf(terminator, from)
         if (end < 0) fail(n, "XML document structures must start and end within the same entity (unterminated $what).")
         return end + terminator.length
+    }
+
+    /**
+     * `<?` Name (S ... )? `?>`: the target must be an XML Name followed by white space or `?>` (SAX: "White space is
+     * required between the processing instruction target and data"). The XML declaration also needs white space between
+     * its pseudo-attributes.
+     */
+    private fun processingInstruction() {
+        val start = i + 2
+        var k = start
+        while (k < n && !isXmlSpace(s[k]) && !s.startsWith("?>", k)) k++
+        if (k == start) fail(start, "The processing instruction must begin with the name of the target.")
+        if (k >= n) fail(n, "XML document structures must start and end within the same entity (unterminated processing instruction).")
+        checkName(start, k, "White space is required between the processing instruction target and data.")
+        if (i == 0 && k - start == 3 && s.startsWith("xml", start)) xmlDeclaration(k)
+        i = skipPast("?>", k, "processing instruction")
+    }
+
+    /** After each quoted pseudo-attribute value of the XML declaration comes white space or `?>`. */
+    private fun xmlDeclaration(from: Int) {
+        var k = from
+        var quote = '\u0000'
+        while (k < n && !(quote == '\u0000' && s.startsWith("?>", k))) {
+            val c = s[k]
+            if (quote == '\u0000') {
+                if (c == '"' || c == '\'') quote = c
+            } else if (c == quote) {
+                quote = '\u0000'
+                if (k + 1 < n && !isXmlSpace(s[k + 1]) && s[k + 1] != '?') {
+                    fail(k + 1, "White space is required between the pseudo attributes of the XML declaration.")
+                }
+            }
+            k++
+        }
+    }
+
+    /** XML 1.0 (4th edition, as the JDK parser) Name check of `s[from, to)`; kdom's Verifier tables match the JDK's. */
+    private fun checkName(from: Int, to: Int, message: String) {
+        if (!Verifier.isXMLNameStartCharacter(s[from])) fail(from, message)
+        for (k in from + 1 until to) if (!Verifier.isXMLNameCharacter(s[k])) fail(k, message)
+    }
+
+    /**
+     * Namespace-aware QName rule of the JDK parser: the first `:` after the first character splits prefix and local
+     * part; an empty local part or a second `:` in it is rejected, and so is the element prefix `xmlns`. (A leading `:`
+     * is part of the local name, as in the JDK parser.)
+     */
+    private fun checkQName(from: Int, to: Int, element: Boolean) {
+        if (!namespaceAware) return
+        var colon = -1
+        for (k in from + 1 until to) if (s[k] == ':') { colon = k; break }
+        if (colon < 0) return
+        val name = s.substring(from, to)
+        if (colon + 1 == to || s.indexOf(':', colon + 1).let { it in 0 until to }) {
+            fail(from, "Element or attribute \"$name\" do not match QName production: QName::=(NCName:)?NCName.")
+        }
+        if (element && colon - from == 5 && s.startsWith("xmlns", from)) {
+            fail(from, "Element \"$name\" cannot have \"xmlns\" as its prefix.")
+        }
     }
 
     /** End of a name starting at [from]; names end at white space, markup delimiters or the end of input. */
@@ -148,6 +208,7 @@ internal class SourceScanner(private val s: String, private val namespaceAware: 
         val start = i + 2
         val end = nameEnd(start)
         if (end == start) fail(start, "The end-tag must have a name.")
+        checkName(start, end, "The end-tag name is not a legal XML name.")
         recordColons(start, end)
         val k = skipSpace(end)
         if (k >= n || s[k] != '>') fail(k, "The end-tag for element type \"" + s.substring(start, end) + "\" must end with a '>' delimiter.")
@@ -158,6 +219,8 @@ internal class SourceScanner(private val s: String, private val namespaceAware: 
         val start = i + 1
         val end = nameEnd(start)
         if (end == start) fail(start, "The markup in the document must be well-formed (a start tag needs a name).")
+        checkName(start, end, "The markup in the document must be well-formed (illegal element name).")
+        checkQName(start, end, element = true)
         recordColons(start, end)
         val element = s.substring(start, end)
         var seen: MutableSet<String>? = null
@@ -180,6 +243,8 @@ internal class SourceScanner(private val s: String, private val namespaceAware: 
             val aName = s.substring(aStart, aEnd)
             if (seen == null) seen = HashSet()
             if (!seen.add(aName)) fail(aStart, "Attribute \"$aName\" was already specified for element \"$element\".")
+            checkName(aStart, aEnd, "Element type \"$element\" must be followed by either attribute specifications, \">\" or \"/>\".")
+            checkQName(aStart, aEnd, element = false)
             recordColons(aStart, aEnd)
             if (!namespaceAware && aName == "xmlns") xmlnsNames.add(aStart + 4)
             k = skipSpace(aEnd)
