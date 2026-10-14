@@ -23,39 +23,20 @@ and a line here.
   `ProcessingInstruction.target/data`, `Attribute.name/namespace/value/attributeType`, `Element.name/namespace/text/attributes/content`,
   `Document.rootElement/docType/content`. Proven by `PropertySyntaxTest` (Kotlin assignment, chains, identity). The setter parameter
   type is the non-null property type; call `setX(null)` for the jdom2 null handling. Void jdom2 setters (`DocType.setInternalSubset`,
-  `Attribute.setSpecified`, `Document.setBaseURI`) are plain `var` properties. For Task 7: `kotlin.jvm.JvmSynthetic` is an optional
-  annotation in the common stdlib (same family as `JvmField`/`JvmStatic`/`JvmName`); verify it compiles in `commonMain` and keep the
-  fluent `setX` there.
-- `Element.getXMLBaseURI()` stays a function: it walks the ancestry, resolves URIs and throws the checked
-  `URISyntaxException` (`@Throws`). (A property would also have the JVM name `getXmlBaseURI`.)
+  `Attribute.setSpecified`, `Document.setBaseURI`) are plain `var` properties. Task 7: `kotlin.jvm.JvmSynthetic`,
+  `JvmField`, `JvmStatic`, `JvmName`, `JvmOverloads` and `Throws` compile in `commonMain` for jvm, iosArm64 and iosSimulatorArm64
+  (probe compiled 2026-10-14; the moved sources import them from `kotlin.jvm`), so the dual setter API is unchanged in common code.
+- `Element.getXMLBaseURI()` was kept as a function in Task 5; Task 7 removed it (`java.net.URI`, see Task 7 API changes).
 - `Attribute.getIntValue/getLongValue/getFloatValue/getDoubleValue/getBooleanValue` are properties with
-  `@get:Throws(DataConversionException::class)` (the Java tests catch the checked exception).
+  `@get:GetterThrows(DataConversionException::class)` (the Java tests catch the checked exception). `GetterThrows` (Task 7) is an
+  `@OptionalExpectation` annotation in `fi.sykero.kdom.internal` whose JVM actual is `kotlin.jvm.Throws`: common `kotlin.Throws`
+  cannot target a getter.
 - `ProcessingInstruction.getPseudoAttributeNames()` -> `val pseudoAttributeNames` (copying getter, as `NamespaceStack.scope` in Task 4).
 - `ContentFilter.get/setFilterMask` -> `var filterMask` (backing field `filterMask`, as jdom2) whose setter applies the default mask
   (`setDefaultMask(); filterMask &= mask` collapses to `field = DEFAULT_MASK and mask`; every mask the class assigns is a subset).
-- Not a property: `NamespaceStack.getNamespaceForPrefix(prefix)`, `getFirstNamespaceForURI(uri)`,
-  `getAllNamespacesForURI(uri)`, `getRebound(prefix)` take a parameter and stay functions.
-
-- Task 5 (tree core), **dual setter API (ruling R8)**: every jdom2 fluent setter with a matching no-arg getter is kept as the jdom2-shaped
-  `open fun setX(v: T?): Self` (returns the receiver, accepts `null` as jdom2 did: jdom2's own tests assert `er == er.setName("n")`,
-  `doc == doc.setDocType(null)`, chains like `new Element("a").setText("1")`) **and** the getter is a mutable property `var x: T` whose
-  setter is `@JvmSynthetic set(v) { setX(v) }`, so Kotlin callers keep jdom2's synthetic-property assignment (`e.name = "a"`,
-  `t.text = "b"`, as used in `app/.../EpubOptimization.kt`, `ClientPageObjects.kt`). `@JvmSynthetic` hides the property setter from
-  javac, the JVM only has the fluent `setX(..)`; no platform clash arose (descriptors differ by return type, and the property setter
-  is synthetic). Covered: `Text.text`, `Comment.text`, `EntityRef.name/publicID/systemID`, `DocType.elementName/publicID/systemID`,
-  `ProcessingInstruction.target/data`, `Attribute.name/namespace/value/attributeType`, `Element.name/namespace/text/attributes/content`,
-  `Document.rootElement/docType/content`. Proven by `PropertySyntaxTest` (Kotlin assignment, chains, identity). The setter parameter
-  type is the non-null property type; call `setX(null)` for the jdom2 null handling. Void jdom2 setters (`DocType.setInternalSubset`,
-  `Attribute.setSpecified`, `Document.setBaseURI`) are plain `var` properties. For Task 7: `kotlin.jvm.JvmSynthetic` is an optional
-  annotation in the common stdlib (same family as `JvmField`/`JvmStatic`/`JvmName`); verify it compiles in `commonMain` and keep the
-  fluent `setX` there.
-- `Element.getXMLBaseURI()` stays a function: it walks the ancestry, resolves URIs and throws the checked
-  `URISyntaxException` (`@Throws`). (A property would also have the JVM name `getXmlBaseURI`.)
-- `Attribute.getIntValue/getLongValue/getFloatValue/getDoubleValue/getBooleanValue` are properties with
-  `@get:Throws(DataConversionException::class)` (the Java tests catch the checked exception).
-- `ProcessingInstruction.getPseudoAttributeNames()` -> `val pseudoAttributeNames` (copying getter, as `NamespaceStack.scope` in Task 4).
-- `ContentFilter.get/setFilterMask` -> `var filterMask` with a custom setter (`setDefaultMask(); mask &= newMask`); the private field is
-  `mask` (jdom2: `filterMask`), see Traps.
+- Task 6 output API shape (see "Task 6" under API shape): `XMLOutputter.xmlOutputProcessor` keeps the JVM names
+  `getXMLOutputProcessor`/`setXMLOutputProcessor` through `@get:JvmName`/`@set:JvmName`, and
+  `Format.getRawFormat/getPrettyFormat/getCompactFormat` stay `@JvmStatic` companion factory functions (not properties).
 - Not a property: `Element.getNamespace(prefix)`, `getAttribute*(..)`, `getChild*(..)`, `getChildren(name[, ns])`, `getContent(index|filter)`,
   `getDescendants(filter)`, `Document.getProperty(id)`, `ProcessingInstruction.getPseudoAttributeValue(name)`, `Attribute`/`Element`
   `get/removeAttribute*`, `AttributeList.get(name, ns)` take parameters.
@@ -140,10 +121,12 @@ Shape decisions (no behaviour change intended):
   `detach`, `clone`, `setParent`, `Text.append`, `CDATA`/`Element`/`Document` overrides of those, `Content` abstract members and the
   `Parent`/`NamespaceAware`/`Filter` members (interfaces); everything else (getters, `getChild*`, `getAttribute*`, `remove*` helpers,
   ...) is final although jdom2 allowed overriding it. kdom has no subclassers outside the tests' anonymous raw subclasses.
+  The output walkers `WalkerPRESERVE`, `WalkerTRIM`, `WalkerTRIM_FULL_WHITE`, `WalkerNORMALIZE` are final classes too (public
+  non-final in jdom2), as are `FormatStack` and `XMLOutputter` (final in jdom2).
 - The protected fields of the content classes became properties; the nullable storage is a private field `xField` (`nameField`,
   `textField`, `publicIDField`, ...; `Text.textValue` is `@JvmField protected`, written by `CDATA`). **The serialized field names of
   these classes therefore changed** (default Java serialization of `name`, `value`, ... is no longer jdom2's); no serialized data
-  exists in kdom and Task 7 removes serialization. Kept: `Content.ctype` (protected final field, `cType` the property),
+  exists in kdom and Task 7 removed serialization. Kept: `Content.ctype` (protected final field, `cType` the property),
   `Attribute.type`/`specified`, `ContentFilter.filterMask`. Renamed: `Content.parent`/`Attribute.parent` -> `parentRef` (`@JvmField
   @Transient internal`: the list classes set it, as package access did in Java), `Element.content/attributes/additionalNamespaces`
   -> private `contentList`/`attributeListField`/`additionalNamespaceList`, `Document.content` -> `contentList`.
@@ -154,7 +137,8 @@ Shape decisions (no behaviour change intended):
 - `clone()` overrides are explicitly `public override fun clone()` in all tree classes (Kotlin keeps `protected` from `Cloneable.clone`
   otherwise); `CloneBase.clone()` is public (was protected). Cloning is still `Object.clone()` via `super<Cloneable>.clone()`
   (`Attribute` has two supertypes with it: `super<CloneBase>.clone()`). `Serializable`, `readObject/writeObject`, `transient`,
-  `serialVersionUID` (`private const val` in a private companion, a static field of the outer class) are kept (Task 7).
+  `serialVersionUID` (`private const val` in a private companion, a static field of the outer class) were kept until Task 7, which
+  replaced `clone()` and removed serialization (see Task 7).
 - `AttributeList`/`ContentList` extend `AbstractMutableList` with the Java algorithms and the exact `modCount` /
   `ConcurrentModificationException` checks (`AttributeList` uses the inherited `modCount`; `ContentList` keeps its own
   `sizeModCount`/`dataModiCount`). `remove(int)` is `removeAt`, `size()` is the `size` property. The JDK `List.sort(Comparator)`
@@ -214,10 +198,101 @@ Output sanity check: `src/jvmTest/kotlin/fi/sykero/kdom/diff/OutputDifferentialT
 (and five further format variants: encodings US-ASCII/ISO-8859-1/UTF-16, line separators, indent, expand-empty, omit declaration/encoding, TRIM_FULL_WHITE, NORMALIZE),
 string/writer/stream entry points, escaping helpers, TrAX PIs and `toString()` character for character. The full outputter differential is Task 12.
 
+Task 7 (commonization: everything except `internal/Platform.jvm.kt` and `output/XMLOutputterJvm.kt` moved to `src/commonMain/kotlin`;
+common code uses only the Kotlin stdlib, no `java.*`/`javax.*`). API changes:
+- **Output to `Appendable`.** `XMLOutputter.output(x, out: Appendable)` / `outputElementContent(e, out: Appendable)` replace the `Writer`
+  overloads (a `java.io.Writer` is an `Appendable`, so `output(doc, writer)` still compiles) and end with `flushIfPossible(out)`
+  (`internal expect fun`; JVM: `(out as? java.io.Flushable)?.flush()`, iOS: no-op). `XMLOutputProcessor.process(out: Appendable, ..)` and every
+  `AbstractXMLOutputProcessor` `write`/`text*`/`print*`/`attributeEscapedEntitiesFilter` hook take `Appendable` (`out.write(str)` ->
+  `out.append(str)`). `outputString`/`escapeAttributeEntities` write to a `StringBuilder`. The `@Throws(IOException::class)` clauses stay:
+  `fi.sykero.kdom.internal.IOException` is an `expect open class`, `actual typealias` to `java.io.IOException` on the JVM.
+- **`OutputStream` overloads are JVM extensions.** `XMLOutputterJvm.kt` declares `fun XMLOutputter.output(x, out: java.io.OutputStream)` for
+  `Document`, `DocType`, `Element`, `List<Content>`, `CDATA`, `Text`, `Comment`, `ProcessingInstruction`, `EntityRef` and
+  `outputElementContent(Element, OutputStream)`, encoding with `Format.encoding` through jdom2's `BufferedWriter(OutputStreamWriter(
+  BufferedOutputStream(out), encoding))`. Kotlin callers import `fi.sykero.kdom.output.output`; Java callers use
+  `XMLOutputterJvmKt.output(outputter, doc, stream)` (`TestXMLOutputter` was adapted, including its reflective `checkOutput`).
+- **TrAX PI targets**: `javax.xml.transform.Result.PI_DISABLE/ENABLE_OUTPUT_ESCAPING` are private string constants with the JAXP values.
+- **`Format` default escape strategy** is chosen from the encoding name only: `UTF-8`/`UTF-16` (jdom2), then `ISO-8859-*`/`Latin1`
+  (jdom2), `US-ASCII`/`ASCII` (jdom2), then (replacing jdom2's `Charset.forName(enc).newEncoder().canEncode(ch)`) `UTF8`, `UTF-16*`,
+  `UTF-32*` -> escape only high surrogates (as the UTF strategy), `ISO8859_1` -> escape above 0xFF, anything else -> escape above 0x7F.
+  See Behaviour differences.
+- **`SystemProperty` removed.** `LineSeparator.DEFAULT` is jdom2's hard default `"\r\n"`; jdom2's system-property override
+  (`JDOMConstants.JDOM2_PROPERTY_LINE_SEPARATOR`, constant kept) is gone. `LineSeparator.SYSTEM` is `systemLineSeparator()` (JVM:
+  `System.getProperty("line.separator")`, iOS: `"\n"`). Pinned by `LineSeparatorTest`.
+- **`Element.getXMLBaseURI()` removed** (it returned `java.net.URI`; `grep -rn XMLBaseURI jsword/src app/src` finds no caller).
+- **`clone()`.** No `Cloneable`/`Object.clone()`. `CloneBase` is an `abstract class` with `protected abstract fun shallowCopy(): CloneBase`
+  (a new instance with every field copied by reference, what `Object.clone()` did) and `open fun clone(): CloneBase = shallowCopy()`.
+  `Text`, `CDATA`, `Comment`, `ProcessingInstruction`, `EntityRef`, `DocType`, `Attribute`, `Element`, `Document` implement `shallowCopy`
+  through their protected/public no-arg constructors; their `clone()` overrides keep jdom2's deep-copy code unchanged (covariant
+  returns stay). `Parent.clone(): Any` is a plain interface function. `Format.clone()` copies its ten fields explicitly (encoding
+  before the escape strategy, so the copied strategy wins); `XMLOutputter.clone()` shares the `Format` and processor instances, as
+  jdom2's shallow `Object.clone()` did. Pinned by jdom2's clone tests and `CloneTest`.
+- **Serialization removed.** `Serializable` (on `Content`, `Attribute`, `Parent`, `Namespace`, `Filter`), `readObject`/`writeObject`
+  (`Element`, `Document`), `Namespace`'s serialization proxy (`writeReplace`/`readResolve`), `@Transient` and every `serialVersionUID`
+  (and the private companions that only held it). The tests that only tested serialization are removed (below).
+- **`Namespace` cache**: an immutable snapshot `Map<String, Map<String, Namespace>>` in a `kotlin.concurrent.atomics.AtomicReference`
+  (`@OptIn(ExperimentalAtomicApi::class)`), replaced copy-on-write by a CAS loop (`register`); a lookup reads one snapshot without
+  locking. The returned instances stay canonical (`NamespaceCacheConcurrencyTest`, common: JVM threads / iOS workers). jdom2 registered
+  an empty prefix map for a newly validated URI before validating the prefix; kdom registers the URI with its first Namespace, which
+  only means a valid URI whose first prefix was rejected is validated again next time (same result).
+- **Collections.** `Collections.unmodifiableList` -> `internal.UnmodifiableList` (a read-only `AbstractList` view; Java-side mutators
+  throw `UnsupportedOperationException` as before), `emptyList()`/`singletonList()` -> `emptyList()`/`listOf()`,
+  `Collections.emptyMap()` in `ProcessingInstruction.parseData` -> `internal.EmptyUnmodifiableMap` (stored in the mutable `mapData`
+  field: `put` throws `UnsupportedOperationException` as before), `System.arraycopy` -> `copyInto`, `Arrays.sort` -> `sort`/`sortWith`
+  (stable, as `Arrays.sort` on objects), `java.util.ArrayList/HashMap/LinkedHashMap/Comparator/ConcurrentModificationException/
+  NoSuchElementException/RandomAccess` -> the Kotlin stdlib types. `TreeMap` (two uses: `Element.namespacesInScope`,
+  `Attribute.orderFirst`) -> `LinkedHashMap` plus `keys.sorted()` at the read; same order (pinned against jdom2 by
+  `CommonCollectionsTest`). `ArrayCopy.copyOf/copyOfRange` use `Array.copyOf` (keeps the runtime component type) instead of
+  `java.lang.reflect.Array`.
+- **Live lists** (`AttributeList`, `ContentList`, `ContentList.FilterList`) extend `internal expect abstract class KdomMutableList<E> :
+  AbstractMutableList<E>`. Its JVM actual keeps jdom2's `List.sort(Comparator)` override (calling the list's in-place sort, also what
+  Kotlin's `sortWith` reaches on the JVM); common code has no `List.sort` member, so on iOS `sortWith` on a live list is unsupported (use
+  `Element.sortContent/sortChildren/sortAttributes`). `modCount` is visible from common `AbstractMutableList` (compiled for iOS).
+- **Strings and chars.** `String.format("%0nx", v)` in `Verifier` messages -> `internal.hex(v, n)` (same text);
+  `Integer.toHexString(i)` -> `i.toString(16)` (non-negative values only); `Character.isDigit` -> `Char.isDigit()`;
+  `Character.isWhitespace` (`ProcessingInstruction.parseData`) -> `internal.isJavaWhitespace` (Java semantics: no-break spaces are not
+  whitespace; pinned for all 65536 chars by `CommonHelpersTest`); `StringBuilder.setLength(0)` -> `clear()`, `setLength(len - 1)` ->
+  `deleteAt(len - 1)`; `Float.valueOf`/`Double.valueOf` -> `toFloat()`/`toDouble()` (the same JDK parser on the JVM);
+  `catch (StringIndexOutOfBoundsException)` -> `catch (IndexOutOfBoundsException)` (its supertype); `Math.max` -> `maxOf`;
+  `Locale.ENGLISH` upper-casing -> `uppercase()` (locale-invariant). `String.intern` and `System.identityHashCode` were not used.
+- **Class names.** `obj.javaClass.name` in `ContentList`'s `IllegalAddException` messages -> `internal.className(obj)` (JVM: unchanged
+  `getClass().getName()`; iOS: the qualified Kotlin name). `ClassFilter` holds a `KClass` (`KClass.isInstance` matches boxed values for
+  `Double::class`/`Boolean::class`, which jdom2 needed `java.lang.Double.class` for); its `toString()` shows `className(kclass)` (JVM:
+  the boxed Java name, unchanged). `Filters.fclass(clazz: KClass<F>)` replaces `fclass(Class<F>)` (Java callers pass
+  `JvmClassMappingKt.getKotlinClass(X.class)`, as `TestFilters` now does). `ContentFilter` uses `is Content`; `TextOnlyFilter.hashCode()`
+  hashes `this::class`.
+- **Annotations in common code.** `kotlin.jvm.JvmField/JvmStatic/JvmName/JvmSynthetic/JvmOverloads` and `kotlin.Throws` are imported
+  explicitly and compile for iOS (no-ops there). Kotlin/Native requires an override to repeat the overridden member's `@Throws`, so
+  `Parent.canContainContent` and `Document.canContainContent` now declare `@Throws(IllegalAddException::class)` like
+  `Element.canContainContent` (jdom2 declared it on the interface too).
+- **Raw instances on Kotlin/Native** (`internal.unsafeNull`): the erased generic cast is unchecked on Native as on the JVM, so a raw
+  instance's non-null-typed property returns `null` there too; Native inserts no check at the generic return. Using that value as
+  non-null (a member call) is undefined on Native (no NPE guarantee). Production code never creates raw instances, and a `== null` check
+  on a non-null-typed value may be folded away by the compiler, so no common test pins it; the 8 Java raw-instance tests stay JVM-only.
+
 ## Behaviour differences
 
 - `JDOMParseException` (R3): a SAX-carrying cause no longer supplies line/column/publicId/systemId; callers pass them
   explicitly. The jdom2-style constructors always give -1 / -1 / null / null. Pinned by `JDOMParseExceptionTest`.
+- **Escape strategy for encodings outside kdom's name list** (Task 7): jdom2 asked the JDK charset whether it can encode a character
+  (and escaped only high surrogates for an unknown charset name); kdom escapes every character above 0x7F for such names
+  (`windows-1252`, `Shift_JIS`, an unknown name, ...). The listed names give jdom2's answers. Pinned by `FormatEscapeStrategyTest`;
+  `TestFormat#testCharsetEncodingEscapes` / `#testIllegalEncodingEscapes` were changed to expect the kdom answers.
+- **No line-separator system property** (Task 7): `-Dorg.jdom2.output.LineSeparator=...` (`fi.sykero.kdom.output.LineSeparator`) is
+  ignored; `LineSeparator.DEFAULT` is always `"\r\n"`. Pinned by `LineSeparatorTest`.
+- **Null passed to a non-null setter** (Task 6 shape, pinned in Task 7): `Format.setTextMode(null)`, `Format.setEscapeStrategy(null)`,
+  `XMLOutputter.setFormat(null)` and `setXMLOutputProcessor(null)` throw `NullPointerException` at the call (Kotlin parameter check);
+  jdom2 stored the null and failed with a `NullPointerException` later, at output (`setFormat(null)` failed at once in jdom2 too).
+  Pinned by `output/NullSetterTest` (Java, against both libraries).
+- **Clone of a subclass** (Task 7): `clone()` of an instance of a class outside kdom that extends a kdom class (`class MyElement :
+  Element("x")`) returns an instance of the kdom class (`Element`), because `shallowCopy()` cannot create an unknown subclass;
+  jdom2's `Object.clone()` kept the runtime class. The deep copy is otherwise identical. Pinned by `CloneTest`.
+- **Read-only lists and Kotlin casts** (Task 7): the read-only views (`additionalNamespaces`, `namespacesIn*`, filter results) are Kotlin
+  read-only lists; a Kotlin `as MutableList` cast fails with `ClassCastException` on the JVM (jdom2's `Collections.unmodifiableList` cast,
+  then threw `UnsupportedOperationException`). Java callers still get `UnsupportedOperationException`.
+- **Error messages on iOS** (Task 7): class names in `ContentList` messages and `ClassFilter.toString()` are Kotlin qualified names on
+  iOS (unchanged on the JVM). `Attribute.floatValue/doubleValue` parse with Kotlin's `toFloat()/toDouble()`, the JDK parser on the JVM;
+  the iOS parser's grammar for unusual inputs (hex floats, `f`/`d` suffixes) is not verified here.
 
 ## Task 5 traps (met while translating)
 
@@ -231,12 +306,14 @@ string/writer/stream entry points, escaping helpers, TrAX PIs and `toString()` c
 - **`size` inside an inner class.** In `ContentList`, `FilterList` (an inner class that is itself a list) and the iterators referred to the
   outer field `size`. In Kotlin the `FilterList.size` property would shadow it, so the outer field is `count`.
 - **`AbstractMutableList.modCount`** exists on the JVM (inherited from `java.util.AbstractList`) and is accessible from the subclass and
-  its inner classes. It must be re-declared on Native in Task 7 (spec M0.4); `ContentList` does not use it (own counters).
+  its inner classes. Task 7: the common `AbstractMutableList` declares it too (compiled for iOS), nothing had to be re-declared;
+  `ContentList` does not use it (own counters).
 - **`sort` override is invisible to Kotlin callers**, see API shape; calling `contentList.sort(cmp)` resolves to the stdlib extension.
+  Task 7 moved the override into the JVM actual of `KdomMutableList`.
 - **Overloaded `filter(List)` vs `filter(Object)`** are chosen by static type, as in Java; call sites that hold `Any?` pick the right one
   (`AbstractFilter.matches`, `ContentList.FilterList.resync`, `FilterIterator`).
-- **`Boolean::class.java` is the primitive `boolean` class** (`isInstance` is always false): `Filters.fboolean()` must wrap
-  `java.lang.Boolean::class.java`.
+- **`Boolean::class.java` is the primitive `boolean` class** (`isInstance` is always false): `Filters.fboolean()` had to wrap
+  `java.lang.Boolean::class.java`. Task 7: `ClassFilter` holds a `KClass`, whose `isInstance` handles the boxed values.
 - **Identity comparisons**: `Text.value === EMPTY_STRING` (`CDATA.append`), `ns === Namespace.NO_NAMESPACE`, `tfirst.parent !== text.parent`
   (`Element.coalesceText`), `(left + right) ushr 1`, `~x` -> `.inv()`; `String.trim()` -> `trim { it <= ' ' }` (`Element.getTextTrim`,
   `Attribute.get*Value`, `ProcessingInstruction.parseData`).
@@ -267,6 +344,9 @@ script overwrites those edits.
 
 ### Imported classes that still reference JVM-only APIs (re-shaped by later tasks)
 
+(Task 7: all of these are gone from the kdom sources; the only JVM-only files are `internal/Platform.jvm.kt` and
+`output/XMLOutputterJvm.kt`.)
+
 - `input.JDOMParseException`: references `org.xml.sax.SAXParseException` for its line/column/publicId/systemId
   accessors. Task 4 re-shapes it without any sax dependency (plain lineNumber/columnNumber/publicId/systemId fields).
 - `AttributeType`: `import org.xml.sax.Attributes` (javadoc-only reference, no code use).
@@ -286,6 +366,16 @@ script overwrites those edits.
 - `output/TestXMLOutputter#test_ErrorSurrogatePairOutput`: needs `UncheckedJDOMFactory` (excluded) to build an invalid `Text`.
 - `TestIllegalAddExceptn`: not removed; `DefaultJDOMFactory` calls (`fac.element(..)` etc.) replaced by the equivalent
   public constructors (`new Element(..)` etc.).
+- Task 7 (serialization removed): `TestDocument#test_TCU__testSerialization`, `TestElement#test_TCU__testSerialization`,
+  `TestAttribute#serialization_default`, `TestAttribute#serialization_Namespace`, `TestProcessingInstruction#testSerialize`.
+- Task 7 (`Element.getXMLBaseURI` removed): `TestElement#testXmlBaseNone`, `#testXmlBaseDocument`, `#testXmlBaseRelative`,
+  `#testXmlBaseRelativeToDoc`, `#testXmlBaseAbsolute`, `#testXmlBaseSubAbsolute`, `#testXmlBaseBroken`.
+- Task 7, changed but kept (marked `// K5:`): `AbstractTestFilter#exercise` lost its deserialized-copy round and uses the filter itself
+  where it used `UnitTestUtil.deSerialize(af)` (also in `exerciseAtt` and the `refine` checks); `TestFilters#checkFilter` lost the
+  deserialized-copy equality line and calls `fclass` with a `KClass`; `TestContentFilter#testEqualsObject` compares with a new equal
+  `ContentFilter` instead of a deserialized copy; `TestFormat#testCharsetEncodingEscapes` / `#testIllegalEncodingEscapes` expect the
+  kdom escape answers; `TestXMLOutputter` reaches the `OutputStream` overloads through `XMLOutputterJvmKt` and the writer overloads
+  through `Appendable`. `UnitTestUtil.deSerialize` is unused (kept, it compiles for any `Serializable`).
 - Not imported at all (excluded-class tests): all of `cases/{input,located,adapters,transform,xpath,jaxb,serialize}`,
   `*JDOMFactory*` tests, `TestBridgeMethods`, and in `cases/output` the
   DOM/SAX/StAX outputter and round-trip tests; `test/util/FidoFetch`; `special/TestIssue008*`; `util/TestReflectionConstructor`.
@@ -309,7 +399,10 @@ Each parse goes through a private placeholder `parseWithKdomBuilder(String)` in 
 ## Baseline
 
 `:kdom:jvmTest` on the JVM after Task 3: 40 test classes, 704 tests, 10 skipped (8 K5 `@Ignore` + 2 upstream), 0 failures,
-0 errors. After Task 4 fix round 1: 41 test classes, 708 tests (+4 `JDOMParseExceptionTest`), 10 skipped, 0 failures. After Task 5 (tree core and filters in Kotlin): 41 classes / 708 tests / 10 skipped / 0 failures; after fix round 1 (R8): 42 classes / 712 tests (+4 `PropertySyntaxTest`) / 10 skipped / 0 failures. After Task 6 (output package in Kotlin, no Java left in `src/jvmMain/java`): 43 classes / 716 tests (+4 `OutputDifferentialTest`) / 10 skipped / 0 failures. This number may only grow; the 8 K5 ignores return in Task 9.
+0 errors. After Task 4 fix round 1: 41 test classes, 708 tests (+4 `JDOMParseExceptionTest`), 10 skipped, 0 failures. After Task 5 (tree core and filters in Kotlin): 41 classes / 708 tests / 10 skipped / 0 failures; after fix round 1 (R8): 42 classes / 712 tests (+4 `PropertySyntaxTest`) / 10 skipped / 0 failures. After Task 6 (output package in Kotlin, no Java left in `src/jvmMain/java`): 43 classes / 716 tests (+4 `OutputDifferentialTest`) / 10 skipped / 0 failures. After Task 7 (commonized): 50 classes / 724 tests / 10 skipped / 0 failures
+(716 - 5 serialization tests - 7 `getXMLBaseURI` tests + 20 new: `NamespaceCacheConcurrencyTest` 3 (common), `FormatEscapeStrategyTest` 2,
+`LineSeparatorTest` 2, `CloneTest` 5, `CommonCollectionsTest` 3, `CommonHelpersTest` 3, `NullSetterTest` 2).
+This number may only grow (apart from the listed removals); the 8 K5 ignores return in Task 9.
 
 ### Import notes (fix round 1)
 
@@ -318,5 +411,5 @@ Each parse goes through a private placeholder `parseWithKdomBuilder(String)` in 
 - Line endings: the CRLF originals of `UnitTestUtil.java` and `complex.xml` were normalised to LF by git.
 - `xmlchars.xml` and `complex.xml` are copied to `src/jvmTest/resources` but are currently unused by the kept tests
   (Task 8 embeds xmlchars).
-- Known stale string: `output/LineSeparator.java` javadoc/comment (lines ~109, ~171) still says
-  `-Dorg.jdom2.output.LineSeparator`; left as imported, Task 7 removes it together with `SystemProperty`.
+- Known stale string: `output/LineSeparator.java` javadoc/comment (lines ~109, ~171) still said
+  `-Dorg.jdom2.output.LineSeparator`; Task 7 removed it together with `SystemProperty`.
