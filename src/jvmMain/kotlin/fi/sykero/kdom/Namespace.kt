@@ -62,8 +62,8 @@ import fi.sykero.kdom.JDOMConstants.Companion.NS_PREFIX_XMLNS
 import fi.sykero.kdom.JDOMConstants.Companion.NS_URI_DEFAULT
 import fi.sykero.kdom.JDOMConstants.Companion.NS_URI_XML
 import fi.sykero.kdom.JDOMConstants.Companion.NS_URI_XMLNS
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentMap
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * An XML namespace representation, as well as a factory for creating XML
@@ -129,14 +129,20 @@ class Namespace private constructor(
         return uri.hashCode()
     }
 
+    @OptIn(ExperimentalAtomicApi::class)
     companion object {
         /**
          * Factory list of namespaces.
          * Keys are *URI*&*prefix*.
          * Values are Namespace objects
+         *
+         * kdom: jdom2 used a `ConcurrentHashMap` of `ConcurrentHashMap`s. Common code has no concurrent map, so
+         * this is an immutable snapshot (URI -> prefix -> Namespace) replaced copy-on-write with a CAS loop
+         * ([register]). Lookups read one snapshot without locking; a new Namespace is published only if no other
+         * thread published one for the same prefix and URI first, so returned instances stay canonical.
          */
-        private val namespacemap: ConcurrentMap<String, ConcurrentMap<String, Namespace>> =
-            ConcurrentHashMap<String, ConcurrentMap<String, Namespace>>(512, 0.75f, 64)
+        private val namespacemap: AtomicReference<Map<String, Map<String, Namespace>>> =
+            AtomicReference(emptyMap())
 
         /** Define a `Namespace` for when *not* in a namespace */
         @JvmField
@@ -160,17 +166,35 @@ class Namespace private constructor(
         init {
             // pre-populate the map with the constant namespaces that would
             // otherwise fail validation
-            val nmap: ConcurrentMap<String, Namespace> = ConcurrentHashMap<String, Namespace>()
-            nmap.put(NO_NAMESPACE.prefix, NO_NAMESPACE)
-            namespacemap.put(NO_NAMESPACE.uri, nmap)
+            namespacemap.store(
+                mapOf(
+                    NO_NAMESPACE.uri to mapOf(NO_NAMESPACE.prefix to NO_NAMESPACE),
+                    XML_NAMESPACE.uri to mapOf(XML_NAMESPACE.prefix to XML_NAMESPACE),
+                    XMLNS_NAMESPACE.uri to mapOf(XMLNS_NAMESPACE.prefix to XMLNS_NAMESPACE),
+                )
+            )
+        }
 
-            val xmap: ConcurrentMap<String, Namespace> = ConcurrentHashMap<String, Namespace>()
-            xmap.put(XML_NAMESPACE.prefix, XML_NAMESPACE)
-            namespacemap.put(XML_NAMESPACE.uri, xmap)
-
-            val xnsmap: ConcurrentMap<String, Namespace> = ConcurrentHashMap<String, Namespace>()
-            xnsmap.put(XMLNS_NAMESPACE.prefix, XMLNS_NAMESPACE)
-            namespacemap.put(XMLNS_NAMESPACE.uri, xnsmap)
+        /**
+         * Publishes [ns] for [uri] and [prefix] unless another thread published one first, and returns the
+         * registered (canonical) instance. jdom2: `urimap.putIfAbsent(pfx, ns)`.
+         */
+        private fun register(uri: String, prefix: String, ns: Namespace): Namespace {
+            while (true) {
+                val current = namespacemap.load()
+                val urimap = current[uri]
+                val prev = urimap?.get(prefix)
+                if (prev != null) {
+                    // someone registered the same namespace as us while we were busy
+                    // validating. Use their registered copy.
+                    return prev
+                }
+                val updated = HashMap(current)
+                updated[uri] = if (urimap == null) mapOf(prefix to ns) else HashMap(urimap).apply { put(prefix, ns) }
+                if (namespacemap.compareAndSet(current, updated)) {
+                    return ns
+                }
+            }
         }
 
         /**
@@ -190,7 +214,7 @@ class Namespace private constructor(
         fun getNamespace(prefix: String?, uri: String?): Namespace {
 
             // This is a rewrite of the JDOM 1 getNamespace() to use
-            // java.util.concurrent. The motivation is:
+            // java.util.concurrent (kdom: a copy-on-write snapshot, see namespacemap). The motivation is:
             // 1. avoid having to create a new NamespaceKey for each query.
             // 2. avoid a 'big' synchronisation bottleneck in the Namespace class.
             // 3. no-memory-lookup for pre-existing Namespaces... (avoid 'new' and
@@ -210,7 +234,7 @@ class Namespace private constructor(
 
             // must have checked for 'null' uri else namespacemap throws NPE
             // do not 'trim' uri's any more see issue #50
-            var urimap: ConcurrentMap<String, Namespace>? = namespacemap.get(uri)
+            val urimap: Map<String, Namespace>? = namespacemap.load()[uri]
             if (urimap == null) {
                 // no Namespaces yet with that URI.
                 // Ensure proper naming
@@ -218,22 +242,13 @@ class Namespace private constructor(
                 if (reason != null) {
                     throw IllegalNameException(uri, "Namespace URI", reason)
                 }
-
-                urimap = ConcurrentHashMap<String, Namespace>()
-                val xmap: ConcurrentMap<String, Namespace>? =
-                    namespacemap.putIfAbsent(uri, urimap)
-
-                if (xmap != null) {
-                    // some other thread registered this URI between when we
-                    // first checked, and when we got a new map created.
-                    // we must use the already-registered value.
-                    urimap = xmap
-                }
+                // kdom: jdom2 registered an empty prefix map for the URI here; the URI is registered together with
+                // its first Namespace instead (register), which only skips re-validating a valid URI.
             }
 
             // OK, we have a container for the URI, let's search on the prefix.
 
-            var ns: Namespace? = urimap!!.get(if (prefix == null) NS_PREFIX_DEFAULT else prefix)
+            val ns: Namespace? = urimap?.get(if (prefix == null) NS_PREFIX_DEFAULT else prefix)
             if (ns != null) {
                 // got one.
                 return ns
@@ -303,14 +318,7 @@ class Namespace private constructor(
             }
 
             // OK, good bet that we have a new Namespace.
-            ns = Namespace(pfx, uri)
-            val prev: Namespace? = urimap.putIfAbsent(pfx, ns)
-            if (prev != null) {
-                // someone registered the same namespace as us while we were busy
-                // validating. Use their registered copy.
-                ns = prev
-            }
-            return ns
+            return register(uri, pfx, Namespace(pfx, uri))
         }
 
         /**
