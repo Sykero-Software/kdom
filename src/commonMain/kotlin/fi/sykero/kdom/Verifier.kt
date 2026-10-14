@@ -1321,6 +1321,8 @@ class Verifier private constructor() {
          */
         @JvmStatic
         fun isAllXMLWhitespace(value: String): Boolean {
+            // Kotlin/Native has no implicit parameter null check: a null smuggled in by an unchecked cast would crash.
+            if ((value as String?) == null) throw NullPointerException("value")
             // Doing the count-down instead of a count-up saves a single int
             // variable declaration.
             var i = value.length

@@ -118,7 +118,8 @@ internal class AttributeList
      *         if validation rules prevent the add
      */
     override fun add(element: Attribute): Boolean {
-        val attribute = element
+        val attribute: Attribute = element as Attribute?
+            ?: throw NullPointerException("Cannot add a null Attribute to AttributeList")
         if (attribute.parent != null) {
             throw IllegalAddException(
                 "The attribute already has an existing parent \""
@@ -160,7 +161,8 @@ internal class AttributeList
      *         if validation rules prevent the add
      */
     override fun add(index: Int, element: Attribute) {
-        val attribute = element
+        val attribute: Attribute = element as Attribute?
+            ?: throw NullPointerException("Cannot add a null Attribute to AttributeList")
         if (index < 0 || index > size) {
             throw IndexOutOfBoundsException(
                 "Index: " + index +
@@ -480,7 +482,8 @@ internal class AttributeList
      *         if validation rules prevent the set
      */
     override fun set(index: Int, element: Attribute): Attribute {
-        val attribute = element
+        val attribute: Attribute = element as Attribute?
+            ?: throw NullPointerException("Cannot add a null Attribute to AttributeList")
         if (index < 0 || index >= size)
             throw IndexOutOfBoundsException(
                 "Index: " + index +
