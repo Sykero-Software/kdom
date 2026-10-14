@@ -54,7 +54,7 @@
 
  */
 
-package fi.sykero.kdom;
+package fi.sykero.kdom
 
 /**
  * The top level 'checked' exception that JDOM classes can throw. JDOM does
@@ -64,42 +64,32 @@ package fi.sykero.kdom;
  * @author  Brett McLaughlin
  * @author  Jason Hunter
  */
-public class JDOMException extends Exception {
+open class JDOMException : Exception {
 
-	/**
-	 * Standard JDOM2 Exception Serialization. Default.
-	 */
-	private static final long serialVersionUID = 200L;
+    /**
+     * This will create an `Exception`.
+     */
+    constructor() : super("Error occurred in JDOM application.")
 
-	/**
-	 * This will create an <code>Exception</code>.
-	 */
-	public JDOMException() {
-		super("Error occurred in JDOM application.");
-	}
+    /**
+     * This will create an `Exception` with the given message.
+     *
+     * @param message `String` message indicating the problem that occurred.
+     */
+    constructor(message: String?) : super(message)
 
-	/**
-	 * This will create an <code>Exception</code> with the given message.
-	 *
-	 * @param message <code>String</code> message indicating
-	 *                the problem that occurred.
-	 */    
-	public JDOMException(String message)  {
-		super(message);
-	}
+    /**
+     * This will create an `Exception` with the given message
+     * and wrap another `Exception`.  This is useful when
+     * the originating `Exception` should be held on to.
+     *
+     * @param message `String` message indicating the problem that occurred.
+     * @param cause `Throwable` that caused this to be thrown.
+     */
+    constructor(message: String?, cause: Throwable?) : super(message, cause)
 
-	/**
-	 * This will create an <code>Exception</code> with the given message
-	 * and wrap another <code>Exception</code>.  This is useful when
-	 * the originating <code>Exception</code> should be held on to.
-	 *
-	 * @param message <code>String</code> message indicating
-	 *                the problem that occurred.
-	 * @param cause <code>Throwable</code> that caused this
-	 *                  to be thrown.
-	 */    
-	public JDOMException(String message, Throwable cause)  {
-		super(message, cause);    
-	}    
-
+    private companion object {
+        /** Standard JDOM2 Exception Serialization. Default. */
+        private const val serialVersionUID = 200L
+    }
 }

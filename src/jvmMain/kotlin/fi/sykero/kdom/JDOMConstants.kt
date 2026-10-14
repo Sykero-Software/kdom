@@ -54,121 +54,104 @@
 
  */
 
-package fi.sykero.kdom;
+package fi.sykero.kdom
 
-
-import fi.sykero.kdom.output.LineSeparator;
-
+import fi.sykero.kdom.output.LineSeparator
 
 /**
  * A collection of constants that may be useful to JDOM users.
- * <p>
+ *
  * JDOM attempts to make knowing these 'magic' constants unnecessary, but it is
  * not always possible. In an attempt to make it easier though, common constants
  * are defined here. This is not a comprehensive list of all the constants that
  * may be useful when processing XML, but it should cover most of those occasions
  * where JDOM does not automatically do the 'right thing'.
- * <p>
- * Many of these constants are already referenced inside the JDOM code.
- * 
- * @author Rolf Lear
  *
+ * Many of these constants are already referenced inside the JDOM code.
+ *
+ * @author Rolf Lear
  */
-public final class JDOMConstants {
-	
-	/**
-	 * Keep out of public reach.
-	 */
-	private JDOMConstants () {
-		// private default constructor.
-	}
-	
-	/*
-	 * XML Namespace constants
-	 */
-	
-	/** Defined as {@value} */
-	public static final String NS_PREFIX_DEFAULT = "";
-	/** Defined as {@value} */
-	public static final String NS_URI_DEFAULT = "";
+class JDOMConstants private constructor() {
+    companion object {
+        /*
+         * XML Namespace constants
+         */
 
-	/** Defined as {@value} */
-	public static final String NS_PREFIX_XML = "xml";
-	/** Defined as {@value} */
-	public static final String NS_URI_XML = "http://www.w3.org/XML/1998/namespace";
-	
-	/** Defined as {@value} */
-	public static final String NS_PREFIX_XMLNS = "xmlns";
-	/** Defined as {@value} */
-	public static final String NS_URI_XMLNS = "http://www.w3.org/2000/xmlns/";
-	
-	
-	/** Defined as {@value} */
-	public static final String SAX_PROPERTY_DECLARATION_HANDLER = 
-			"http://xml.org/sax/properties/declaration-handler";
-	
-	/** Defined as {@value} */
-	public static final String SAX_PROPERTY_DECLARATION_HANDLER_ALT = 
-			"http://xml.org/sax/handlers/DeclHandler";
-	
-	/** Defined as {@value} */
-	public static final String SAX_PROPERTY_LEXICAL_HANDLER = 
-			"http://xml.org/sax/properties/lexical-handler";
-	
-	/** Defined as {@value} */
-	public static final String SAX_PROPERTY_LEXICAL_HANDLER_ALT = 
-			"http://xml.org/sax/handlers/LexicalHandler";
+        /** Defined as `""` */
+        const val NS_PREFIX_DEFAULT: String = ""
+        /** Defined as `""` */
+        const val NS_URI_DEFAULT: String = ""
 
-	
-	
-	/** Defined as {@value} */
-	public static final String SAX_FEATURE_EXTERNAL_ENT = 
-			"http://xml.org/sax/features/external-general-entities";
-	
-	/** Defined as {@value} */
-	public static final String SAX_FEATURE_VALIDATION =
-			"http://xml.org/sax/features/validation";
-	
-	/** Defined as {@value} */
-	public static final String SAX_FEATURE_NAMESPACES =
-			"http://xml.org/sax/features/namespaces";
-	
-	/** Defined as {@value} */
-	public static final String SAX_FEATURE_NAMESPACE_PREFIXES =
-			"http://xml.org/sax/features/namespace-prefixes";
+        /** Defined as `xml` */
+        const val NS_PREFIX_XML: String = "xml"
+        /** Defined as `http://www.w3.org/XML/1998/namespace` */
+        const val NS_URI_XML: String = "http://www.w3.org/XML/1998/namespace"
 
-	
-	/**
-	 * Constant used to define the {@link JDOMSource} with JAXP.
-	 * Defined as {@value}
-	 * @see JDOMSource
-	 */
-	public static final String JDOM2_FEATURE_JDOMSOURCE = 
-			"http://jdom.org/jdom2/transform/JDOMSource/feature";
-	
-	/**
-	 * Constant used to define the {@link JDOMResult} with {@link TransformerFactory}.
-	 * Defined as {@value}
-	 * @see JDOMResult
-	 */
-	public static final String JDOM2_FEATURE_JDOMRESULT = 
-			"http://jdom.org/jdom2/transform/JDOMResult/feature";
-	
-	/**
-	 * System Property queried to obtain an alternate default XPathFactory.
-	 * Defined as {@value}
-	 * @see XPathFactory
-	 */
-	public static final String JDOM2_PROPERTY_XPATH_FACTORY =
-			"fi.sykero.kdom.xpath.XPathFactory";
-	
-	/**
-	 * System Property queried to obtain an alternate default Line Separator.
-	 * <p>
-	 * Defined as {@value}
-	 * @see LineSeparator
-	 */
-	public static final String JDOM2_PROPERTY_LINE_SEPARATOR =
-			"fi.sykero.kdom.output.LineSeparator";
-	
+        /** Defined as `xmlns` */
+        const val NS_PREFIX_XMLNS: String = "xmlns"
+        /** Defined as `http://www.w3.org/2000/xmlns/` */
+        const val NS_URI_XMLNS: String = "http://www.w3.org/2000/xmlns/"
+
+        /** Defined as `http://xml.org/sax/properties/declaration-handler` */
+        const val SAX_PROPERTY_DECLARATION_HANDLER: String =
+            "http://xml.org/sax/properties/declaration-handler"
+
+        /** Defined as `http://xml.org/sax/handlers/DeclHandler` */
+        const val SAX_PROPERTY_DECLARATION_HANDLER_ALT: String =
+            "http://xml.org/sax/handlers/DeclHandler"
+
+        /** Defined as `http://xml.org/sax/properties/lexical-handler` */
+        const val SAX_PROPERTY_LEXICAL_HANDLER: String =
+            "http://xml.org/sax/properties/lexical-handler"
+
+        /** Defined as `http://xml.org/sax/handlers/LexicalHandler` */
+        const val SAX_PROPERTY_LEXICAL_HANDLER_ALT: String =
+            "http://xml.org/sax/handlers/LexicalHandler"
+
+        /** Defined as `http://xml.org/sax/features/external-general-entities` */
+        const val SAX_FEATURE_EXTERNAL_ENT: String =
+            "http://xml.org/sax/features/external-general-entities"
+
+        /** Defined as `http://xml.org/sax/features/validation` */
+        const val SAX_FEATURE_VALIDATION: String =
+            "http://xml.org/sax/features/validation"
+
+        /** Defined as `http://xml.org/sax/features/namespaces` */
+        const val SAX_FEATURE_NAMESPACES: String =
+            "http://xml.org/sax/features/namespaces"
+
+        /** Defined as `http://xml.org/sax/features/namespace-prefixes` */
+        const val SAX_FEATURE_NAMESPACE_PREFIXES: String =
+            "http://xml.org/sax/features/namespace-prefixes"
+
+        /**
+         * Constant used to define the JDOMSource with JAXP.
+         * Defined as `http://jdom.org/jdom2/transform/JDOMSource/feature`
+         */
+        const val JDOM2_FEATURE_JDOMSOURCE: String =
+            "http://jdom.org/jdom2/transform/JDOMSource/feature"
+
+        /**
+         * Constant used to define the JDOMResult with TransformerFactory.
+         * Defined as `http://jdom.org/jdom2/transform/JDOMResult/feature`
+         */
+        const val JDOM2_FEATURE_JDOMRESULT: String =
+            "http://jdom.org/jdom2/transform/JDOMResult/feature"
+
+        /**
+         * System Property queried to obtain an alternate default XPathFactory.
+         * Defined as `fi.sykero.kdom.xpath.XPathFactory`
+         */
+        const val JDOM2_PROPERTY_XPATH_FACTORY: String =
+            "fi.sykero.kdom.xpath.XPathFactory"
+
+        /**
+         * System Property queried to obtain an alternate default Line Separator.
+         *
+         * Defined as `fi.sykero.kdom.output.LineSeparator`
+         * @see LineSeparator
+         */
+        const val JDOM2_PROPERTY_LINE_SEPARATOR: String =
+            "fi.sykero.kdom.output.LineSeparator"
+    }
 }

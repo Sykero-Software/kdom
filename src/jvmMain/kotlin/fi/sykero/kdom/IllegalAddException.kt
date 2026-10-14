@@ -54,7 +54,7 @@
 
  */
 
-package fi.sykero.kdom;
+package fi.sykero.kdom
 
 /**
  * Thrown when trying to add an illegal object to a JDOM construct.
@@ -62,262 +62,236 @@ package fi.sykero.kdom;
  * @author  Brett McLaughlin
  * @author  Jason Hunter
  */
-public class IllegalAddException extends IllegalArgumentException {
+open class IllegalAddException : IllegalArgumentException {
 
-	/**
-	 * Standard JDOM2 Exception Serialization. Default.
-	 */
-	private static final long serialVersionUID = 200L;
+    /**
+     * This will create an `Exception` indicating
+     * that the addition of the [Attribute] to the [Element] is illegal.
+     *
+     * @param base `Element` that `Attribute` couldn't be added to
+     * @param added `Attribute` that could not be added
+     * @param reason cause of the problem
+     */
+    internal constructor(base: Element, added: Attribute, reason: String?) : super(
+        StringBuilder()
+            .append("The attribute \"")
+            .append(added.qualifiedName)
+            .append("\" could not be added to the element \"")
+            .append(base.qualifiedName)
+            .append("\": ")
+            .append(reason)
+            .toString()
+    )
 
-	/**
-	 * This will create an <code>Exception</code> indicating
-	 * that the addition of the <code>{@link Attribute}</code>
-	 * to the <code>{@link Element}</code> is illegal.
-	 *
-	 * @param base <code>Element</code> that <code>Attribute</code>
-	 *        couldn't be added to
-	 * @param added <code>Attribute</code> that could not be added
-	 * @param reason cause of the problem
-	 */
-	IllegalAddException(Element base, Attribute added, String reason) {
-		super(new StringBuilder()
-		.append("The attribute \"")
-		.append(added.getQualifiedName())
-		.append("\" could not be added to the element \"")
-		.append(base.getQualifiedName())
-		.append("\": ")
-		.append(reason)
-		.toString());
-	}
+    /**
+     * This will create an `Exception` indicating
+     * that the addition of the [Element] to parent is illegal.
+     *
+     * @param base `Element` that the child couldn't be added to
+     * @param added `Element` that could not be added
+     * @param reason cause of the problem
+     */
+    internal constructor(base: Element, added: Element, reason: String?) : super(
+        StringBuilder()
+            .append("The element \"")
+            .append(added.qualifiedName)
+            .append("\" could not be added as a child of \"")
+            .append(base.qualifiedName)
+            .append("\": ")
+            .append(reason)
+            .toString()
+    )
 
-	/**
-	 * This will create an <code>Exception</code> indicating
-	 * that the addition of the <code>{@link Element}</code>
-	 * to parent is illegal.
-	 *
-	 * @param base <code>Element</code> that the child
-	 *        couldn't be added to
-	 * @param added <code>Element</code> that could not be added
-	 * @param reason cause of the problem
-	 */
-	IllegalAddException(Element base, Element added, String reason) {
-		super(new StringBuilder()
-		.append("The element \"")
-		.append(added.getQualifiedName())
-		.append("\" could not be added as a child of \"")
-		.append(base.getQualifiedName())
-		.append("\": ")
-		.append(reason)
-		.toString());
-	}
+    /**
+     * This will create an `Exception` indicating
+     * that the addition of the [Element] to the [Document] is illegal.
+     *
+     * @param added `Element` that could not be added
+     * @param reason cause of the problem
+     */
+    internal constructor(added: Element, reason: String?) : super(
+        StringBuilder()
+            .append("The element \"")
+            .append(added.qualifiedName)
+            .append("\" could not be added as the root of the document: ")
+            .append(reason)
+            .toString()
+    )
 
-	/**
-	 * This will create an <code>Exception</code> indicating
-	 * that the addition of the <code>{@link Element}</code>
-	 * to the <code>{@link Document}</code> is illegal.
-	 *
-	 * @param added <code>Element</code> that could not be added
-	 * @param reason cause of the problem
-	 */
-	IllegalAddException(Element added, String reason) {
-		super(new StringBuilder()
-		.append("The element \"")
-		.append(added.getQualifiedName())
-		.append("\" could not be added as the root of the document: ")
-		.append(reason)
-		.toString());
-	}
+    /**
+     * This will create an `Exception` indicating
+     * that the addition of the [ProcessingInstruction] to the [Element] is illegal.
+     *
+     * @param base `Element` that the `ProcessingInstruction` couldn't be added to
+     * @param added `ProcessingInstruction` that could not be added
+     * @param reason cause of the problem
+     */
+    internal constructor(base: Element, added: ProcessingInstruction, reason: String?) : super(
+        StringBuilder()
+            .append("The PI \"")
+            .append(added.target)
+            .append("\" could not be added as content to \"")
+            .append(base.qualifiedName)
+            .append("\": ")
+            .append(reason)
+            .toString()
+    )
 
-	/**
-	 * This will create an <code>Exception</code> indicating
-	 * that the addition of the <code>{@link ProcessingInstruction}</code>
-	 * to the <code>{@link Element}</code> is illegal.
-	 *
-	 * @param base <code>Element</code> that the
-	 *              <code>ProcessingInstruction</code> couldn't be added to
-	 * @param added <code>ProcessingInstruction</code> that could not be added
-	 * @param reason cause of the problem
-	 */
-	IllegalAddException(Element base, ProcessingInstruction added,
-			String reason) {
-		super(new StringBuilder()
-		.append("The PI \"")
-		.append(added.getTarget())
-		.append("\" could not be added as content to \"")
-		.append(base.getQualifiedName())
-		.append("\": ")
-		.append(reason)
-		.toString());
-	}
+    /**
+     * This will create an `Exception` indicating
+     * that the addition of the [ProcessingInstruction] to the [Document] is illegal.
+     *
+     * @param added `ProcessingInstruction` that could not be added
+     * @param reason cause of the problem
+     */
+    internal constructor(added: ProcessingInstruction, reason: String?) : super(
+        StringBuilder()
+            .append("The PI \"")
+            .append(added.target)
+            .append("\" could not be added to the top level of the document: ")
+            .append(reason)
+            .toString()
+    )
 
-	/**
-	 * This will create an <code>Exception</code> indicating
-	 * that the addition of the <code>{@link ProcessingInstruction}</code>
-	 * to the <code>{@link Document}</code> is illegal.
-	 *
-	 * @param added <code>ProcessingInstruction</code> that could not be added
-	 * @param reason cause of the problem
-	 */
-	IllegalAddException(ProcessingInstruction added,
-			String reason) {
-		super(new StringBuilder()
-		.append("The PI \"")
-		.append(added.getTarget())
-		.append("\" could not be added to the top level of the document: ")
-		.append(reason)
-		.toString());
-	}
+    /**
+     * This will create an `Exception` indicating
+     * that the addition of the [Comment] to the [Element] is illegal.
+     *
+     * @param base `Element` that the `Comment` couldn't be added to
+     * @param added `Comment` that could not be added
+     * @param reason cause of the problem
+     */
+    internal constructor(base: Element, added: Comment, reason: String?) : super(
+        StringBuilder()
+            .append("The comment \"")
+            .append(added.text)
+            .append("\" could not be added as content to \"")
+            .append(base.qualifiedName)
+            .append("\": ")
+            .append(reason)
+            .toString()
+    )
 
-	/**
-	 * This will create an <code>Exception</code> indicating
-	 * that the addition of the <code>{@link Comment}</code>
-	 * to the <code>{@link Element}</code> is illegal.
-	 *
-	 * @param base <code>Element</code> that the <code>Comment</code>
-	 *             couldn't be added to
-	 * @param added <code>Comment</code> that could not be added
-	 * @param reason cause of the problem
-	 */
-	IllegalAddException(Element base, Comment added, String reason) {
-		super(new StringBuilder()
-		.append("The comment \"")
-		.append(added.getText())
-		.append("\" could not be added as content to \"")
-		.append(base.getQualifiedName())
-		.append("\": ")
-		.append(reason)
-		.toString());
-	}
+    /**
+     * This will create an `Exception` indicating
+     * that the addition of the [CDATA]
+     *
+     * @param base `Element` that the `CDATA` couldn't be added to
+     * @param added `CDATA` that could not be added
+     * @param reason cause of the problem
+     */
+    internal constructor(base: Element, added: CDATA, reason: String?) : super(
+        StringBuilder()
+            .append("The CDATA \"")
+            .append(added.text)
+            .append("\" could not be added as content to \"")
+            .append(base.qualifiedName)
+            .append("\": ")
+            .append(reason)
+            .toString()
+    )
 
+    /**
+     * This will create an `Exception` indicating
+     * that the addition of the [Text] to the [Element] is illegal.
+     *
+     * @param base `Element` that the `Comment` couldn't be added to
+     * @param added `Text` that could not be added
+     * @param reason cause of the problem
+     */
+    internal constructor(base: Element, added: Text, reason: String?) : super(
+        StringBuilder()
+            .append("The Text \"")
+            .append(added.text)
+            .append("\" could not be added as content to \"")
+            .append(base.qualifiedName)
+            .append("\": ")
+            .append(reason)
+            .toString()
+    )
 
-	/**
-	 * This will create an <code>Exception</code> indicating
-	 * that the addition of the <code>{@link CDATA}</code>
-	 *
-	 * @param base <code>Element</code> that the <code>CDATA</code>
-	 *             couldn't be added to
-	 * @param added <code>CDATA</code> that could not be added
-	 * @param reason cause of the problem
-	 */
-	IllegalAddException(Element base, CDATA added, String reason) {
-		super(new StringBuilder()
-		.append("The CDATA \"")
-		.append(added.getText())
-		.append("\" could not be added as content to \"")
-		.append(base.getQualifiedName())
-		.append("\": ")
-		.append(reason)
-		.toString());
-	}
+    /**
+     * This will create an `Exception` indicating
+     * that the addition of the [Comment] to the [Document] is illegal.
+     *
+     * @param added `Comment` that could not be added
+     * @param reason cause of the problem
+     */
+    internal constructor(added: Comment, reason: String?) : super(
+        StringBuilder()
+            .append("The comment \"")
+            .append(added.text)
+            .append("\" could not be added to the top level of the document: ")
+            .append(reason)
+            .toString()
+    )
 
+    /**
+     * This will create an `Exception` indicating
+     * that the addition of the [EntityRef] to the [Element] is illegal.
+     *
+     * @param base `Element` that the `EntityRef` couldn't be added to
+     * @param added `EntityRef` reference that could not be added
+     * @param reason cause of the problem
+     */
+    internal constructor(base: Element, added: EntityRef, reason: String?) : super(
+        StringBuilder()
+            .append("The entity reference\"")
+            .append(added.name)
+            .append("\" could not be added as content to \"")
+            .append(base.qualifiedName)
+            .append("\": ")
+            .append(reason)
+            .toString()
+    )
 
-	/**
-	 * This will create an <code>Exception</code> indicating
-	 * that the addition of the <code>{@link Text}</code>
-	 * to the <code>{@link Element}</code> is illegal.
-	 *
-	 * @param base <code>Element</code> that the <code>Comment</code>
-	 *             couldn't be added to
-	 * @param added <code>Text</code> that could not be added
-	 * @param reason cause of the problem
-	 */
-	IllegalAddException(Element base, Text added, String reason) {
-		super(new StringBuilder()
-		.append("The Text \"")
-		.append(added.getText())
-		.append("\" could not be added as content to \"")
-		.append(base.getQualifiedName())
-		.append("\": ")
-		.append(reason)
-		.toString());
-	}
+    /**
+     * This will create an `Exception` indicating
+     * that the addition of the [Namespace] to the [Element] is illegal.
+     *
+     * @param base `Element` that the `Namespace` couldn't be added to
+     * @param added `Namespace` that could not be added
+     * @param reason cause of the problem
+     */
+    internal constructor(base: Element, added: Namespace, reason: String?) : super(
+        StringBuilder()
+            .append("The namespace xmlns")
+            .append(if (added.prefix == "") "=" else ":" + added.prefix + "=")
+            .append("\"")
+            .append(added.uri)
+            .append("\" could not be added as a namespace to \"")
+            .append(base.qualifiedName)
+            .append("\": ")
+            .append(reason)
+            .toString()
+    )
 
-	/**
-	 * This will create an <code>Exception</code> indicating
-	 * that the addition of the <code>{@link Comment}</code>
-	 * to the <code>{@link Document}</code> is illegal.
-	 *
-	 * @param added <code>Comment</code> that could not be added
-	 * @param reason cause of the problem
-	 */
-	IllegalAddException(Comment added, String reason) {
-		super(new StringBuilder()
-		.append("The comment \"")
-		.append(added.getText())
-		.append("\" could not be added to the top level of the document: ")
-		.append(reason)
-		.toString());
-	}
+    /**
+     * This will create an `Exception` indicating
+     * that the addition of the [DocType] to the [Document] is illegal.
+     *
+     * @param added `DocType` that could not be added
+     * @param reason cause of the problem
+     */
+    internal constructor(added: DocType, reason: String?) : super(
+        StringBuilder()
+            .append("The DOCTYPE ")
+            .append(added.toString())
+            .append(" could not be added to the document: ")
+            .append(reason)
+            .toString()
+    )
 
-	/**
-	 * This will create an <code>Exception</code> indicating
-	 * that the addition of the <code>{@link EntityRef}</code>
-	 * to the <code>{@link Element}</code> is illegal.
-	 *
-	 * @param base <code>Element</code> that the <code>EntityRef</code>
-	 *             couldn't be added to
-	 * @param added <code>EntityRef</code> reference that could not be added
-	 * @param reason cause of the problem
-	 */
-	IllegalAddException(Element base, EntityRef added, String reason) {
-		super(new StringBuilder()
-		.append("The entity reference\"")
-		.append(added.getName())
-		.append("\" could not be added as content to \"")
-		.append(base.getQualifiedName())
-		.append("\": ")
-		.append(reason)
-		.toString());
-	}
+    /**
+     * This will create an `Exception` with the specified
+     * error message.
+     *
+     * @param reason cause of the problem
+     */
+    constructor(reason: String?) : super(reason)
 
-	/**
-	 * This will create an <code>Exception</code> indicating
-	 * that the addition of the <code>{@link Namespace}</code>
-	 * to the <code>{@link Element}</code> is illegal.
-	 *
-	 * @param base <code>Element</code> that the <code>Namespace</code>
-	 *             couldn't be added to
-	 * @param added <code>Namespace</code> that could not be added
-	 * @param reason cause of the problem
-	 */
-	IllegalAddException(Element base, Namespace added, String reason) {
-		super(new StringBuilder()
-		.append("The namespace xmlns")
-		.append(added.getPrefix().equals("") ? "=" 
-				: ":" + added.getPrefix() + "=")
-				.append("\"")
-				.append(added.getURI())
-				.append("\" could not be added as a namespace to \"")
-				.append(base.getQualifiedName())
-				.append("\": ")
-				.append(reason)
-				.toString());
-	}
-
-	/**
-	 * This will create an <code>Exception</code> indicating
-	 * that the addition of the <code>{@link DocType}</code>
-	 * to the <code>{@link Document}</code> is illegal.
-	 *
-	 * @param added <code>DocType</code> that could not be added
-	 * @param reason cause of the problem
-	 */
-	IllegalAddException(DocType added, String reason) {
-		super(new StringBuilder()
-		.append("The DOCTYPE ")
-		.append(added.toString())
-		.append(" could not be added to the document: ")
-		.append(reason)
-		.toString());
-	}
-
-	/**
-	 * This will create an <code>Exception</code> with the specified
-	 * error message.
-	 *
-	 * @param reason cause of the problem
-	 */
-	public IllegalAddException(String reason) {
-		super(reason);
-	}
+    private companion object {
+        /** Standard JDOM2 Exception Serialization. Default. */
+        private const val serialVersionUID = 200L
+    }
 }

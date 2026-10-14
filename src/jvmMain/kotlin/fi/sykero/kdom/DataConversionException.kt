@@ -54,35 +54,25 @@
 
  */
 
-package fi.sykero.kdom;
+package fi.sykero.kdom
 
 /**
  * Thrown when a data conversion from a string to value type fails, such as
- * can happen with the {@link Attribute} convenience getter functions.
+ * can happen with the [Attribute] convenience getter functions.
  *
  * @author  Brett McLaughlin
  * @author  Jason Hunter
  */
-public class DataConversionException extends JDOMException {
-
-	/**
-	 * Standard JDOM2 Exception Serialization. Default.
-	 */
-	private static final long serialVersionUID = 200L;
-
-	/**
-	 * Constructs an exception where the named construct couldn't be converted
-	 * to the named data type.
-	 *
-	 * @param name name of the construct whose value failed conversion
-	 * @param dataType type the conversion was attempting to create
-	 */
-	public DataConversionException(String name, String dataType) {
-		super(new StringBuilder()
-		.append("The XML construct ")
-		.append(name)
-		.append(" could not be converted to a ")
-		.append(dataType)
-		.toString());
-	}
+open class DataConversionException(name: String?, dataType: String?) : JDOMException(
+    StringBuilder()
+        .append("The XML construct ")
+        .append(name)
+        .append(" could not be converted to a ")
+        .append(dataType)
+        .toString()
+) {
+    private companion object {
+        /** Standard JDOM2 Exception Serialization. Default. */
+        private const val serialVersionUID = 200L
+    }
 }

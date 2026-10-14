@@ -54,7 +54,7 @@
 
  */
 
-package fi.sykero.kdom;
+package fi.sykero.kdom
 
 /**
  * Thrown when illegal text is supplied to a JDOM construct.
@@ -62,58 +62,56 @@ package fi.sykero.kdom;
  * @author  Brett McLaughlin
  * @author  Elliotte Rusty Harold
  */
-public class IllegalDataException extends IllegalArgumentException {
+open class IllegalDataException : IllegalArgumentException {
 
-	/**
-	 * Standard JDOM2 Exception Serialization. Default.
-	 */
-	private static final long serialVersionUID = 200L;
+    /**
+     * This will create an `Exception` indicating
+     * that the specified data is illegal for the construct
+     * it was supplied to.
+     *
+     * @param data `String` data that breaks rules.
+     * @param construct `String` construct that data is illegal for.
+     * @param reason `String` message or reason data is illegal.
+     */
+    internal constructor(data: String?, construct: String?, reason: String?) : super(
+        StringBuilder()
+            .append("The data \"")
+            .append(data)
+            .append("\" is not legal for a JDOM ")
+            .append(construct)
+            .append(": ")
+            .append(reason)
+            .append(".")
+            .toString()
+    )
 
-	/**
-	 * This will create an <code>Exception</code> indicating
-	 * that the specified data is illegal for the construct
-	 * it was supplied to.
-	 *
-	 * @param data <code>String</code> data that breaks rules.
-	 * @param construct <code>String</code> construct that data is illegal for.
-	 * @param reason <code>String</code> message or reason data is illegal.
-	 */
-	IllegalDataException(String data, String construct, String reason) {
-		super(new StringBuilder()
-		.append("The data \"")
-		.append(data)
-		.append("\" is not legal for a JDOM ")
-		.append(construct)
-		.append(": ")
-		.append(reason)
-		.append(".")
-		.toString());
-	}
+    /**
+     * This will create an `Exception` indicating
+     * that the specified data is illegal for the construct
+     * it was supplied to.
+     *
+     * @param data `String` data that breaks rules.
+     * @param construct `String` construct that data is illegal for.
+     */
+    internal constructor(data: String?, construct: String?) : super(
+        StringBuilder()
+            .append("The data \"")
+            .append(data)
+            .append("\" is not legal for a JDOM ")
+            .append(construct)
+            .append(".")
+            .toString()
+    )
 
-	/**
-	 * This will create an <code>Exception</code> indicating
-	 * that the specified data is illegal for the construct
-	 * it was supplied to.
-	 *
-	 * @param data <code>String</code> data that breaks rules.
-	 * @param construct <code>String</code> construct that data is illegal for.
-	 */
-	IllegalDataException(String data, String construct) {
-		super(new StringBuilder()
-		.append("The data \"")
-		.append(data)
-		.append("\" is not legal for a JDOM ")
-		.append(construct)
-		.append(".")
-		.toString());
-	}
+    /**
+     * This will create an exceptoin with the specified error message.
+     *
+     * @param reason cause of the problem
+     */
+    constructor(reason: String?) : super(reason)
 
-	/**
-	 * This will create an exceptoin with the specified error message.
-	 *
-	 * @param reason cause of the problem
-	 */
-	public IllegalDataException(String reason) {
-		super(reason);
-	}
+    private companion object {
+        /** Standard JDOM2 Exception Serialization. Default. */
+        private const val serialVersionUID = 200L
+    }
 }
