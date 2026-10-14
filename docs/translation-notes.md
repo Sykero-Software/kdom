@@ -36,8 +36,8 @@ Shape decisions (no behaviour change intended):
   Java callers in `fi.sykero.kdom` still compile). Their string parameters are nullable and concatenate as `"null"` exactly as
   `StringBuilder.append(String)` did.
 - Kotlin artefacts that were not in the Java classes: a `Companion` static field/class on classes with a companion; a public
-  synthetic `Namespace(String, String, DefaultConstructorMarker)` constructor next to the private one; `IteratorIterable` carries
-  the `KMappedMarker` marker interface; the enum classes have `getEntries()`.
+  synthetic `Namespace(String, String, DefaultConstructorMarker)` constructor next to the private one; `IteratorIterable` (declared with
+  `MutableIterator<T>` so `remove()` stays available to Kotlin callers, as in java.util.Iterator) carries the `KMappedMarker` marker interface; the enum classes have `getEntries()`.
 - `EscapeStrategy` became a `fun interface` (Java lambdas / anonymous classes still work).
 - `LineSeparator`: the Java `private static getDefaultLineSeparator()` is a top-level private function (not a companion
   member) because enum entries call it during enum initialisation, when a companion object does not exist yet.
@@ -66,7 +66,8 @@ wraps a position-carrying exception must now pass the position explicitly (Task 
 
 ## Behaviour differences
 
-(none yet)
+- `JDOMParseException` (R3): a SAX-carrying cause no longer supplies line/column/publicId/systemId; callers pass them
+  explicitly. The jdom2-style constructors always give -1 / -1 / null / null. Pinned by `JDOMParseExceptionTest`.
 
 ## Task 3: jdom2 subset import (Java)
 
@@ -132,7 +133,7 @@ Each parse goes through a private placeholder `parseWithKdomBuilder(String)` in 
 ## Baseline
 
 `:kdom:jvmTest` on the JVM after Task 3: 40 test classes, 704 tests, 10 skipped (8 K5 `@Ignore` + 2 upstream), 0 failures,
-0 errors. This number may only grow; the 8 K5 ignores return in Task 9.
+0 errors. After Task 4 fix round 1: 41 test classes, 708 tests (+4 `JDOMParseExceptionTest`), 10 skipped, 0 failures. This number may only grow; the 8 K5 ignores return in Task 9.
 
 ### Import notes (fix round 1)
 

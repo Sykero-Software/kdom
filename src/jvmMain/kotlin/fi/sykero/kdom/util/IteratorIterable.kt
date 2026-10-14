@@ -69,7 +69,7 @@ package fi.sykero.kdom.util
  *
  * @param <T> The generic type of the values returned by this interface
  */
-interface IteratorIterable<T> : Iterable<T>, Iterator<T> {
+interface IteratorIterable<T> : Iterable<T>, MutableIterator<T> {
 	// There is no functionality added by this interface other than
 	// to combine the Iterator and Iterable interfaces.
 }
