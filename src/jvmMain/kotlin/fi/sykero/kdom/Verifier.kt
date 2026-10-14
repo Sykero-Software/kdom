@@ -728,7 +728,7 @@ class Verifier private constructor() {
             }
 
             if (element.hasAttributes()) {
-                reason = checkNamespaceCollision(namespace, element.attributes, ignoreatt)
+                reason = checkNamespaceCollision(namespace, element.getAttributes(), ignoreatt)
                 if (reason != null) {
                     return reason
                 }

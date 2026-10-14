@@ -234,7 +234,7 @@ open class EntityRef : Content {
             // because DocType can only be attached to a Document.
             super.parent as Element?
 
-    override fun clone(): EntityRef {
+    public override fun clone(): EntityRef {
         return super.clone() as EntityRef
     }
 

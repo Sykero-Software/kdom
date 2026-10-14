@@ -1,4 +1,4 @@
-/*--
+/*-- 
 
  Copyright (C) 2000-2012 Jason Hunter & Brett McLaughlin.
  All rights reserved.
@@ -11,8 +11,8 @@
     notice, this list of conditions, and the following disclaimer.
 
  2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions, and the disclaimer that follows
-    these conditions in the documentation and/or other materials
+    notice, this list of conditions, and the disclaimer that follows 
+    these conditions in the documentation and/or other materials 
     provided with the distribution.
 
  3. The name "JDOM" must not be used to endorse or promote products
@@ -23,12 +23,12 @@
     may "JDOM" appear in their name, without prior written permission
     from the JDOM Project Management <request_AT_jdom_DOT_org>.
 
- In addition, we request (but do not require) that you include in the
- end-user documentation provided with the redistribution and/or in the
+ In addition, we request (but do not require) that you include in the 
+ end-user documentation provided with the redistribution and/or in the 
  software itself an acknowledgement equivalent to the following:
      "This product includes software developed by the
       JDOM Project (http://www.jdom.org/)."
- Alternatively, the acknowledgment may be graphical using the logos
+ Alternatively, the acknowledgment may be graphical using the logos 
  available at http://www.jdom.org/images/logos.
 
  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
@@ -44,8 +44,8 @@
  OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  SUCH DAMAGE.
 
- This software consists of voluntary contributions made by many
- individuals on behalf of the JDOM Project and was originally
+ This software consists of voluntary contributions made by many 
+ individuals on behalf of the JDOM Project and was originally 
  created by Jason Hunter <jhunter_AT_jdom_DOT_org> and
  Brett McLaughlin <brett_AT_jdom_DOT_org>.  For more information
  on the JDOM Project, please see <http://www.jdom.org/>.
@@ -54,19 +54,22 @@
 
  */
 
-package fi.sykero.kdom;
+package fi.sykero.kdom
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.util.*;
-
-import fi.sykero.kdom.filter.*;
-import fi.sykero.kdom.util.IteratorIterable;
+import fi.sykero.kdom.filter.Filter
+import fi.sykero.kdom.filter.Filters
+import fi.sykero.kdom.util.IteratorIterable
+import java.io.IOException
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
+import java.util.ArrayList
+import java.util.Arrays
+import java.util.Collections
+import java.util.HashMap
 
 /**
  * An XML document. Methods allow access to the root element as well as the
- * {@link DocType} and other document-level information.
+ * [DocType] and other document-level information.
  *
  * @author  Brett McLaughlin
  * @author  Jason Hunter
@@ -74,862 +77,819 @@ import fi.sykero.kdom.util.IteratorIterable;
  * @author  Bradley S. Huffman
  * @author  Rolf Lear
  */
-public class Document extends CloneBase implements Parent {
-	
-	/**
-	 * This document's content including comments, PIs, a possible
-	 * DocType, and a root element.
-	 * Subclassers have to track content using their own
-	 * mechanism.
-	 */
-	transient ContentList content = new ContentList(this);
-
-	/**
-	 *  See http://www.w3.org/TR/2003/WD-DOM-Level-3-Core-20030226/core.html#baseURIs-Considerations
-	 */
-	protected String baseURI = null;
-
-	// Supports the setProperty/getProperty calls
-	private transient HashMap<String,Object> propertyMap = null;
-
-	/**
-	 * Creates a new empty document.  A document must have a root element,
-	 * so this document will not be well-formed and accessor methods will
-	 * throw an IllegalStateException if this document is accessed before a
-	 * root element is added.  This method is most useful for build tools.
-	 */
-	public Document() {}
-
-	/**
-	 * This will create a new <code>Document</code>,
-	 * with the supplied <code>{@link Element}</code>
-	 * as the root element, the supplied
-	 * <code>{@link DocType}</code> declaration, and the specified
-	 * base URI.
-	 *
-	 * @param rootElement <code>Element</code> for document root.
-	 * @param docType <code>DocType</code> declaration.
-	 * @param baseURI the URI from which this document was loaded.
-	 * @throws IllegalAddException if the given docType object
-	 *         is already attached to a document or the given
-	 *         rootElement already has a parent
-	 */
-	public Document(Element rootElement, DocType docType, String baseURI) {
-		if (rootElement != null) {
-			setRootElement(rootElement);
-		}
-		if (docType != null) {
-			setDocType(docType);
-		}
-		if (baseURI != null) {
-			setBaseURI(baseURI);
-		}
-	}
-
-	/**
-	 * This will create a new <code>Document</code>,
-	 * with the supplied <code>{@link Element}</code>
-	 * as the root element and the supplied
-	 * <code>{@link DocType}</code> declaration.
-	 *
-	 * @param rootElement <code>Element</code> for document root.
-	 * @param docType <code>DocType</code> declaration.
-	 * @throws IllegalAddException if the given DocType object
-	 *         is already attached to a document or the given
-	 *         rootElement already has a parent
-	 */
-	public Document(Element rootElement, DocType docType) {
-		this(rootElement, docType, null);
-	}
-
-	/**
-	 * This will create a new <code>Document</code>,
-	 * with the supplied <code>{@link Element}</code>
-	 * as the root element, and no <code>{@link DocType}</code>
-	 * declaration.
-	 *
-	 * @param rootElement <code>Element</code> for document root
-	 * @throws IllegalAddException if the given rootElement already has
-	 *         a parent.
-	 */
-	public Document(Element rootElement) {
-		this(rootElement, null, null);
-	}
-
-	/**
-	 * This will create a new <code>Document</code>,
-	 * with the supplied list of content, and a
-	 * <code>{@link DocType}</code> declaration only if the content
-	 * contains a DocType instance.  A null list is treated the
-	 * same as the no-arg constructor.
-	 *
-	 * @param content <code>List</code> of starter content
-	 * @throws IllegalAddException if the List contains more than
-	 *         one Element or objects of illegal types.
-	 */
-	public Document(List<? extends Content> content) {
-		setContent(content);
-	}
-
-	@Override
-	public int getContentSize() {
-		return content.size();
-	}
-
-	@Override
-	public int indexOf(Content child) {
-		return content.indexOf(child);
-	}
-
-	//    /**
-	//     * Starting at the given index (inclusive), return the index of
-	//     * the first child matching the supplied filter, or -1
-	//     * if none is found.
-	//     *
-	//     * @return index of child, or -1 if none found.
-	//     */
-	//    private int indexOf(int start, Filter filter) {
-	//        int size = getContentSize();
-	//        for (int i = start; i < size; i++) {
-	//            if (filter.matches(getContent(i))) {
-	//                return i;
-	//            }
-	//        }
-	//        return -1;
-	//    }
-
-	/**
-	 * This will return <code>true</code> if this document has a
-	 * root element, <code>false</code> otherwise.
-	 *
-	 * @return <code>true</code> if this document has a root element,
-	 *         <code>false</code> otherwise.
-	 */
-	public boolean hasRootElement() {
-		return (content.indexOfFirstElement() < 0) ? false : true;
-	}
-
-	/**
-	 * This will return the root <code>Element</code>
-	 * for this <code>Document</code>
-	 *
-	 * @return <code>Element</code> - the document's root element
-	 * @throws IllegalStateException if the root element hasn't been set
-	 */
-	public Element getRootElement() {
-		int index = content.indexOfFirstElement();
-		if (index < 0) {
-			throw new IllegalStateException("Root element not set");
-		}
-		return (Element) content.get(index);
-	}
-
-	/**
-	 * This sets the root <code>{@link Element}</code> for the
-	 * <code>Document</code>. If the document already has a root
-	 * element, it is replaced.
-	 *
-	 * @param rootElement <code>Element</code> to be new root.
-	 * @return <code>Document</code> - modified Document.
-	 * @throws IllegalAddException if the given rootElement already has
-	 *         a parent.
-	 */
-	public Document setRootElement(Element rootElement) {
-		int index = content.indexOfFirstElement();
-		if (index < 0) {
-			content.add(rootElement);
-		}
-		else {
-			content.set(index, rootElement);
-		}
-		return this;
-	}
-
-	/**
-	 * Detach the root <code>{@link Element}</code> from this document.
-	 *
-	 * @return removed root <code>Element</code>
-	 */
-	public Element detachRootElement() {
-		int index = content.indexOfFirstElement();
-		if (index < 0)
-			return null;
-		return (Element) removeContent(index);
-	}
-
-	/**
-	 * This will return the <code>{@link DocType}</code>
-	 * declaration for this <code>Document</code>, or
-	 * <code>null</code> if none exists.
-	 *
-	 * @return <code>DocType</code> - the DOCTYPE declaration.
-	 */
-	public DocType getDocType() {
-		int index = content.indexOfDocType();
-		if (index < 0) {
-			return null;
-		}
-		return (DocType) content.get(index);
-	}
-
-	/**
-	 * This will set the <code>{@link DocType}</code>
-	 * declaration for this <code>Document</code>. Note
-	 * that a DocType can only be attached to one Document.
-	 * Attempting to set the DocType to a DocType object
-	 * that already belongs to a Document will result in an
-	 * IllegalAddException being thrown.
-	 *
-	 * @param docType <code>DocType</code> declaration.
-	 * @return object on which the method was invoked
-	 * @throws IllegalAddException if the given docType is
-	 *   already attached to a Document.
-	 */
-	public Document setDocType(DocType docType) {
-		if (docType == null) {
-			// Remove any existing doctype
-			int docTypeIndex = content.indexOfDocType();
-			if (docTypeIndex >= 0) content.remove(docTypeIndex);
-			return this;
-		}
-
-		if (docType.getParent() != null) {
-			throw new IllegalAddException(docType,
-					"The DocType already is attached to a document");
-		}
-
-		// Add DocType to head if new, replace old otherwise
-		int docTypeIndex = content.indexOfDocType();
-		if (docTypeIndex < 0) {
-			content.add(0, docType);
-		}
-		else {
-			content.set(docTypeIndex, docType);
-		}
-
-		return this;
-	}
-
-	/**
-	 * Appends the child to the end of the content list.
-	 *
-	 * @param child   child to append to end of content list
-	 * @return        the document on which the method was called
-	 * @throws IllegalAddException if the given child already has a parent.
-	 */
-	@Override
-	public Document addContent(Content child) {
-		content.add(child);
-		return this;
-	}
-
-	/**
-	 * Appends all children in the given collection to the end of
-	 * the content list.  In event of an exception during add the
-	 * original content will be unchanged and the objects in the supplied
-	 * collection will be unaltered.
-	 *
-	 * @param c   collection to append
-	 * @return    the document on which the method was called
-	 * @throws IllegalAddException if any item in the collection
-	 *         already has a parent or is of an illegal type.
-	 */
-	@Override
-	public Document addContent(Collection<? extends Content> c) {
-		content.addAll(c);
-		return this;
-	}
-
-	/**
-	 * Inserts the child into the content list at the given index.
-	 *
-	 * @param index location for adding the collection
-	 * @param child      child to insert
-	 * @return           the parent on which the method was called
-	 * @throws IndexOutOfBoundsException if index is negative or beyond
-	 *         the current number of children
-	 * @throws IllegalAddException if the given child already has a parent.
-	 */
-	@Override
-	public Document addContent(int index, Content child) {
-		content.add(index, child);
-		return this;
-	}
-
-	/**
-	 * Inserts the content in a collection into the content list
-	 * at the given index.  In event of an exception the original content
-	 * will be unchanged and the objects in the supplied collection will be
-	 * unaltered.
-	 *
-	 * @param index location for adding the collection
-	 * @param c  collection to insert
-	 * @return            the parent on which the method was called
-	 * @throws IndexOutOfBoundsException if index is negative or beyond
-	 *         the current number of children
-	 * @throws IllegalAddException if any item in the collection
-	 *         already has a parent or is of an illegal type.
-	 */
-	@Override
-	public Document addContent(int index, Collection<? extends Content> c) {
-		content.addAll(index, c);
-		return this;
-	}
-
-	@Override
-	public List<Content> cloneContent() {
-		int size = getContentSize();
-		List<Content> list = new ArrayList<Content>(size);
-		for (int i = 0; i < size; i++) {
-			Content child = getContent(i);
-			list.add(child.clone());
-		}
-		return list;
-	}
-
-	@Override
-	public Content getContent(int index) {
-		return content.get(index);
-	}
-
-	//    public Content getChild(Filter filter) {
-		//        int i = indexOf(0, filter);
-	//        return (i < 0) ? null : getContent(i);
-	//    }
-
-	/**
-	 * This will return all content for the <code>Document</code>.
-	 * The returned list is "live" in document order and changes to it
-	 * affect the document's actual content.
-	 *
-	 * <p>
-	 * Sequential traversal through the List is best done with a Iterator
-	 * since the underlying implement of List.size() may require walking the
-	 * entire list.
-	 * </p>
-	 *
-	 * @return <code>List</code> - all Document content
-	 * @throws IllegalStateException if the root element hasn't been set
-	 */
-	@Override
-	public List<Content> getContent() {
-		if (!hasRootElement())
-			throw new IllegalStateException("Root element not set");
-		return content;
-	}
-
-	/**
-	 * Return a filtered view of this <code>Document</code>'s content.
-	 *
-	 * <p>
-	 * Sequential traversal through the List is best done with a Iterator
-	 * since the underlying implement of List.size() may require walking the
-	 * entire list.
-	 * </p>
-	 *
-	 * @param filter <code>Filter</code> to apply
-	 *        Note that the {@link Filters} class has a number of predefined, useful
-	 *        filters.
-	 * @return <code>List</code> - filtered Document content
-	 * @throws IllegalStateException if the root element hasn't been set
-	 */
-	@Override
-	public <F extends Content> List<F> getContent(Filter<F> filter) {
-		if (!hasRootElement())
-			throw new IllegalStateException("Root element not set");
-		return content.getView(filter);
-	}
-
-	/**
-	 * Removes all child content from this parent.
-	 *
-	 * @return list of the old children detached from this parent
-	 */
-	@Override
-	public List<Content> removeContent() {
-		List<Content> old = new ArrayList<Content>(content);
-		content.clear();
-		return old;
-	}
-
-	/**
-	 * Remove all child content from this parent matching the supplied filter.
-	 *
-	 * @param filter filter to select which content to remove
-	 *        Note that the {@link Filters} class has a number of predefined, useful
-	 *        filters.
-	 * @return list of the old children detached from this parent
-	 */
-	@Override
-	public <F extends Content> List<F> removeContent(Filter<F> filter) {
-		List<F> old = new ArrayList<F>();
-		Iterator<F> itr = content.getView(filter).iterator();
-		while (itr.hasNext()) {
-			F child = itr.next();
-			old.add(child);
-			itr.remove();
-		}
-		return old;
-	}
-
-	/**
-	 * This sets the content of the <code>Document</code>.  The supplied
-	 * List should contain only objects of type <code>Element</code>,
-	 * <code>Comment</code>, and <code>ProcessingInstruction</code>.
-	 *
-	 * <p>
-	 * When all objects in the supplied List are legal and before the new
-	 * content is added, all objects in the old content will have their
-	 * parentage set to null (no parent) and the old content list will be
-	 * cleared. This has the effect that any active list (previously obtained
-	 * with a call to {@link #getContent}) will also
-	 * change to reflect the new content.  In addition, all objects in the
-	 * supplied List will have their parentage set to this document, but the
-	 * List itself will not be "live" and further removals and additions will
-	 * have no effect on this document content. If the user wants to continue
-	 * working with a "live" list, then a call to setContent should be
-	 * followed by a call to {@link #getContent} to
-	 * obtain a "live" version of the content.
-	 * </p>
-	 *
-	 * <p>
-	 * Passing a null or empty List clears the existing content.
-	 * </p>
-	 *
-	 * <p>
-	 * In event of an exception the original content will be unchanged and
-	 * the objects in the supplied content will be unaltered.
-	 * </p>
-	 *
-	 * @param newContent <code>List</code> of content to set
-	 * @return this document modified
-	 * @throws IllegalAddException if the List contains objects of
-	 *         illegal types or with existing parentage.
-	 */
-	public Document setContent(Collection<? extends Content> newContent) {
-		content.clearAndSet(newContent);
-		return this;
-	}
-
-	/**
-	 *
-	 * <p>
-	 * Sets the effective URI from which this document was loaded,
-	 * and against which relative URLs in this document will be resolved.
-	 * </p>
-	 *
-	 * @param uri the base URI of this document
-	 */
-	public final void setBaseURI(String uri) {
-		this.baseURI = uri;  // XXX We don't check the URI
-	}
-
-	/**
-	 * <p>
-	 *   Returns the URI from which this document was loaded,
-	 *   or null if this is not known.
-	 * </p>
-	 *
-	 * @return the base URI of this document
-	 */
-	public final String getBaseURI() {
-		return baseURI;
-	}
-
-	/**
-	 * Replace the current child the given index with the supplied child.
-	 * <p>
-	 * In event of an exception the original content will be unchanged and
-	 * the supplied child will be unaltered.
-	 * </p>
-	 *
-	 * @param index - index of child to replace.
-	 * @param child - child to add.
-	 * @return this document instance
-	 * @throws IllegalAddException if the supplied child is already attached
-	 *                             or not legal content for this parent.
-	 * @throws IndexOutOfBoundsException if index is negative or greater
-	 *         than the current number of children.
-	 */
-	public Document setContent(int index, Content child) {
-		content.set(index, child);
-		return this;
-	}
-
-	/**
-	 * Replace the child at the given index with the supplied
-	 * collection.
-	 * <p>
-	 * In event of an exception the original content will be unchanged and
-	 * the content in the supplied collection will be unaltered.
-	 * </p>
-	 *
-	 * @param index - index of child to replace.
-	 * @param collection - collection of content to add.
-	 * @return object on which the method was invoked
-	 * @throws IllegalAddException if the collection contains objects of
-	 *         illegal types.
-	 * @throws IndexOutOfBoundsException if index is negative or greater
-	 *         than the current number of children.
-	 */
-	public Document setContent(int index, Collection<? extends Content> collection) {
-		content.remove(index);
-		content.addAll(index, collection);
-		return this;
-	}
-
-	@Override
-	public boolean removeContent(Content child) {
-		return content.remove(child);
-	}
-
-	@Override
-	public Content removeContent(int index) {
-		return content.remove(index);
-	}
-
-	/**
-	 * Set this document's content to be the supplied child.
-	 * <p>
-	 * If the supplied child is legal content for a Document and before
-	 * it is added, all content in the current content list will
-	 * be cleared and all current children will have their parentage set to
-	 * null.
-	 * <p>
-	 * This has the effect that any active list (previously obtained with
-	 * a call to one of the {@link #getContent} methods will also change
-	 * to reflect the new content.  In addition, all content in the supplied
-	 * collection will have their parentage set to this Document.  If the user
-	 * wants to continue working with a <b>"live"</b> list of this Document's
-	 * child, then a call to setContent should be followed by a call to one
-	 * of the {@link #getContent} methods to obtain a <b>"live"</b>
-	 * version of the children.
-	 * <p>
-	 * Passing a null child clears the existing content.
-	 * <p>
-	 * In event of an exception the original content will be unchanged and
-	 * the supplied child will be unaltered.
-	 *
-	 * @param child new content to replace existing content
-	 * @return           the parent on which the method was called
-	 * @throws IllegalAddException if the supplied child is already attached
-	 *                             or not legal content for this parent
-	 */
-	public Document setContent(Content child) {
-		content.clear();
-		content.add(child);
-		return this;
-	}
-
-	/**
-	 * This returns a <code>String</code> representation of the
-	 * <code>Document</code>, suitable for debugging. If the XML
-	 * representation of the <code>Document</code> is desired,
-	 * {@link fi.sykero.kdom.output.XMLOutputter#outputString(Document)}
-	 * should be used.
-	 *
-	 * @return <code>String</code> - information about the
-	 *         <code>Document</code>
-	 */
-	@Override
-	public String toString() {
-		StringBuilder stringForm = new StringBuilder()
-		.append("[Document: ");
-
-		DocType docType = getDocType();
-		if (docType != null) {
-			stringForm.append(docType.toString())
-			.append(", ");
-		} else {
-			stringForm.append(" No DOCTYPE declaration, ");
-		}
-
-		Element rootElement = hasRootElement() ? getRootElement() : null ;
-		if (rootElement != null) {
-			stringForm.append("Root is ")
-			.append(rootElement.toString());
-		} else {
-			stringForm.append(" No root element"); // shouldn't happen
-		}
-
-		stringForm.append("]");
-
-		return stringForm.toString();
-	}
-
-	/**
-	 * This tests for equality of this <code>Document</code> to the supplied
-	 * <code>Object</code>.
-	 *
-	 * @param ob <code>Object</code> to compare to
-	 * @return <code>boolean</code> whether the <code>Document</code> is
-	 *         equal to the supplied <code>Object</code>
-	 */
-	@Override
-	public final boolean equals(Object ob) {
-		return (ob == this);
-	}
-
-	/**
-	 * This returns the hash code for this <code>Document</code>.
-	 *
-	 * @return <code>int</code> hash code
-	 */
-	@Override
-	public final int hashCode() {
-		return super.hashCode();
-	}
-
-	/**
-	 * This will return a deep clone of this <code>Document</code>.
-	 *
-	 * @return <code>Object</code> clone of this <code>Document</code>
-	 */
-	@Override
-	public Document clone() {
-		final Document doc = (Document) super.clone();
-
-		// The clone has a reference to this object's content list, so
-		// overwrite with a empty list
-		doc.content = new ContentList(doc);
-
-		// Add the cloned content to clone
-
-		for (int i = 0; i < content.size(); i++) {
-			Object obj = content.get(i);
-			if (obj instanceof Element) {
-				Element element = ((Element)obj).clone();
-				doc.content.add(element);
-			}
-			else if (obj instanceof Comment) {
-				Comment comment = ((Comment)obj).clone();
-				doc.content.add(comment);
-			}
-			else if (obj instanceof ProcessingInstruction) {
-				ProcessingInstruction pi = ((ProcessingInstruction)obj).clone();
-				doc.content.add(pi);
-			}
-			else if (obj instanceof DocType) {
-				DocType dt = ((DocType)obj).clone();
-				doc.content.add(dt);
-			}
-		}
-
-		return doc;
-	}
-
-	/**
-	 * Returns an iterator that walks over all descendants in document order.
-	 *
-	 * @return an iterator to walk descendants
-	 */
-	@Override
-	public IteratorIterable<Content> getDescendants() {
-		return new DescendantIterator(this);
-	}
-
-	/**
-	 * Returns an iterator that walks over all descendants in document order
-	 * applying the Filter to return only elements that match the filter rule.
-	 * With filters you can match only Elements, only Comments, Elements or
-	 * Comments, only Elements with a given name and/or prefix, and so on.
-	 *
-	 * @param filter filter to select which descendants to see
-	 *        Note that the {@link Filters} class has a number of predefined, useful
-	 *        filters.
-	 * @return an iterator to walk descendants within a filter
-	 */
-	@Override
-	public <F extends Content> IteratorIterable<F> getDescendants(final Filter<F> filter) {
-		return new FilterIterator<F>(new DescendantIterator(this), filter);
-	}
-
-	/**
-	 * Always returns null, Document cannot have a parent.
-	 * @return null
-	 */
-	@Override
-	public Parent getParent() {
-		return null;  // documents never have parents
-	}
-
-
-
-	/**
-	 * Always returns this Document Instance
-	 * @return 'this' because this Document is its own Document
-	 */
-	@Override
-	public Document getDocument() {
-		return this;
-	}
-
-	/**
-	 * Assigns an arbitrary object to be associated with this document under
-	 * the given "id" string.  Null values are permitted.  'id' Strings beginning
-	 * with "http://www.jdom.org/ are reserved for JDOM use. Properties set with
-	 * this method will not be serialized with the rest of this Document, should
-	 * serialization need to be done.
-	 *
-	 * @param id     the id of the stored <code>Object</code>
-	 * @param value  the <code>Object</code> to store
-	 */
-	public void setProperty(String id, Object value) {
-		if (propertyMap == null) {
-			propertyMap = new HashMap<String, Object>();
-		}
-		propertyMap.put(id, value);
-	}
-
-	/**
-	 * Returns the object associated with this document under the given "id"
-	 * string, or null if there is no binding or if the binding explicitly
-	 * stored a null value.
-	 *
-	 * @param id   the id of the stored <code>Object</code> to return
-	 * @return     the <code>Object</code> associated with the given id
-	 */
-	public Object getProperty(String id) {
-		if (propertyMap == null) {
-			return null;
-		}
-		return propertyMap.get(id);
-	}
-	
-	@Override
-	public void canContainContent(Content child, int index, boolean replace) {
-		if (child instanceof Element) {
-			int cre = content.indexOfFirstElement();
-			if (replace && cre == index) {
-				return;
-			}
-			if (cre >= 0) {
-				throw new IllegalAddException(
-						"Cannot add a second root element, only one is allowed");
-			}
-			if (content.indexOfDocType() >= index) {
-				throw new IllegalAddException(
-						"A root element cannot be added before the DocType");
-			}
-		}
-		if (child instanceof DocType) {
-			int cdt = content.indexOfDocType();
-			if (replace && cdt == index) {
-				// It's OK to replace an existing DocType
-				return;
-			}
-			if (cdt >= 0) {
-				throw new IllegalAddException(
-						"Cannot add a second doctype, only one is allowed");
-			}
-			int firstElt = content.indexOfFirstElement();
-			if (firstElt != -1 && firstElt < index) {
-				throw new IllegalAddException(
-						"A DocType cannot be added after the root element");
-			}
-		}
-				
-		if (child instanceof CDATA) {
-			throw new IllegalAddException("A CDATA is not allowed at the document root");
-		}
-
-		if (child instanceof Text) {
-			if(Verifier.isAllXMLWhitespace(((Text) child).getText())) {
-				// only whitespace, not a problem.
-				return;
-			}
-			throw new IllegalAddException("A Text is not allowed at the document root");
-		}
-
-		if (child instanceof EntityRef) {
-			throw new IllegalAddException("An EntityRef is not allowed at the document root");
-		}
-		
-	}
-
-	/**
-	 * Get the Namespaces that are in-scope on this Document.
-	 * <p>
-	 * Document always has exactly two Namespaces in-scope:
-	 * {@link Namespace#NO_NAMESPACE} and {@link Namespace#XML_NAMESPACE}.
-	 * <p>
-	 * These namespaces are always introduced by the Document, and thus they are
-	 * both returned by {@link #getNamespacesIntroduced()}, and additionally
-	 * {@link #getNamespacesInherited()} will always be empty.
-	 * <p>
-	 * <strong>Description copied from</strong>
-	 * {@link NamespaceAware#getNamespacesInScope()}:
-	 * <p>
-	 * {@inheritDoc}
-	 */
-	@Override
-	public List<Namespace> getNamespacesInScope() {
-		return Collections.unmodifiableList(Arrays.asList(
-				new Namespace[] {Namespace.NO_NAMESPACE, Namespace.XML_NAMESPACE}));
-	}
-
-	@Override
-	public List<Namespace> getNamespacesIntroduced() {
-		return Collections.unmodifiableList(Arrays.asList(
-				new Namespace[] {Namespace.NO_NAMESPACE, Namespace.XML_NAMESPACE}));
-	}
-
-	@Override
-	public List<Namespace> getNamespacesInherited() {
-		return Collections.emptyList();
-	}
-	
-	
-	/**
-	 * JDOM2 Serialization. In this case, DocType is simple. 
-	 */
-	private static final long serialVersionUID = 200L;
-
-	/**
-	 * Serialize out the Element.
-	 * 
-	 * @serialData
-	 * <strong>Document Properties are not serialized!</strong>
-	 * <p>
-	 * The Stream protocol is:
-	 * <ol>
-	 *   <li>The BaseURI using default Serialization.
-	 *   <li>The count of child Content
-	 *   <li>The actual Child Content.
-	 * </ol>
-	 * 
-	 * @param out where to write the Element to.
-	 * @throws IOException if there is a writing problem.
-	 */
-	private void writeObject(final ObjectOutputStream out) throws IOException {
-		out.defaultWriteObject();
-		final int cs = content.size();
-		out.writeInt(cs);
-		for (int i = 0; i < cs; i++) {
-			out.writeObject(getContent(i));
-		}
-	}
-
-	/**
-	 * Read an Element off the ObjectInputStream.
-	 * 
-	 * @see #writeObject(ObjectOutputStream)
-	 * @param in where to read the Element from.
-	 * @throws IOException if there is a reading problem.
-	 * @throws ClassNotFoundException when a class cannot be found
-	 */
-	private void readObject(final ObjectInputStream in)
-			throws IOException, ClassNotFoundException {
-
-		in.defaultReadObject();
-		
-		content = new ContentList(this);
-
-		int cs = in.readInt();
-		while (--cs >= 0) {
-			addContent((Content)in.readObject());
-		}
-
-	}
+open class Document : CloneBase, Parent {
+
+    /**
+     * This document's content including comments, PIs, a possible
+     * DocType, and a root element.
+     * Subclassers have to track content using their own
+     * mechanism.
+     * (Was the package-private field `content`; renamed because that is now the property.)
+     */
+    @Transient
+    private var contentList: ContentList = ContentList(this)
+
+    /**
+     *  See http://www.w3.org/TR/2003/WD-DOM-Level-3-Core-20030226/core.html#baseURIs-Considerations
+     *
+     * Sets the effective URI from which this document was loaded,
+     * and against which relative URLs in this document will be resolved.
+     * (The URI is not checked.)
+     *
+     * Returns the URI from which this document was loaded,
+     * or null if this is not known.
+     */
+    var baseURI: String? = null
+
+    // Supports the setProperty/getProperty calls
+    @Transient
+    private var propertyMap: HashMap<String, Any?>? = null
+
+    /**
+     * Creates a new empty document.  A document must have a root element,
+     * so this document will not be well-formed and accessor methods will
+     * throw an IllegalStateException if this document is accessed before a
+     * root element is added.  This method is most useful for build tools.
+     */
+    constructor() : super()
+
+    /**
+     * This will create a new `Document`,
+     * with the supplied `[Element]`
+     * as the root element, the supplied
+     * `[DocType]` declaration, and the specified
+     * base URI.
+     *
+     * @param rootElement `Element` for document root.
+     * @param docType `DocType` declaration.
+     * @param baseURI the URI from which this document was loaded.
+     * @throws IllegalAddException if the given docType object
+     *         is already attached to a document or the given
+     *         rootElement already has a parent
+     */
+    constructor(rootElement: Element?, docType: DocType?, baseURI: String?) : super() {
+        if (rootElement != null) {
+            setRootElement(rootElement)
+        }
+        if (docType != null) {
+            setDocType(docType)
+        }
+        if (baseURI != null) {
+            this.baseURI = baseURI
+        }
+    }
+
+    /**
+     * This will create a new `Document`,
+     * with the supplied `[Element]`
+     * as the root element and the supplied
+     * `[DocType]` declaration.
+     *
+     * @param rootElement `Element` for document root.
+     * @param docType `DocType` declaration.
+     * @throws IllegalAddException if the given DocType object
+     *         is already attached to a document or the given
+     *         rootElement already has a parent
+     */
+    constructor(rootElement: Element?, docType: DocType?) : this(rootElement, docType, null)
+
+    /**
+     * This will create a new `Document`,
+     * with the supplied `[Element]`
+     * as the root element, and no `[DocType]`
+     * declaration.
+     *
+     * @param rootElement `Element` for document root
+     * @throws IllegalAddException if the given rootElement already has
+     *         a parent.
+     */
+    constructor(rootElement: Element?) : this(rootElement, null, null)
+
+    /**
+     * This will create a new `Document`,
+     * with the supplied list of content, and a
+     * `[DocType]` declaration only if the content
+     * contains a DocType instance.  A null list is treated the
+     * same as the no-arg constructor.
+     *
+     * @param content `List` of starter content
+     * @throws IllegalAddException if the List contains more than
+     *         one Element or objects of illegal types.
+     */
+    constructor(content: List<Content>?) : super() {
+        setContent(content)
+    }
+
+    override val contentSize: Int
+        get() = contentList.size
+
+    override fun indexOf(child: Content): Int {
+        return contentList.indexOf(child)
+    }
+
+    //    /**
+    //     * Starting at the given index (inclusive), return the index of
+    //     * the first child matching the supplied filter, or -1
+    //     * if none is found.
+    //     *
+    //     * @return index of child, or -1 if none found.
+    //     */
+    //    private int indexOf(int start, Filter filter) {
+    //        int size = getContentSize();
+    //        for (int i = start; i < size; i++) {
+    //            if (filter.matches(getContent(i))) {
+    //                return i;
+    //            }
+    //        }
+    //        return -1;
+    //    }
+
+    /**
+     * This will return `true` if this document has a
+     * root element, `false` otherwise.
+     *
+     * @return `true` if this document has a root element,
+     *         `false` otherwise.
+     */
+    fun hasRootElement(): Boolean {
+        return if ((contentList.indexOfFirstElement() < 0)) false else true
+    }
+
+    /**
+     * This will return the root `Element`
+     * for this `Document`
+     *
+     * @return `Element` - the document's root element
+     * @throws IllegalStateException if the root element hasn't been set
+     */
+    val rootElement: Element
+        get() {
+            val index = contentList.indexOfFirstElement()
+            if (index < 0) {
+                throw IllegalStateException("Root element not set")
+            }
+            return contentList[index] as Element
+        }
+
+    /**
+     * This sets the root `[Element]` for the
+     * `Document`. If the document already has a root
+     * element, it is replaced.
+     *
+     * @param rootElement `Element` to be new root.
+     * @return `Document` - modified Document.
+     * @throws IllegalAddException if the given rootElement already has
+     *         a parent.
+     */
+    open fun setRootElement(rootElement: Element?): Document {
+        val index = contentList.indexOfFirstElement()
+        if (index < 0) {
+            contentList.add(rootElement!!)
+        } else {
+            contentList.set(index, rootElement!!)
+        }
+        return this
+    }
+
+    /**
+     * Detach the root `[Element]` from this document.
+     *
+     * @return removed root `Element`
+     */
+    fun detachRootElement(): Element? {
+        val index = contentList.indexOfFirstElement()
+        if (index < 0)
+            return null
+        return removeContent(index) as Element?
+    }
+
+    /**
+     * This will return the `[DocType]`
+     * declaration for this `Document`, or
+     * `null` if none exists.
+     *
+     * @return `DocType` - the DOCTYPE declaration.
+     */
+    val docType: DocType?
+        get() {
+            val index = contentList.indexOfDocType()
+            if (index < 0) {
+                return null
+            }
+            return contentList[index] as DocType?
+        }
+
+    /**
+     * This will set the `[DocType]`
+     * declaration for this `Document`. Note
+     * that a DocType can only be attached to one Document.
+     * Attempting to set the DocType to a DocType object
+     * that already belongs to a Document will result in an
+     * IllegalAddException being thrown.
+     *
+     * @param docType `DocType` declaration.
+     * @return object on which the method was invoked
+     * @throws IllegalAddException if the given docType is
+     *   already attached to a Document.
+     */
+    open fun setDocType(docType: DocType?): Document {
+        if (docType == null) {
+            // Remove any existing doctype
+            val docTypeIndex = contentList.indexOfDocType()
+            if (docTypeIndex >= 0) contentList.removeAt(docTypeIndex)
+            return this
+        }
+
+        if (docType.parent != null) {
+            throw IllegalAddException(
+                docType,
+                "The DocType already is attached to a document"
+            )
+        }
+
+        // Add DocType to head if new, replace old otherwise
+        val docTypeIndex = contentList.indexOfDocType()
+        if (docTypeIndex < 0) {
+            contentList.add(0, docType)
+        } else {
+            contentList.set(docTypeIndex, docType)
+        }
+
+        return this
+    }
+
+    /**
+     * Appends the child to the end of the content list.
+     *
+     * @param child   child to append to end of content list
+     * @return        the document on which the method was called
+     * @throws IllegalAddException if the given child already has a parent.
+     */
+    override fun addContent(child: Content): Document {
+        contentList.add(child)
+        return this
+    }
+
+    /**
+     * Appends all children in the given collection to the end of
+     * the content list.  In event of an exception during add the
+     * original content will be unchanged and the objects in the supplied
+     * collection will be unaltered.
+     *
+     * @param c   collection to append
+     * @return    the document on which the method was called
+     * @throws IllegalAddException if any item in the collection
+     *         already has a parent or is of an illegal type.
+     */
+    override fun addContent(c: Collection<Content>): Document {
+        contentList.addAll(c)
+        return this
+    }
+
+    /**
+     * Inserts the child into the content list at the given index.
+     *
+     * @param index location for adding the collection
+     * @param child      child to insert
+     * @return           the parent on which the method was called
+     * @throws IndexOutOfBoundsException if index is negative or beyond
+     *         the current number of children
+     * @throws IllegalAddException if the given child already has a parent.
+     */
+    override fun addContent(index: Int, child: Content): Document {
+        contentList.add(index, child)
+        return this
+    }
+
+    /**
+     * Inserts the content in a collection into the content list
+     * at the given index.  In event of an exception the original content
+     * will be unchanged and the objects in the supplied collection will be
+     * unaltered.
+     *
+     * @param index location for adding the collection
+     * @param c  collection to insert
+     * @return            the parent on which the method was called
+     * @throws IndexOutOfBoundsException if index is negative or beyond
+     *         the current number of children
+     * @throws IllegalAddException if any item in the collection
+     *         already has a parent or is of an illegal type.
+     */
+    override fun addContent(index: Int, c: Collection<Content>): Document {
+        contentList.addAll(index, c)
+        return this
+    }
+
+    override fun cloneContent(): MutableList<Content> {
+        val size = contentSize
+        val list: MutableList<Content> = ArrayList<Content>(size)
+        for (i in 0 until size) {
+            val child = getContent(i)
+            list.add(child.clone())
+        }
+        return list
+    }
+
+    override fun getContent(index: Int): Content {
+        return contentList[index]
+    }
+
+    //    public Content getChild(Filter filter) {
+    //        int i = indexOf(0, filter);
+    //        return (i < 0) ? null : getContent(i);
+    //    }
+
+    /**
+     * This will return all content for the `Document`.
+     * The returned list is "live" in document order and changes to it
+     * affect the document's actual content.
+     *
+     *
+     * Sequential traversal through the List is best done with a Iterator
+     * since the underlying implement of List.size() may require walking the
+     * entire list.
+     *
+     *
+     * @return `List` - all Document content
+     * @throws IllegalStateException if the root element hasn't been set
+     */
+    override val content: MutableList<Content>
+        get() {
+            if (!hasRootElement())
+                throw IllegalStateException("Root element not set")
+            return contentList
+        }
+
+    /**
+     * Return a filtered view of this `Document`'s content.
+     *
+     *
+     * Sequential traversal through the List is best done with a Iterator
+     * since the underlying implement of List.size() may require walking the
+     * entire list.
+     *
+     *
+     * @param filter `Filter` to apply
+     *        Note that the [Filters] class has a number of predefined, useful
+     *        filters.
+     * @return `List` - filtered Document content
+     * @throws IllegalStateException if the root element hasn't been set
+     */
+    override fun <F : Content> getContent(filter: Filter<F>): MutableList<F> {
+        if (!hasRootElement())
+            throw IllegalStateException("Root element not set")
+        return contentList.getView(filter)
+    }
+
+    /**
+     * Removes all child content from this parent.
+     *
+     * @return list of the old children detached from this parent
+     */
+    override fun removeContent(): MutableList<Content> {
+        val old: MutableList<Content> = ArrayList<Content>(contentList)
+        contentList.clear()
+        return old
+    }
+
+    /**
+     * Remove all child content from this parent matching the supplied filter.
+     *
+     * @param filter filter to select which content to remove
+     *        Note that the [Filters] class has a number of predefined, useful
+     *        filters.
+     * @return list of the old children detached from this parent
+     */
+    override fun <F : Content> removeContent(filter: Filter<F>): MutableList<F> {
+        val old: MutableList<F> = ArrayList<F>()
+        val itr = contentList.getView(filter).iterator()
+        while (itr.hasNext()) {
+            val child = itr.next()
+            old.add(child)
+            itr.remove()
+        }
+        return old
+    }
+
+    /**
+     * This sets the content of the `Document`.  The supplied
+     * List should contain only objects of type `Element`,
+     * `Comment`, and `ProcessingInstruction`.
+     *
+     *
+     * When all objects in the supplied List are legal and before the new
+     * content is added, all objects in the old content will have their
+     * parentage set to null (no parent) and the old content list will be
+     * cleared. This has the effect that any active list (previously obtained
+     * with a call to [content]) will also
+     * change to reflect the new content.  In addition, all objects in the
+     * supplied List will have their parentage set to this document, but the
+     * List itself will not be "live" and further removals and additions will
+     * have no effect on this document content. If the user wants to continue
+     * working with a "live" list, then a call to setContent should be
+     * followed by a call to [content] to
+     * obtain a "live" version of the content.
+     *
+     *
+     *
+     * Passing a null or empty List clears the existing content.
+     *
+     *
+     *
+     * In event of an exception the original content will be unchanged and
+     * the objects in the supplied content will be unaltered.
+     *
+     *
+     * @param newContent `List` of content to set
+     * @return this document modified
+     * @throws IllegalAddException if the List contains objects of
+     *         illegal types or with existing parentage.
+     */
+    open fun setContent(newContent: Collection<Content>?): Document {
+        contentList.clearAndSet(newContent)
+        return this
+    }
+
+    /**
+     * Replace the current child the given index with the supplied child.
+     *
+     * In event of an exception the original content will be unchanged and
+     * the supplied child will be unaltered.
+     *
+     *
+     * @param index - index of child to replace.
+     * @param child - child to add.
+     * @return this document instance
+     * @throws IllegalAddException if the supplied child is already attached
+     *                             or not legal content for this parent.
+     * @throws IndexOutOfBoundsException if index is negative or greater
+     *         than the current number of children.
+     */
+    open fun setContent(index: Int, child: Content): Document {
+        contentList.set(index, child)
+        return this
+    }
+
+    /**
+     * Replace the child at the given index with the supplied
+     * collection.
+     *
+     * In event of an exception the original content will be unchanged and
+     * the content in the supplied collection will be unaltered.
+     *
+     *
+     * @param index - index of child to replace.
+     * @param collection - collection of content to add.
+     * @return object on which the method was invoked
+     * @throws IllegalAddException if the collection contains objects of
+     *         illegal types.
+     * @throws IndexOutOfBoundsException if index is negative or greater
+     *         than the current number of children.
+     */
+    open fun setContent(index: Int, collection: Collection<Content>): Document {
+        contentList.removeAt(index)
+        contentList.addAll(index, collection)
+        return this
+    }
+
+    override fun removeContent(child: Content): Boolean {
+        return contentList.remove(child)
+    }
+
+    override fun removeContent(index: Int): Content? {
+        return contentList.removeAt(index)
+    }
+
+    /**
+     * Set this document's content to be the supplied child.
+     *
+     * If the supplied child is legal content for a Document and before
+     * it is added, all content in the current content list will
+     * be cleared and all current children will have their parentage set to
+     * null.
+     *
+     * This has the effect that any active list (previously obtained with
+     * a call to one of the [content] methods will also change
+     * to reflect the new content.  In addition, all content in the supplied
+     * collection will have their parentage set to this Document.  If the user
+     * wants to continue working with a **"live"** list of this Document's
+     * child, then a call to setContent should be followed by a call to one
+     * of the [content] methods to obtain a **"live"**
+     * version of the children.
+     *
+     * Passing a null child clears the existing content.
+     *
+     * In event of an exception the original content will be unchanged and
+     * the supplied child will be unaltered.
+     *
+     * @param child new content to replace existing content
+     * @return           the parent on which the method was called
+     * @throws IllegalAddException if the supplied child is already attached
+     *                             or not legal content for this parent
+     */
+    open fun setContent(child: Content): Document {
+        contentList.clear()
+        contentList.add(child)
+        return this
+    }
+
+    /**
+     * This returns a `String` representation of the
+     * `Document`, suitable for debugging. If the XML
+     * representation of the `Document` is desired,
+     * [fi.sykero.kdom.output.XMLOutputter.outputString]
+     * should be used.
+     *
+     * @return `String` - information about the
+     *         `Document`
+     */
+    override fun toString(): String {
+        val stringForm = StringBuilder()
+            .append("[Document: ")
+
+        val docType = docType
+        if (docType != null) {
+            stringForm.append(docType.toString())
+                .append(", ")
+        } else {
+            stringForm.append(" No DOCTYPE declaration, ")
+        }
+
+        val rootElement = if (hasRootElement()) rootElement else null
+        if (rootElement != null) {
+            stringForm.append("Root is ")
+                .append(rootElement.toString())
+        } else {
+            stringForm.append(" No root element") // shouldn't happen
+        }
+
+        stringForm.append("]")
+
+        return stringForm.toString()
+    }
+
+    /**
+     * This tests for equality of this `Document` to the supplied
+     * `Object`.
+     *
+     * @param other `Object` to compare to
+     * @return `boolean` whether the `Document` is
+     *         equal to the supplied `Object`
+     */
+    final override fun equals(other: Any?): Boolean {
+        return (other === this)
+    }
+
+    /**
+     * This returns the hash code for this `Document`.
+     *
+     * @return `int` hash code
+     */
+    final override fun hashCode(): Int {
+        return super.hashCode()
+    }
+
+    /**
+     * This will return a deep clone of this `Document`.
+     *
+     * @return `Object` clone of this `Document`
+     */
+    public override fun clone(): Document {
+        val doc = super.clone() as Document
+
+        // The clone has a reference to this object's content list, so
+        // overwrite with a empty list
+        doc.contentList = ContentList(doc)
+
+        // Add the cloned content to clone
+
+        for (i in 0 until contentList.size) {
+            val obj: Any = contentList[i]
+            if (obj is Element) {
+                val element = obj.clone()
+                doc.contentList.add(element)
+            } else if (obj is Comment) {
+                val comment = obj.clone()
+                doc.contentList.add(comment)
+            } else if (obj is ProcessingInstruction) {
+                val pi = obj.clone()
+                doc.contentList.add(pi)
+            } else if (obj is DocType) {
+                val dt = obj.clone()
+                doc.contentList.add(dt)
+            }
+        }
+
+        return doc
+    }
+
+    /**
+     * Returns an iterator that walks over all descendants in document order.
+     *
+     * @return an iterator to walk descendants
+     */
+    override val descendants: IteratorIterable<Content>
+        get() = DescendantIterator(this)
+
+    /**
+     * Returns an iterator that walks over all descendants in document order
+     * applying the Filter to return only elements that match the filter rule.
+     * With filters you can match only Elements, only Comments, Elements or
+     * Comments, only Elements with a given name and/or prefix, and so on.
+     *
+     * @param filter filter to select which descendants to see
+     *        Note that the [Filters] class has a number of predefined, useful
+     *        filters.
+     * @return an iterator to walk descendants within a filter
+     */
+    override fun <F : Content> getDescendants(filter: Filter<F>): IteratorIterable<F> {
+        return FilterIterator<F>(DescendantIterator(this), filter)
+    }
+
+    /**
+     * Always returns null, Document cannot have a parent.
+     * @return null
+     */
+    override val parent: Parent?
+        get() = null // documents never have parents
+
+
+    /**
+     * Always returns this Document Instance
+     * @return 'this' because this Document is its own Document
+     */
+    override val document: Document
+        get() = this
+
+    /**
+     * Assigns an arbitrary object to be associated with this document under
+     * the given "id" string.  Null values are permitted.  'id' Strings beginning
+     * with "http://www.jdom.org/ are reserved for JDOM use. Properties set with
+     * this method will not be serialized with the rest of this Document, should
+     * serialization need to be done.
+     *
+     * @param id     the id of the stored `Object`
+     * @param value  the `Object` to store
+     */
+    fun setProperty(id: String?, value: Any?) {
+        if (propertyMap == null) {
+            propertyMap = HashMap<String, Any?>()
+        }
+        propertyMap!!.put(id!!, value)
+    }
+
+    /**
+     * Returns the object associated with this document under the given "id"
+     * string, or null if there is no binding or if the binding explicitly
+     * stored a null value.
+     *
+     * @param id   the id of the stored `Object` to return
+     * @return     the `Object` associated with the given id
+     */
+    fun getProperty(id: String?): Any? {
+        if (propertyMap == null) {
+            return null
+        }
+        return propertyMap!![id]
+    }
+
+    override fun canContainContent(content: Content, index: Int, replace: Boolean) {
+        if (content is Element) {
+            val cre = contentList.indexOfFirstElement()
+            if (replace && cre == index) {
+                return
+            }
+            if (cre >= 0) {
+                throw IllegalAddException(
+                    "Cannot add a second root element, only one is allowed"
+                )
+            }
+            if (contentList.indexOfDocType() >= index) {
+                throw IllegalAddException(
+                    "A root element cannot be added before the DocType"
+                )
+            }
+        }
+        if (content is DocType) {
+            val cdt = contentList.indexOfDocType()
+            if (replace && cdt == index) {
+                // It's OK to replace an existing DocType
+                return
+            }
+            if (cdt >= 0) {
+                throw IllegalAddException(
+                    "Cannot add a second doctype, only one is allowed"
+                )
+            }
+            val firstElt = contentList.indexOfFirstElement()
+            if (firstElt != -1 && firstElt < index) {
+                throw IllegalAddException(
+                    "A DocType cannot be added after the root element"
+                )
+            }
+        }
+
+        if (content is CDATA) {
+            throw IllegalAddException("A CDATA is not allowed at the document root")
+        }
+
+        if (content is Text) {
+            if (Verifier.isAllXMLWhitespace(content.text!!)) {
+                // only whitespace, not a problem.
+                return
+            }
+            throw IllegalAddException("A Text is not allowed at the document root")
+        }
+
+        if (content is EntityRef) {
+            throw IllegalAddException("An EntityRef is not allowed at the document root")
+        }
+
+    }
+
+    /**
+     * Get the Namespaces that are in-scope on this Document.
+     *
+     * Document always has exactly two Namespaces in-scope:
+     * [Namespace.NO_NAMESPACE] and [Namespace.XML_NAMESPACE].
+     *
+     * These namespaces are always introduced by the Document, and thus they are
+     * both returned by [namespacesIntroduced], and additionally
+     * [namespacesInherited] will always be empty.
+     *
+     * **Description copied from**
+     * [NamespaceAware.namespacesInScope]:
+     */
+    override val namespacesInScope: List<Namespace>
+        get() = Collections.unmodifiableList(
+            Arrays.asList(
+                *arrayOf(Namespace.NO_NAMESPACE, Namespace.XML_NAMESPACE)
+            )
+        )
+
+    override val namespacesIntroduced: List<Namespace>
+        get() = Collections.unmodifiableList(
+            Arrays.asList(
+                *arrayOf(Namespace.NO_NAMESPACE, Namespace.XML_NAMESPACE)
+            )
+        )
+
+    override val namespacesInherited: List<Namespace>
+        get() = Collections.emptyList()
+
+
+    /**
+     * Serialize out the Element.
+     *
+     * @serialData
+     * **Document Properties are not serialized!**
+     *
+     * The Stream protocol is:
+     *
+     * 1. The BaseURI using default Serialization.
+     * 1. The count of child Content
+     * 1. The actual Child Content.
+     *
+     * @param out where to write the Element to.
+     * @throws IOException if there is a writing problem.
+     */
+    @Throws(IOException::class)
+    private fun writeObject(out: ObjectOutputStream) {
+        out.defaultWriteObject()
+        val cs = contentList.size
+        out.writeInt(cs)
+        for (i in 0 until cs) {
+            out.writeObject(getContent(i))
+        }
+    }
+
+    /**
+     * Read an Element off the ObjectInputStream.
+     *
+     * @see writeObject
+     * @param in where to read the Element from.
+     * @throws IOException if there is a reading problem.
+     * @throws ClassNotFoundException when a class cannot be found
+     */
+    @Throws(IOException::class, ClassNotFoundException::class)
+    private fun readObject(`in`: ObjectInputStream) {
+
+        `in`.defaultReadObject()
+
+        contentList = ContentList(this)
+
+        var cs = `in`.readInt()
+        while (--cs >= 0) {
+            addContent(`in`.readObject() as Content)
+        }
+
+    }
+
+    private companion object {
+        /**
+         * JDOM2 Serialization. In this case, DocType is simple.
+         */
+        private const val serialVersionUID = 200L
+    }
 
 }

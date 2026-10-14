@@ -380,7 +380,7 @@ open class ProcessingInstruction : Content {
             .toString()
     }
 
-    override fun clone(): ProcessingInstruction {
+    public override fun clone(): ProcessingInstruction {
         val pi = super.clone() as ProcessingInstruction
 
         // target and rawdata are immutable and references copied by

@@ -116,7 +116,7 @@ open class Comment : Content {
         return this
     }
 
-    override fun clone(): Comment {
+    public override fun clone(): Comment {
         return super.clone() as Comment
     }
 

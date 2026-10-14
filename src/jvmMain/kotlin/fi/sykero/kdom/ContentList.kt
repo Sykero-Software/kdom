@@ -648,6 +648,14 @@ internal class ContentList
      */
     // @Override - only in Java8
     override fun sort(comp: Comparator<in Content>?) {
+        sortContent(comp)
+    }
+
+    /**
+     * The body of [sort], reachable from Kotlin callers (the JDK `List.sort` member is not callable
+     * on a Kotlin `MutableList`, where the `sort` extension is found instead).
+     */
+    fun sortContent(comp: Comparator<in Content>?) {
 
         if (comp == null) {
             // sort by the 'natural order', which, there is none.
@@ -1292,6 +1300,11 @@ internal class ContentList
          */
         //Not till Java8 @Override
         override fun sort(comp: Comparator<in F>?) {
+            sortContent(comp)
+        }
+
+        /** The body of [sort], reachable from Kotlin callers (see [ContentList.sortContent]). */
+        fun sortContent(comp: Comparator<in F>?) {
             // this size() forces a full scan/update of the list.
             if (comp == null) {
                 // sort by the 'natural order', which, there is none.

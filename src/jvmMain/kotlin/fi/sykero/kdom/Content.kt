@@ -148,7 +148,16 @@ abstract class Content protected constructor(type: CType) : CloneBase(), Seriali
      *
      * @return A CType enumerated value representing this content.
      */
-    val cType: CType = type
+    val cType: CType
+        get() = ctype
+
+    /**
+     * The content type enumerate value for this Content
+     * (Kept as the protected final field `ctype` so the default Java serialization form is unchanged.)
+     * @serialField This is an Enum, and cannot be null.
+     */
+    @JvmField
+    protected val ctype: CType = type
 
     /**
      * Detaches this child from its parent or does nothing if the child
@@ -232,7 +241,7 @@ abstract class Content protected constructor(type: CType) : CloneBase(), Seriali
      */
     abstract val value: String?
 
-    override fun clone(): Content {
+    public override fun clone(): Content {
         val c = super.clone() as Content
         c.parentRef = null
         return c

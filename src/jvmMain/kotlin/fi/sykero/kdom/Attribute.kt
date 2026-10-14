@@ -134,8 +134,11 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
      *
      * @return `AttributeType` - type for this attribute.
      */
-    var attributeType: AttributeType = AttributeType.UNDECLARED
-        private set
+    val attributeType: AttributeType
+        get() = type
+
+    /** The type of the `Attribute` (kept as `type`, a serialized field in jdom2) */
+    private var type: AttributeType = AttributeType.UNDECLARED
 
     /**
      * Specified attributes are part of the XML,
@@ -147,7 +150,14 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
      * (Was the protected field `specified`, with `isSpecified()` and `setSpecified(boolean)`.)
      * @since JDOM2
      */
-    var isSpecified: Boolean = true
+    var isSpecified: Boolean
+        get() = specified
+        set(specified) {
+            this.specified = specified
+        }
+
+    /** The 'specified' flag (kept as `specified`, a serialized field in jdom2) */
+    private var specified: Boolean = true
 
     /**
      * The parent to which this Attribute belongs. Change it with
@@ -335,7 +345,7 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
             throw IllegalNameException(name, "attribute", reason)
         }
         this.name = name
-        isSpecified = true
+        specified = true
         return this
     }
 
@@ -427,7 +437,7 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
             )
         }
         this.namespace = namespace
-        isSpecified = true
+        specified = true
         return this
     }
 
@@ -451,7 +461,7 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
             throw IllegalDataException(value, "attribute", reason)
         }
         this.value = value
-        isSpecified = true
+        specified = true
         return this
     }
 
@@ -464,8 +474,8 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
      *         not one of the supported types.
      */
     open fun setAttributeType(type: AttributeType?): Attribute {
-        this.attributeType = type ?: AttributeType.UNDECLARED
-        isSpecified = true
+        this.type = type ?: AttributeType.UNDECLARED
+        specified = true
         return this
     }
 
@@ -502,7 +512,7 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
             .toString()
     }
 
-    override fun clone(): Attribute {
+    public override fun clone(): Attribute {
         val clone = super<CloneBase>.clone() as Attribute
         clone.parentRef = null
         return clone

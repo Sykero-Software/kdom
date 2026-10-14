@@ -617,6 +617,14 @@ internal class AttributeList
      * @param comp The Comparator to use for sorting.
      */
     override fun sort(comp: Comparator<in Attribute>?) {
+        sortAttributes(comp)
+    }
+
+    /**
+     * The body of [sort], reachable from Kotlin callers (the JDK `List.sort` member is not callable
+     * on a Kotlin `MutableList`, where the `sort` extension is found instead).
+     */
+    fun sortAttributes(comp: Comparator<in Attribute>?) {
         val comp: Comparator<in Attribute> = comp ?: ATTRIBUTE_NATURAL
         val sz = size
         val indexes = IntArray(sz)

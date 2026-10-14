@@ -200,7 +200,7 @@ open class CDATA : Text {
             .toString()
     }
 
-    override fun clone(): CDATA {
+    public override fun clone(): CDATA {
         return super.clone() as CDATA
     }
 

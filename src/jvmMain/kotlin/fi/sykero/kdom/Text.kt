@@ -220,7 +220,7 @@ open class Text : Content {
             .toString()
     }
 
-    override fun clone(): Text {
+    public override fun clone(): Text {
         val text = super.clone() as Text
         text.value = value
         return text

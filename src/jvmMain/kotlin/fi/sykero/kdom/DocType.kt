@@ -250,7 +250,7 @@ open class DocType : Content {
             .toString()
     }
 
-    override fun clone(): DocType {
+    public override fun clone(): DocType {
         return super.clone() as DocType
     }
 
