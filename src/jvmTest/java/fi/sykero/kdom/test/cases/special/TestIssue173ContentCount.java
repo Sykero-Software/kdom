@@ -3,24 +3,20 @@ package fi.sykero.kdom.test.cases.special;
 
 import static org.junit.Assert.*;
 
-import java.io.StringReader;
-
 import fi.sykero.kdom.Document;
 import fi.sykero.kdom.Element;
+import fi.sykero.kdom.input.KdomBuilder;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 @SuppressWarnings("javadoc")
 public class TestIssue173ContentCount {
 
-	/** K5: placeholder for the SAXBuilder parse; Task 9 switches the body to KdomBuilder (non-validating). */
-	private static Document parseWithKdomBuilder(String xml) {
-		throw new UnsupportedOperationException("needs KdomBuilder, Task 9");
+	/** K5: the SAXBuilder parse, through KdomBuilder (non-validating). */
+	private static Document parseWithKdomBuilder(String xml) throws Exception {
+		return new KdomBuilder().build(xml);
 	}
 
-	// K5: needs KdomBuilder (Task 9)
-	@Ignore("needs KdomBuilder, Task 9")
 	@Test
 	public void testContentSize() throws Exception {
 		// In Version 1.1 this was new SAXBuilder(false)

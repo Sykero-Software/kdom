@@ -14,6 +14,7 @@ import fi.sykero.kdom.IllegalDataException
 import fi.sykero.kdom.JDOMException
 import fi.sykero.kdom.ProcessingInstruction
 import fi.sykero.kdom.Text
+import fi.sykero.kdom.input.KdomBuilder
 import fi.sykero.kdom.output.Format
 import fi.sykero.kdom.output.Format.TextMode
 import fi.sykero.kdom.output.support.AbstractXMLOutputProcessor
@@ -80,8 +81,7 @@ class TestXMLOutputter : AbstractTestOutputter(true, true, false, false, false) 
 	}
 
 
-    // K5: needs KdomBuilder (Task 9)
-    @Ignore /* needs KdomBuilder, Task 9 */ @Test fun test_HighSurrogatePair() {
+    @Test fun test_HighSurrogatePair() {
       val doc = parseWithKdomBuilder("<?xml version=\"1.0\"?><root>&#x10000; &#x10000;</root>")
       val format = Format.getCompactFormat().setEncoding("ISO-8859-1")
       val outputter = XMLOutputter(format)
@@ -92,17 +92,13 @@ class TestXMLOutputter : AbstractTestOutputter(true, true, false, false, false) 
                    "<root>&#x10000; &#x10000;</root>" + format.lineSeparator, xml)
     }
 
-    /**
-     * K5: placeholder for the SAXBuilder parse of the original jdom2 tests. Task 9 replaces the body with a
-     * KdomBuilder parse (expanding entities) and removes the {@code @Ignore} markers.
-     */
+    /** K5: the SAXBuilder parse of the original jdom2 tests, through KdomBuilder (entities expanded). */
     private /*STATIC*/ fun parseWithKdomBuilder(xml: String): Document {
-      throw UnsupportedOperationException("needs KdomBuilder, Task 9")
+      return KdomBuilder().build(xml)
     }
 
 
-    // K5: needs KdomBuilder (Task 9)
-    @Ignore /* needs KdomBuilder, Task 9 */ @Test fun test_HighSurrogatePairDecimal() {
+    @Test fun test_HighSurrogatePairDecimal() {
       val doc = parseWithKdomBuilder("<?xml version=\"1.0\"?><root>&#x10000; &#65536;</root>")
       val format = Format.getCompactFormat().setEncoding("ISO-8859-1")
       val outputter = XMLOutputter(format)
@@ -111,8 +107,7 @@ class TestXMLOutputter : AbstractTestOutputter(true, true, false, false, false) 
                    "<root>&#x10000; &#x10000;</root>" + format.lineSeparator, xml)
     }
 
-    // K5: needs KdomBuilder (Task 9)
-    @Ignore /* needs KdomBuilder, Task 9 */ @Test fun test_HighSurrogateAttPair() {
+    @Test fun test_HighSurrogateAttPair() {
       val doc = parseWithKdomBuilder("<?xml version=\"1.0\"?><root att=\"&#x10000; &#x10000;\" />")
       val format = Format.getCompactFormat().setEncoding("ISO-8859-1")
       val outputter = XMLOutputter(format)
@@ -121,8 +116,7 @@ class TestXMLOutputter : AbstractTestOutputter(true, true, false, false, false) 
                    "<root att=\"&#x10000; &#x10000;\" />" + format.lineSeparator, xml)
     }
 
-    // K5: needs KdomBuilder (Task 9)
-    @Ignore /* needs KdomBuilder, Task 9 */ @Test fun test_HighSurrogateAttPairDecimal() {
+    @Test fun test_HighSurrogateAttPairDecimal() {
       val doc = parseWithKdomBuilder("<?xml version=\"1.0\"?><root att=\"&#x10000; &#65536;\" />")
       val format = Format.getCompactFormat().setEncoding("ISO-8859-1")
       val outputter = XMLOutputter(format)
@@ -132,8 +126,7 @@ class TestXMLOutputter : AbstractTestOutputter(true, true, false, false, false) 
     }
 
     // Construct a raw surrogate pair character and confirm it outputs hex escaped
-    // K5: needs KdomBuilder (Task 9)
-    @Ignore /* needs KdomBuilder, Task 9 */ @Test fun test_RawSurrogatePair() {
+    @Test fun test_RawSurrogatePair() {
       val doc = parseWithKdomBuilder("<?xml version=\"1.0\"?><root>\uD800\uDC00</root>")
       val format = Format.getCompactFormat().setEncoding("ISO-8859-1")
       val outputter = XMLOutputter(format)
@@ -143,8 +136,7 @@ class TestXMLOutputter : AbstractTestOutputter(true, true, false, false, false) 
     }
 
     // Construct a raw surrogate pair character and confirm it outputs hex escaped, when UTF-8 too
-    // K5: needs KdomBuilder (Task 9)
-    @Ignore /* needs KdomBuilder, Task 9 */ @Test fun test_RawSurrogatePairUTF8() {
+    @Test fun test_RawSurrogatePairUTF8() {
       val doc = parseWithKdomBuilder("<?xml version=\"1.0\"?><root>\uD800\uDC00</root>")
       val format = Format.getCompactFormat().setEncoding("UTF-8")
       val outputter = XMLOutputter(format)
@@ -154,8 +146,7 @@ class TestXMLOutputter : AbstractTestOutputter(true, true, false, false, false) 
     }
 
     // Construct illegal XML and check if the parser notices
-    // K5: needs KdomBuilder (Task 9)
-    @Ignore /* needs KdomBuilder, Task 9 */ @Test fun test_ErrorSurrogatePair() {
+    @Test fun test_ErrorSurrogatePair() {
       val doc = parseWithKdomBuilder("<?xml version=\"1.0\"?><root></root>")
       assertFailsWith<IllegalDataException>("Illegal surrogate pair should have thrown an exception") {
         doc.rootElement.setText("\uD800\uDBFF")
