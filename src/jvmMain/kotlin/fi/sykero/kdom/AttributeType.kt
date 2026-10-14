@@ -54,9 +54,7 @@
 
  */
 
-package fi.sykero.kdom;
-
-import org.xml.sax.Attributes;
+package fi.sykero.kdom
 
 /**
  * Use a simple enumeration for the Attribute Types
@@ -64,7 +62,7 @@ import org.xml.sax.Attributes;
  * @author Rolf Lear
  *
  */
-public enum AttributeType {
+enum class AttributeType {
 	
 	/**
 	 * Attribute type: the attribute has not been declared or type
@@ -148,7 +146,9 @@ public enum AttributeType {
 	 * @see #getAttributeType
 	 */
 	ENUMERATION;
-	
+
+	companion object {
+
 	/**
 	 * Obtain a AttributeType by a int constant.
 	 * This goes against the logic of enums, but this is used for backward
@@ -158,17 +158,18 @@ public enum AttributeType {
 	 * @throws IllegalArgumentException if there is no equivalent
 	 * @deprecated Use normal Enums instead of int's
 	 */
-	@Deprecated
-	public static final AttributeType byIndex(int index) {
-		if (index < 0) {
-			throw new IllegalDataException("No such AttributeType " + index);
+		@Deprecated("Use normal Enums instead of int's")
+		@JvmStatic
+		fun byIndex(index: Int): AttributeType {
+			if (index < 0) {
+				throw IllegalDataException("No such AttributeType $index")
+			}
+			if (index >= values().size) {
+				throw IllegalDataException("No such AttributeType " +
+						index + ", max is " + (values().size - 1))
+			}
+			return values()[index]
 		}
-		if (index >= values().length)  {
-			throw new IllegalDataException("No such AttributeType " + 
-					index + ", max is " + (values().length - 1));
-		}
-		return values()[index];
-	}
 	
 	/**
 	 * Returns the the JDOM AttributeType value from the SAX 2.0
@@ -182,24 +183,24 @@ public enum AttributeType {
 	 * @see Attribute#setAttributeType
 	 * @see Attributes#getType
 	 */
-	public static final AttributeType getAttributeType(String typeName) {
-		if (typeName == null) {
-			return UNDECLARED;
-		}
-		
-		try {
-			return valueOf(typeName);
-		} catch (IllegalArgumentException iae) {
-			if (typeName.length() > 0 &&
-					typeName.trim().charAt(0) == '(') {
-				// Xerces 1.4.X reports attributes of enumerated type with
-				// a type string equals to the enumeration definition, i.e.
-				// starting with a parenthesis.
-				return ENUMERATION;
+		@JvmStatic
+		fun getAttributeType(typeName: String?): AttributeType {
+			if (typeName == null) {
+				return UNDECLARED
 			}
-			return UNDECLARED;
-		}
-		
-	}
 
+			try {
+				return valueOf(typeName)
+			} catch (iae: IllegalArgumentException) {
+				if (typeName.length > 0 &&
+						typeName.trim { it <= ' ' }[0] == '(') {
+					// Xerces 1.4.X reports attributes of enumerated type with
+					// a type string equals to the enumeration definition, i.e.
+					// starting with a parenthesis.
+					return ENUMERATION
+				}
+				return UNDECLARED
+			}
+		}
+	}
 }

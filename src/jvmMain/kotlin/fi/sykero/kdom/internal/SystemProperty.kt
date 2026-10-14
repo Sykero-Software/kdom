@@ -54,7 +54,7 @@
 
  */
 
-package fi.sykero.kdom.internal;
+package fi.sykero.kdom.internal
 
 /**
  * System.getProperty(...) requires security permissions in Applets, and some
@@ -64,7 +64,9 @@ package fi.sykero.kdom.internal;
  * @author Rolf Lear
  *
  */
-public final class SystemProperty {
+class SystemProperty {
+
+    companion object {
 
 	/**
 	 * Query the System properties for a particular property. If the property
@@ -73,11 +75,13 @@ public final class SystemProperty {
 	 * @param def The value to return if the property is not accessible or not set.
 	 * @return the appropriate property value.
 	 */
-	public static final String get(final String property, final String def) {
-		try {
-			return System.getProperty(property, def);
-		} catch (SecurityException se) {
-			return def;
-		}
-	}
+        @JvmStatic
+        fun get(property: String?, def: String?): String? {
+            return try {
+                System.getProperty(property, def)
+            } catch (se: SecurityException) {
+                def
+            }
+        }
+    }
 }

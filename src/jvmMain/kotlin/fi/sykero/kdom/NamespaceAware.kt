@@ -54,9 +54,7 @@
 
  */
 
-package fi.sykero.kdom;
-
-import java.util.List;
+package fi.sykero.kdom
 
 /**
  * Classes implementing this interface are all sensitive to their
@@ -169,7 +167,7 @@ import java.util.List;
  * @author Rolf Lear
  * @since JDOM2
  */
-public interface NamespaceAware {
+interface NamespaceAware {
 
 	/**
 	 * Obtain a list of all namespaces that are in scope for the current
@@ -183,7 +181,7 @@ public interface NamespaceAware {
 	 * 
 	 * @return a read-only list of Namespaces.
 	 */
-	public List<Namespace> getNamespacesInScope();
+	val namespacesInScope: List<Namespace>
 
 	/**
 	 * Obtain a list of all namespaces that are introduced to the XML tree by
@@ -196,7 +194,7 @@ public interface NamespaceAware {
 	 * 
 	 * @return a read-only list of Namespaces.
 	 */
-	public List<Namespace> getNamespacesIntroduced();
+	val namespacesIntroduced: List<Namespace>
 
 	/**
 	 * Obtain a list of all namespaces that are in scope for this content, but
@@ -208,5 +206,5 @@ public interface NamespaceAware {
 	 * 
 	 * @return a read-only list of Namespaces.
 	 */
-	public List<Namespace> getNamespacesInherited();
+	val namespacesInherited: List<Namespace>
 }

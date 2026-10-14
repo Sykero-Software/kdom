@@ -54,9 +54,7 @@
 
  */
 
-package fi.sykero.kdom.util;
-
-import java.util.Iterator;
+package fi.sykero.kdom.util
 
 /**
  * An interface that represents both a <code>java.util.Iterator</code>
@@ -71,7 +69,7 @@ import java.util.Iterator;
  *
  * @param <T> The generic type of the values returned by this interface
  */
-public interface IteratorIterable<T> extends Iterable<T>, Iterator<T> {
+interface IteratorIterable<T> : Iterable<T>, Iterator<T> {
 	// There is no functionality added by this interface other than
 	// to combine the Iterator and Iterable interfaces.
 }

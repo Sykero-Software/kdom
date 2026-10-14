@@ -54,9 +54,9 @@
 
  */
 
-package fi.sykero.kdom.internal;
+package fi.sykero.kdom.internal
 
-import java.lang.reflect.Array;
+import java.lang.reflect.Array
 
 /**
  * The copyOf methods on java.util.Arrays are introduced in Java6. Need an
@@ -65,11 +65,9 @@ import java.lang.reflect.Array;
  * @author Rolf Lear
  *
  */
-public final class ArrayCopy {
-	
-	private ArrayCopy() {
-		// inaccessible constructor.
-	}
+class ArrayCopy private constructor() {
+
+    companion object {
 
 	/**
 	 * Arrays.copyOf(...) is a Java6 thing. This is a replacement.
@@ -78,12 +76,13 @@ public final class ArrayCopy {
 	 * @param len the length of the new array copy.
 	 * @return a new array that has the same elements as the source.
 	 */
-	public static final <E> E[] copyOf(final E[] source, final int len) {
-		@SuppressWarnings("unchecked")
-		final E[] dest = (E[])Array.newInstance(source.getClass().getComponentType(), len);
-		System.arraycopy(source, 0, dest, 0, len < source.length ? len : source.length);
-		return dest;
-	}
+        @JvmStatic
+        @Suppress("UNCHECKED_CAST")
+        fun <E> copyOf(source: kotlin.Array<E>, len: Int): kotlin.Array<E> {
+            val dest = Array.newInstance(source.javaClass.componentType, len) as kotlin.Array<E>
+            System.arraycopy(source, 0, dest, 0, if (len < source.size) len else source.size)
+            return dest
+        }
 
 	/**
 	 * Arrays.copyOf(...) is a Java6 thing. This is a replacement.
@@ -93,17 +92,18 @@ public final class ArrayCopy {
 	 * @param to the end point of the copy (exclusive).
 	 * @return a new array that has the same elements as the source.
 	 */
-	public static final <E> E[] copyOfRange(final E[] source, final int from, int to) {
-		final int len = to - from;
-		if (len < 0) {
-			throw new IllegalArgumentException("From(" + from + ") > To (" + to + ")");
-		}
-		@SuppressWarnings("unchecked")
-		final E[] dest = (E[])Array.newInstance(source.getClass().getComponentType(), len);
-		final int tocopy = from + len > source.length ? source.length - from : len;
-		System.arraycopy(source, from, dest, 0, tocopy);
-		return dest;
-	}
+        @JvmStatic
+        @Suppress("UNCHECKED_CAST")
+        fun <E> copyOfRange(source: kotlin.Array<E>, from: Int, to: Int): kotlin.Array<E> {
+            val len = to - from
+            if (len < 0) {
+                throw IllegalArgumentException("From($from) > To ($to)")
+            }
+            val dest = Array.newInstance(source.javaClass.componentType, len) as kotlin.Array<E>
+            val tocopy = if (from + len > source.size) source.size - from else len
+            System.arraycopy(source, from, dest, 0, tocopy)
+            return dest
+        }
 
 	/**
 	 * Arrays.copyOf(...) is a Java6 thing. This is a replacement.
@@ -111,11 +111,12 @@ public final class ArrayCopy {
 	 * @param len the length of the new array copy.
 	 * @return a new array that has the same elements as the source.
 	 */
-	public static final char[] copyOf(final char[] source, final int len) {
-		final char[] dest = new char[len];
-		System.arraycopy(source, 0, dest, 0, len < source.length ? len : source.length);
-		return dest;
-	}
+        @JvmStatic
+        fun copyOf(source: CharArray, len: Int): CharArray {
+            val dest = CharArray(len)
+            System.arraycopy(source, 0, dest, 0, if (len < source.size) len else source.size)
+            return dest
+        }
 
 	/**
 	 * Arrays.copyOf(...) is a Java6 thing. This is a replacement.
@@ -123,11 +124,12 @@ public final class ArrayCopy {
 	 * @param len the length of the new array copy.
 	 * @return a new array that has the same elements as the source.
 	 */
-	public static final int[] copyOf(final int[] source, final int len) {
-		final int[] dest = new int[len];
-		System.arraycopy(source, 0, dest, 0, len < source.length ? len : source.length);
-		return dest;
-	}
+        @JvmStatic
+        fun copyOf(source: IntArray, len: Int): IntArray {
+            val dest = IntArray(len)
+            System.arraycopy(source, 0, dest, 0, if (len < source.size) len else source.size)
+            return dest
+        }
 
 	/**
 	 * Arrays.copyOf(...) is a Java6 thing. This is a replacement.
@@ -135,11 +137,11 @@ public final class ArrayCopy {
 	 * @param len the length of the new array copy.
 	 * @return a new array that has the same elements as the source.
 	 */
-	public static final boolean[] copyOf(final boolean[] source, final int len) {
-		final boolean[] dest = new boolean[len];
-		System.arraycopy(source, 0, dest, 0, len < source.length ? len : source.length);
-		return dest;
-	}
-
-
+        @JvmStatic
+        fun copyOf(source: BooleanArray, len: Int): BooleanArray {
+            val dest = BooleanArray(len)
+            System.arraycopy(source, 0, dest, 0, if (len < source.size) len else source.size)
+            return dest
+        }
+    }
 }
