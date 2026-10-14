@@ -289,6 +289,16 @@ type `CDATA`, `specified`; the XML declaration is not in the tree. Errors: `JDOM
 cause = SAXParseException, partialDocument (when the root was started), null, null, line, column)`, as jdom2's
 `SAXBuilderEngine` (R3 shape). Pinned by `KdomBuilderTest` (common) and `KdomBuilderDifferentialTest` (jvmTest, against jdom2).
 
+**Tree-layer failures are wrapped** (fix round 1): input the JDK parser accepts but jdom2's tree layer rejects with an
+unchecked exception (`<:a/>` -> `IllegalNameException`, `<?p:i d?>` -> `IllegalTargetException`, `xmlns:p=" u"` ->
+`IllegalNameException`) makes `KdomBuilder.build` throw `JDOMParseException` (cause = that exception, line/column of the
+event, partial document when the root was started). jdom2's `SAXBuilder` let the unchecked exception escape; kdom never does,
+so a `catch (JDOMException)` fallback chain (JSword) sees every rejected input. Pinned by `KdomBuilderTest` and
+`KdomBuilderDifferentialTest.treeLayerRejectionsAreWrapped`.
+
+`XmlEventParser.parse` declares `@Throws(SAXException::class)` and `KdomBuilder.build` `@Throws(JDOMException::class)`
+(Java callers can catch the checked exceptions; compiles for iOS).
+
 Remaining differences from a JAXP SAX parser / jdom2 `SAXBuilder` (all deliberate):
 - **DOCTYPE is rejected** (plan rule P7; SAX accepts it and expands internal entities).
 - **Errors found by the raw pre-scan are reported before any event** (illegal character, `<` in an attribute value, bad
@@ -299,7 +309,13 @@ Remaining differences from a JAXP SAX parser / jdom2 `SAXBuilder` (all deliberat
   character (Xerces usually reports the column after it); reader errors give where xmlutil stopped.
 - **XML 1.1** documents (`version="1.1"`) are accepted but read with the XML 1.0 character and line-end rules.
 - **Byte input** supports UTF-8, UTF-16 (BOM or `<?xml` pattern), ISO-8859-1 and US-ASCII (with common aliases); any other
-  declared encoding (e.g. `windows-1252`) and a `UTF-16` declaration without UTF-16 bytes are rejected. Malformed bytes
+  declared encoding (e.g. `windows-1252`) and a `UTF-16` declaration without UTF-16 bytes are rejected. As in the JDK parser,
+  the declaration wins over a UTF-8 BOM (`EF BB BF` + `encoding="ISO-8859-1"` reads ISO-8859-1), and a UTF-16 BOM (or BOM-less
+  UTF-16) with a declaration naming another encoding or the other byte order is rejected. The JDK decodes the non-IANA alias
+  `utf8` leniently (malformed bytes become U+FFFD); kdom decodes every UTF-8 alias strictly. AndBible parses strings; byte
+  input serves EPUB and other file callers.
+- **Encoding name in a string's XML declaration**: the JDK ignores the `encoding` value when it reads characters, even a
+  malformed one (`encoding="U&F-8"`); xmlutil reads the declaration and rejects it. Malformed bytes
   (invalid/overlong/truncated UTF-8, encoded surrogates, a byte above 0x7F in US-ASCII, odd UTF-16 length) are a
   `SAXParseException` / `JDOMParseException` with the line of the decoded text, where the JDK parser threw a
   `CharConversionException` (an `IOException`, which jdom2 passed through).
@@ -307,8 +323,8 @@ Remaining differences from a JAXP SAX parser / jdom2 `SAXBuilder` (all deliberat
   (as `SAXBuilder.build(Reader)` without a system id).
 - `characters` delivers each run of character data in one call (SAX chunks arbitrarily; the content is equal);
   `ignorableWhitespace` and `skippedEntity` are never called (no DTD; an undefined entity is an error).
-- Element/attribute name validity is xmlutil's (`NCName` rules in namespace-aware mode); the differential covers the common
-  invalid names, the Task 12 corpus run is the real check.
+- Name validity follows the JDK parser (pre-scan with the XML 1.0 4th-edition tables and its QName rules, fix round 1);
+  entity-reference names inside `&...;` are left to xmlutil (an unknown one is rejected anyway).
 
 ## Behaviour differences
 
@@ -528,6 +544,8 @@ After Task 8 (common tests; 5 raw-instance tests moved into `RawInstanceTest`, t
 After Task 9 (XmlEventParser, KdomBuilder): 58 classes / 766 tests / 2 skipped / 0 failures (728 + 38 new in 6 classes:
 `XmlEventParserProbeTest` 4, `SaxEventDifferentialTest` 5, `KdomBuilderTest` 23, `KdomBuilderDifferentialTest` 2, `KdomBuilderJvmTest` 1,
 `KdomBuilderConcurrencyTest` 3; the 8 K5 `@Ignore`s are re-enabled, leaving jdom2's own 2 skipped).
+After Task 9 fix round 1: 58 classes / 773 tests / 2 skipped / 0 failures (+5 `KdomBuilderTest`, +1 `XmlEventParserProbeTest`,
++1 `KdomBuilderDifferentialTest`; new cases added to the existing differential lists).
 
 ### Import notes (fix round 1)
 

@@ -36,12 +36,12 @@ requirements. Also observed: comments and whitespace after the root element are 
 ## Event stream (pinned by `XmlUtilReaderProbeTest.eventSequences`)
 
 - Every entity reference in element content, predefined (`&lt; &amp; &gt; &apos; &quot;`) or numeric (`&#233;`, `&#x41;`), arrives as an
-  `ENTITY_REF` event whose `text` is the already resolved character (`<`, `&`, `\u00e9`, `A`, ...). They are NOT merged into
+  `ENTITY_REF` event whose `text` is the already resolved character (`<`, `&`, `\u00E9`, `A`, ...). They are NOT merged into
   the surrounding `TEXT`: `<a>p&nbsp;q</a>` is `TEXT('p') ENTITY_REF('') TEXT('q')`, and `t&gt;` is `TEXT('t') ENTITY_REF('>')`.
   The parser must therefore concatenate adjacent TEXT / ENTITY_REF / CDSECT text (as SAX characters).
 - An undefined entity is an `ENTITY_REF` with **empty** text (the entity name is not exposed).
 - CDATA is its own event type `CDSECT` with the raw content (`CDSECT('<raw>')`).
-- In attribute values, refs are resolved already (`x="&lt;&amp;&#233;"` is `x='<&\u00e9'`); an undefined one throws XmlException.
+- In attribute values, refs are resolved already (`x="&lt;&amp;&#233;"` is `x='<&\u00E9'`); an undefined one throws XmlException.
 - A DOCTYPE arrives as a `DOCDECL` event (its `text` throws XmlException "The element is not text"); internal-subset entities are
   expanded afterwards as `ENTITY_REF('v')`.
 - Comments and whitespace after the root: `COMMENT`, `IGNORABLE_WHITESPACE`.
@@ -131,3 +131,24 @@ Further SAX parity fixes found by the differential test (xmlutil accepts or diff
   `piTarget`/`piData` split at the first space only. The parser splits the PI text itself.
 - `xmlns:xmlns="..."`, a prefix bound to the XML namespace or `xml` bound elsewhere: rejected in namespace-aware mode; the
   predeclared `xmlns:xml="http://www.w3.org/XML/1998/namespace"` is accepted and, as by SAX, not reported as a prefix mapping.
+
+Task 9 fix round 1 (found by the reviewer's mutation differential, ~209k comparisons against the JDK parser):
+- **Lone CR**: xmlutil folds `\r\r` into one line end (SAX: two). The pre-scan records every CR not followed by LF and the
+  masked copy holds the LF it normalizes to (same length, so lines and offsets stay); attribute values then get a space each,
+  as with SAX. Covers text, CDATA, comments, PI data, attribute values and namespace URIs.
+- **PI target**: must be an XML Name followed by white space or `?>` (`<?b,c?>`, `<?p"d?>`, `<?p=?>`, `<??>`, `<?1?>` are
+  rejected; `<?p:i d?>` is accepted, as by the JDK; jdom2's tree layer then rejects the colon, see KdomBuilder).
+- **XML declaration**: white space is required after each quoted pseudo-attribute value (`version="1.0"encoding=...`).
+- **Names**: element, attribute and end-tag names are checked with the XML 1.0 4th-edition tables the JDK parser uses
+  (xmlutil uses the 5th-edition ones and accepts e.g. U+037E, U+2C01, U+0F00 in names). kdom's `Verifier.isXMLNameStartCharacter`
+  / `isXMLNameCharacter` (jdom2's tables) are identical to the JDK's `XMLChar.isNameStart` / `isName` on all 65536 BMP
+  characters (checked once with a scratch program against `com.sun.org.apache.xerces.internal.util.XMLChar`); supplementary
+  characters are never name characters (as in the JDK's XML 1.0 scanner).
+- **QName (namespace-aware)**: the first `:` after the first character splits prefix and local part; an empty local part or
+  a further `:` is rejected (`p::b`, `b:`, `xmlns::p`), and so is the element prefix `xmlns`. A leading `:` belongs to the local
+  name (`<:a/>` is accepted, as by the JDK).
+- **Namespace URIs**: the U+0085/U+2028 masks are undone in namespace declarations and element/attribute namespace URIs.
+
+Remaining accept/reject divergences of the differential (seeds 7/11/23, 143k comparisons): DOCTYPE (plan rule P7), an XML
+declaration whose `encoding` value contains `&`, `<` or `>` (the JDK ignores the name when reading a `Reader`; xmlutil rejects
+the declaration), and the byte-input encodings listed in translation-notes.md.
