@@ -5,9 +5,10 @@ import fi.sykero.kdom.sax.SAXParseException
 /**
  * Decodes an XML document given as bytes, like a JAXP SAX parser reading an `InputStream` (common code, no `java.nio`).
  *
- * The encoding is taken from a byte order mark (UTF-8 `EF BB BF`, UTF-16 BE `FE FF`, UTF-16 LE `FF FE`, consumed), from
- * the `<?xml` pattern of BOM-less UTF-16 (`00 3C 00 3F` / `3C 00 3F 00`), else from the XML declaration's `encoding`
- * pseudo-attribute, else UTF-8. Supported encodings: UTF-8, UTF-16 (BE/LE), ISO-8859-1, US-ASCII (with their usual
+ * The encoding is taken from a UTF-16 byte order mark (BE `FE FF`, LE `FF FE`, consumed) or the `<?xml` pattern of
+ * BOM-less UTF-16 (`00 3C 00 3F` / `3C 00 3F 00`), where a declaration must name UTF-16 of that byte order; otherwise
+ * (after a UTF-8 byte order mark, consumed) from the XML declaration's `encoding` pseudo-attribute, else UTF-8. As in
+ * the JDK parser the declaration wins over a UTF-8 BOM. Supported encodings: UTF-8, UTF-16 (BE/LE), ISO-8859-1, US-ASCII (with their usual
  * aliases). Malformed input (an invalid or truncated UTF-8 sequence, an overlong form, an encoded surrogate, a byte
  * above 0x7F in US-ASCII, an odd UTF-16 length) and an unsupported encoding name are rejected with a
  * [SAXParseException] carrying the line/column of the decoded text so far. (A JAXP parser reports malformed bytes as a
@@ -17,34 +18,53 @@ internal object XmlByteDecoder {
     fun decode(b: ByteArray): String {
         val n = b.size
         fun u(i: Int) = if (i < n) b[i].toInt() and 0xFF else -1
-        if (u(0) == 0xEF && u(1) == 0xBB && u(2) == 0xBF) return utf8(b, 3)
-        if (u(0) == 0xFE && u(1) == 0xFF) return utf16(b, 2, bigEndian = true)
-        if (u(0) == 0xFF && u(1) == 0xFE) return utf16(b, 2, bigEndian = false)
-        if (u(0) == 0x00 && u(1) == 0x3C && u(2) == 0x00 && u(3) == 0x3F) return utf16(b, 0, bigEndian = true)
-        if (u(0) == 0x3C && u(1) == 0x00 && u(2) == 0x3F && u(3) == 0x00) return utf16(b, 0, bigEndian = false)
-        return when (val enc = declaredEncoding(b)?.uppercase()) {
-            null, "UTF-8", "UTF8" -> utf8(b, 0)
-            "ISO-8859-1", "ISO8859-1", "ISO_8859-1", "ISO8859_1", "LATIN1", "LATIN-1", "L1", "ISO-LATIN-1", "CP819", "IBM819" -> latin1(b)
-            "US-ASCII", "ASCII", "ISO646-US", "US" -> ascii(b)
-            "UTF-16", "UTF-16BE", "UTF-16LE", "UTF16" ->
-                throw SAXParseException("Encoding \"$enc\" declared, but the bytes are not UTF-16 (no byte order mark).", 1, 1)
+        if (u(0) == 0xEF && u(1) == 0xBB && u(2) == 0xBF) return eightBit(b, 3)
+        if (u(0) == 0xFE && u(1) == 0xFF) return checkedUtf16(b, 2, bigEndian = true)
+        if (u(0) == 0xFF && u(1) == 0xFE) return checkedUtf16(b, 2, bigEndian = false)
+        if (u(0) == 0x00 && u(1) == 0x3C && u(2) == 0x00 && u(3) == 0x3F) return checkedUtf16(b, 0, bigEndian = true)
+        if (u(0) == 0x3C && u(1) == 0x00 && u(2) == 0x3F && u(3) == 0x00) return checkedUtf16(b, 0, bigEndian = false)
+        return eightBit(b, 0)
+    }
+
+    /**
+     * An ASCII-compatible document (after a UTF-8 byte order mark, if any): the declaration chooses the encoding, as in
+     * the JDK parser (a UTF-8 BOM followed by `encoding="ISO-8859-1"` is read as ISO-8859-1).
+     */
+    private fun eightBit(b: ByteArray, from: Int): String {
+        val head = StringBuilder()
+        var i = from
+        while (i < b.size && i < from + 1024) {
+            val c = (b[i].toInt() and 0xFF).toChar()
+            head.append(c)
+            if (c == '>') break
+            i++
+        }
+        val enc = declaredEncoding(head.toString())?.uppercase()
+        return when {
+            enc == null || enc in UTF8 -> utf8(b, from)
+            enc in LATIN1 -> latin1(b, from)
+            enc in ASCII -> ascii(b, from)
+            enc.startsWith("UTF-16") || enc == "UTF16" ->
+                throw SAXParseException("Encoding \"$enc\" declared, but the bytes are not UTF-16.", 1, 1)
             else -> throw SAXParseException("Unsupported encoding \"$enc\" (kdom reads UTF-8, UTF-16, ISO-8859-1 and US-ASCII).", 1, 1)
         }
     }
 
-    /** The `encoding` value of an XML declaration at the very start of [b] (read as ASCII), or null. */
-    private fun declaredEncoding(b: ByteArray): String? {
-        if (b.size < 5 || b[0] != '<'.code.toByte() || b[1] != '?'.code.toByte() || b[2] != 'x'.code.toByte() ||
-            b[3] != 'm'.code.toByte() || b[4] != 'l'.code.toByte()) return null
-        val sb = StringBuilder()
-        var i = 5
-        while (i < b.size && i < 1024) {
-            val c = (b[i].toInt() and 0xFF).toChar()
-            sb.append(c)
-            if (c == '>') break
-            i++
-        }
-        val decl = sb.toString()
+    /** UTF-16 whose declaration (if any) must name UTF-16 of the same byte order (as the JDK parser checks). */
+    private fun checkedUtf16(b: ByteArray, from: Int, bigEndian: Boolean): String {
+        val text = utf16(b, from, bigEndian)
+        val enc = declaredEncoding(text.substring(0, minOf(text.length, 1024)))?.uppercase()
+        val ok = enc == null || enc == "UTF-16" || enc == "UTF16" || enc == "UNICODE" ||
+            (bigEndian && (enc == "UTF-16BE" || enc == "UNICODEBIG")) || (!bigEndian && (enc == "UTF-16LE" || enc == "UNICODELITTLE"))
+        if (!ok) throw SAXParseException("Encoding \"$enc\" declared, but the bytes are UTF-16" + (if (bigEndian) "BE" else "LE") + ".", 1, 1)
+        return text
+    }
+
+    /** The `encoding` value of an XML declaration at the very start of [head], or null. */
+    private fun declaredEncoding(head: String): String? {
+        if (!head.startsWith("<?xml")) return null
+        val close = head.indexOf("?>")
+        val decl = if (close < 0) head else head.substring(0, close)
         var k = decl.indexOf("encoding")
         if (k < 0) return null
         k += "encoding".length
@@ -56,6 +76,10 @@ internal object XmlByteDecoder {
         val end = decl.indexOf(decl[k], k + 1)
         return if (end < 0) null else decl.substring(k + 1, end)
     }
+
+    private val UTF8 = setOf("UTF-8", "UTF8")
+    private val LATIN1 = setOf("ISO-8859-1", "ISO8859-1", "ISO_8859-1", "ISO8859_1", "LATIN1", "LATIN-1", "L1", "ISO-LATIN-1", "CP819", "IBM819")
+    private val ASCII = setOf("US-ASCII", "ASCII", "ISO646-US", "US")
 
     private fun fail(decoded: StringBuilder, message: String): Nothing {
         val lc = lineColumnOf(decoded, decoded.length)
@@ -126,16 +150,16 @@ internal object XmlByteDecoder {
         return (if (bigEndian) (hi shl 8) or lo else (lo shl 8) or hi).toChar()
     }
 
-    private fun latin1(b: ByteArray): String {
+    private fun latin1(b: ByteArray, from: Int): String {
         val sb = StringBuilder(b.size)
-        for (x in b) sb.append((x.toInt() and 0xFF).toChar())
+        for (k in from until b.size) sb.append((b[k].toInt() and 0xFF).toChar())
         return sb.toString()
     }
 
-    private fun ascii(b: ByteArray): String {
+    private fun ascii(b: ByteArray, from: Int): String {
         val sb = StringBuilder(b.size)
-        for (x in b) {
-            val c = x.toInt() and 0xFF
+        for (k in from until b.size) {
+            val c = b[k].toInt() and 0xFF
             if (c > 0x7F) fail(sb, "Byte 0x" + c.toString(16) + " is not 7-bit US-ASCII.")
             sb.append(c.toChar())
         }
