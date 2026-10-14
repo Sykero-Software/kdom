@@ -116,7 +116,8 @@ malformed inputs, 11 mode-specific inputs) and `KdomBuilderDifferentialTest` (tr
   processing instructions, names) against the XML 1.0 `Char` production, with surrogates paired, as SAX does.
 - **P6** `<` in an attribute value (ruling R7): the pre-scan walks start tags (skipping comments, CDATA sections and processing
   instructions) and rejects a literal `<` inside a quoted attribute value. Byte input is decoded first, then scanned.
-- **P7** DOCTYPE: the pre-scan rejects `<!DOCTYPE` (and every other `<!` declaration outside a comment/CDATA); a `DOCDECL`
+- **P7** DOCTYPE (strict mode, the default; see "DOCTYPE policy" below for the permissive opt-in): the pre-scan rejects
+  `<!DOCTYPE` (and every other `<!` declaration outside a comment/CDATA); a `DOCDECL`
   event is rejected as well.
 - **P8** character references: the pre-scan checks each `&#...;` / `&#x...;` in text and attribute values: digits present,
   `;` present, and the code point a legal `Char` (`&#0;`, `&#xD800;`, `&#55357;&#56832;`, `&#1114112;` are rejected).
@@ -152,3 +153,31 @@ Task 9 fix round 1 (found by the reviewer's mutation differential, ~209k compari
 Remaining accept/reject divergences of the differential (seeds 7/11/23, 143k comparisons): DOCTYPE (plan rule P7), an XML
 declaration whose `encoding` value contains `&`, `<` or `>` (the JDK ignores the name when reading a `Reader`; xmlutil rejects
 the declaration), and the byte-input encodings listed in translation-notes.md.
+
+## DOCTYPE policy (M0 gate fix I2, ruling R11)
+
+- **Strict (default)**: `XmlEventParser(namespaceAware)` / `KdomBuilder()` reject every DOCTYPE (P7, unchanged). JSword's
+  OSIS/ThML/GBF parsing keeps this, so a malformed verse still takes the fallback chain exactly as before.
+- **Permissive (opt-in)**: `XmlEventParser(namespaceAware, allowDocType = true)` / `KdomBuilder(allowDocType = true)`, for EPUB
+  XHTML/OPF/NCX and other non-Sword XML (AndBible's `CommonUtils.useSaxBuilder` will construct it, Task 18). xmlutil never
+  sees the DOCTYPE: `SourceScanner` reads it (case-sensitive `<!DOCTYPE` S Name, optional `SYSTEM`/`PUBLIC` id with the
+  JDK's white-space and public-id character rules, optional internal subset; once, before the root) and the masked copy
+  replaces it by a placeholder PI `<?T?>` plus white space with the same line ends, so positions after it stay exact. The
+  internal subset scan honours quoted literals (a `]` or `>` or `<` inside an entity value), comments and PIs; element,
+  entity (general, parameter, external, unparsed) and notation declarations are read; `ATTLIST` declarations and
+  parameter-entity references are rejected as unsupported (they would change the tree: default attributes, attribute
+  types, conditional declarations). **The external subset is never loaded** (no network, no files).
+  - SAX events: `startDTD(name, publicId, systemId)`, the `DeclHandler` events and internal-subset comments in order, `endDTD`
+    (internal-subset PIs are not reported, as by the JDK parser), through the internal `LexicalEventHandler`.
+  - Entity references (only in a document with a DOCTYPE): predefined and character references as always; an internal
+    entity is expanded (replacement text with markup or with references other than the predefined ones is rejected as
+    unsupported); an external parsed entity is `skippedEntity` in content and an error in an attribute value; an unparsed
+    one is an error; an undeclared one is `skippedEntity` in content and dropped from an attribute value when the DOCTYPE has
+    an external id and the document is not `standalone="yes"`, else an error. This is what the JDK parser does with
+    `external-general-entities` and `load-external-dtd` off. Each such reference is replaced in the masked copy by a mark
+    character plus its index in base-256 digit characters (all absent from the document), and restored in the events.
+  - The R7 `<`-in-attribute check, lone-CR masking, name and QName checks run unchanged outside the DOCTYPE.
+  - Pinned by `DocTypeDifferentialTest` (jvmTest: 38 EPUB-like and malformed inputs against jdom2 `SAXBuilder` configured as
+    `CommonUtils` plus `load-external-dtd` off, raw output, internal subset and node kinds; SAX events against the JDK parser
+    in both namespace modes for those and 4 entity-expansion inputs), `KdomBuilderTest` and `XmlEventParserProbeTest`
+    (probes 18/19 accepted in permissive mode, still rejected in strict mode).

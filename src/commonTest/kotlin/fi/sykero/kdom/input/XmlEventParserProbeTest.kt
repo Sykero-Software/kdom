@@ -52,6 +52,18 @@ class XmlEventParserProbeTest {
         assertEquals(nsOnly.associateWith { ACCEPTED }, nsOnly.associateWith { verdict(it, false) })
     }
 
+    /** Permissive DOCTYPE mode (R11): the same verdicts except the two DOCTYPE probes, which are accepted (as by SAX). */
+    @Test fun permissiveDocTypeVerdicts() {
+        val expected = expected(nsAware = true).mapValues { (name, v) ->
+            if (name == "doctype with entity decl" || name == "plain doctype") ACCEPTED else v
+        }
+        val observed = ProbeInputs.probes.mapValues { (_, xml) ->
+            try { XmlEventParser(namespaceAware = true, allowDocType = true).parse(xml, NoOpHandler); ACCEPTED }
+            catch (e: SAXParseException) { REJECTED } catch (e: Exception) { "leaked:" + e::class.simpleName }
+        }
+        assertEquals(expected, observed)
+    }
+
     private fun expected(nsAware: Boolean): Map<String, String> = ProbeInputs.probes.mapValues { (name, _) ->
         when (name) {
             "valid control" -> ACCEPTED

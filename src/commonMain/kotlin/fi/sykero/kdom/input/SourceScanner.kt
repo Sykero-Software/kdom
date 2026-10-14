@@ -47,8 +47,18 @@ internal fun lineColumnOf(s: CharSequence, offset: Int): IntArray {
  * namespace-unaware mode the colons in element and attribute names and attribute names that are exactly `xmlns`.
  *
  * Comments, CDATA sections and processing instructions are skipped as wholes; their inner syntax is left to xmlutil.
+ *
+ * With [allowDocType] (permissive mode, R11) a DOCTYPE is read here instead of being rejected: name, external id,
+ * internal subset (element, entity and notation declarations, comments, PIs; `ATTLIST` and parameter-entity references
+ * are rejected as unsupported). The external subset is never read. The DOCTYPE then decides how a non-predefined entity
+ * reference in content or an attribute value is reported ([entityUses], recorded at [entityRefs]); the parser masks the
+ * DOCTYPE and these references before xmlutil reads the text.
  */
-internal class SourceScanner(private val s: String, private val namespaceAware: Boolean) {
+internal class SourceScanner(
+    private val s: String,
+    private val namespaceAware: Boolean,
+    private val allowDocType: Boolean = false,
+) {
     private val n = s.length
     private var i = 0
 
@@ -67,13 +77,24 @@ internal class SourceScanner(private val s: String, private val namespaceAware: 
     /** Values of character references in the private use range U+E000..U+F8FF (candidates for mask characters). */
     val privateUseRefs: MutableSet<Int> = HashSet()
 
+    /** The DOCTYPE (permissive mode only). */
+    var docType: ScannedDocType? = null
+        private set
+
+    /** `[start, end, index into entityUses]` of each non-predefined entity reference (permissive mode with a DOCTYPE). */
+    val entityRefs: MutableList<IntArray> = ArrayList()
+    val entityUses: MutableList<EntityUse> = ArrayList()
+
+    private var seenRoot = false
+    private var standaloneYes = false
+
     fun scan() {
         checkCharacters()
         if (n > 0 && s[0] == '\uFEFF') fail(0, "Content is not allowed in prolog.")
         while (i < n) {
             when (s[i]) {
                 '<' -> markup()
-                '&' -> if (i + 1 < n && s[i + 1] == '#') i = charRef(i) else i++
+                '&' -> i = if (i + 1 < n && s[i + 1] == '#') charRef(i) else if (docType != null) entityRef(i, false) else i + 1
                 ']' -> {
                     if (s.startsWith("]]>", i)) {
                         fail(i, "The character sequence \"]]>\" must not appear in content unless used to mark the end of a CDATA section.")
@@ -109,7 +130,7 @@ internal class SourceScanner(private val s: String, private val namespaceAware: 
         when {
             s.startsWith("<!--", i) -> i = skipPast("-->", i + 4, "comment")
             s.startsWith("<![CDATA[", i) -> i = skipPast("]]>", i + 9, "CDATA section")
-            s.startsWith("<!DOCTYPE", i) -> fail(i, "DOCTYPE is not allowed (kdom does not process DTDs).")
+            s.startsWith("<!DOCTYPE", i) -> if (allowDocType) docTypeDeclaration() else fail(i, "DOCTYPE is not allowed (kdom does not process DTDs).")
             s.startsWith("<!", i) -> fail(i, "The markup in the document must be well-formed.")
             s.startsWith("<?", i) -> processingInstruction()
             s.startsWith("</", i) -> endTag()
@@ -141,6 +162,8 @@ internal class SourceScanner(private val s: String, private val namespaceAware: 
 
     /** After each quoted pseudo-attribute value of the XML declaration comes white space or `?>`. */
     private fun xmlDeclaration(from: Int) {
+        val close = s.indexOf("?>", from)
+        if (close > 0 && STANDALONE_YES.containsMatchIn(s.substring(from, close))) standaloneYes = true
         var k = from
         var quote = '\u0000'
         while (k < n && !(quote == '\u0000' && s.startsWith("?>", k))) {
@@ -216,6 +239,7 @@ internal class SourceScanner(private val s: String, private val namespaceAware: 
     }
 
     private fun startTag() {
+        seenRoot = true
         val start = i + 1
         val end = nameEnd(start)
         if (end == start) fail(start, "The markup in the document must be well-formed (a start tag needs a name).")
@@ -260,6 +284,7 @@ internal class SourceScanner(private val s: String, private val namespaceAware: 
                     v == quote -> break
                     v == '<' -> fail(k, "The value of attribute \"$aName\" associated with an element type \"$element\" must not contain the '<' character.")
                     v == '&' && k + 1 < n && s[k + 1] == '#' -> k = charRef(k)
+                    v == '&' && docType != null -> k = entityRef(k, true)
                     else -> k++
                 }
             }
@@ -295,8 +320,329 @@ internal class SourceScanner(private val s: String, private val namespaceAware: 
         return k + 1
     }
 
+    // ---- permissive mode: DOCTYPE and entity references -------------------------------------------------------------
+
+    /** `<!DOCTYPE` S Name (S ExternalID)? S? (`[` intSubset `]` S?)? `>` at [i]; never reads the external subset. */
+    private fun docTypeDeclaration() {
+        val start = i
+        if (seenRoot) fail(i, "The markup in the document following the root element must be well-formed.")
+        if (docType != null) fail(i, "Already seen doctype.")
+        var k = i + 9
+        if (k >= n || !isXmlSpace(s[k])) fail(k, "White space is required after \"<!DOCTYPE\" in the document type declaration.")
+        k = skipSpace(k)
+        val nameStart = k
+        while (k < n && !isXmlSpace(s[k]) && s[k] != '[' && s[k] != '>') k++
+        if (k == nameStart) fail(k, "The root element type must appear after \"<!DOCTYPE\" in the document type declaration.")
+        checkName(nameStart, k, "The markup in the document preceding the root element must be well-formed.")
+        val name = s.substring(nameStart, k)
+        var afterName = skipSpace(k)
+        var publicId: String? = null
+        var systemId: String? = null
+        if (afterName > k && (s.startsWith("PUBLIC", afterName) || s.startsWith("SYSTEM", afterName))) {
+            val ids = externalId(afterName, requireSystem = true)
+            publicId = ids.publicId
+            systemId = ids.systemId
+            afterName = skipSpace(ids.end)
+        }
+        k = afterName
+        val items = ArrayList<DtdItem>()
+        val entities = HashMap<String, DtdItem.Entity>()
+        if (k < n && s[k] == '[') {
+            k = internalSubset(k + 1, items, entities)
+            k = skipSpace(k)
+        }
+        if (k >= n || s[k] != '>') fail(k, "The document type declaration for root element type \"$name\" must end with '>'.")
+        i = k + 1
+        docType = ScannedDocType(name, publicId, systemId, start, i, items, entities)
+    }
+
+    private class Ids(val publicId: String?, val systemId: String?, val end: Int)
+
+    /** `SYSTEM` S SystemLiteral | `PUBLIC` S PubidLiteral (S SystemLiteral)? at [from] ([requireSystem]: the second literal is required). */
+    private fun externalId(from: Int, requireSystem: Boolean): Ids {
+        val public = s.startsWith("PUBLIC", from)
+        var k = from + 6
+        if (k >= n || !isXmlSpace(s[k])) fail(k, "White space is required after keyword " + (if (public) "PUBLIC" else "SYSTEM") + " in DOCTYPE decl.")
+        k = skipSpace(k)
+        var publicId: String? = null
+        if (public) {
+            val lit = literal(k)
+            for (p in lit.first until lit.second) if (!isPubidChar(s[p])) {
+                fail(p, "An invalid XML character (Unicode: 0x" + s[p].code.toString(16) + ") was found in the public identifier.")
+            }
+            publicId = normalizePublicId(s.substring(lit.first, lit.second))
+            k = lit.second + 1
+            val afterSpace = skipSpace(k)
+            if (afterSpace < n && (s[afterSpace] == '"' || s[afterSpace] == '\'')) {
+                if (afterSpace == k) fail(k, "White spaces are required between publicId and systemId.")
+            } else {
+                if (requireSystem) fail(afterSpace, "White spaces are required between publicId and systemId.")
+                return Ids(publicId, null, k)
+            }
+            k = afterSpace
+        }
+        val lit = literal(k)
+        return Ids(publicId, normalizeLineEnds(s.substring(lit.first, lit.second)), lit.second + 1)
+    }
+
+    /** A quoted literal at [from]: `[contentStart, closingQuote)`. */
+    private fun literal(from: Int): Pair<Int, Int> {
+        if (from >= n || (s[from] != '"' && s[from] != '\'')) fail(from, "The quoted literal is missing in the document type declaration.")
+        val end = s.indexOf(s[from], from + 1)
+        if (end < 0) fail(n, "XML document structures must start and end within the same entity.")
+        return Pair(from + 1, end)
+    }
+
+    private fun isPubidChar(c: Char): Boolean =
+        c == ' ' || c == '\r' || c == '\n' || c in 'a'..'z' || c in 'A'..'Z' || c in '0'..'9' || c in "-'()+,./:=?;!*#@\$_%"
+
+    /** The internal subset from [from] (after `[`) to its `]`; returns the offset after `]`. */
+    private fun internalSubset(from: Int, items: MutableList<DtdItem>, entities: MutableMap<String, DtdItem.Entity>): Int {
+        val parameterEntities = HashSet<String>()
+        var k = from
+        while (true) {
+            k = skipSpace(k)
+            if (k >= n) fail(n, "XML document structures must start and end within the same entity.")
+            when {
+                s[k] == ']' -> return k + 1
+                s.startsWith("<!--", k) -> {
+                    val end = s.indexOf("-->", k + 4)
+                    if (end < 0) fail(n, "XML document structures must start and end within the same entity.")
+                    val text = s.substring(k + 4, end)
+                    if (text.contains("--") || text.endsWith("-")) fail(k, "The string \"--\" is not permitted within comments.")
+                    items.add(DtdItem.Comment(normalizeLineEnds(text)))
+                    k = end + 3
+                }
+                s.startsWith("<?", k) -> {
+                    val tStart = k + 2
+                    var t = tStart
+                    while (t < n && !isXmlSpace(s[t]) && !s.startsWith("?>", t)) t++
+                    if (t == tStart || t >= n) fail(t, "The processing instruction must begin with the name of the target.")
+                    checkName(tStart, t, "White space is required between the processing instruction target and data.")
+                    val target = s.substring(tStart, t)
+                    if (target.equals("xml", ignoreCase = true)) fail(tStart, "The processing instruction target matching \"[xX][mM][lL]\" is not allowed.")
+                    val end = s.indexOf("?>", t)
+                    if (end < 0) fail(n, "XML document structures must start and end within the same entity.")
+                    items.add(DtdItem.Pi(target, normalizeLineEnds(s.substring(skipSpace(t).coerceAtMost(end), end))))
+                    k = end + 2
+                }
+                s.startsWith("<!ENTITY", k) -> k = entityDeclaration(k, items, entities, parameterEntities)
+                s.startsWith("<!ELEMENT", k) -> {
+                    var p = k + 9
+                    if (p >= n || !isXmlSpace(s[p])) fail(p, "White space is required after \"<!ELEMENT\" in the element type declaration.")
+                    p = skipSpace(p)
+                    val nStart = p
+                    while (p < n && !isXmlSpace(s[p]) && s[p] != '>' && s[p] != '(') p++
+                    if (p == nStart) fail(p, "The element type is required in the element type declaration.")
+                    checkName(nStart, p, "The element type is required in the element type declaration.")
+                    val name = s.substring(nStart, p)
+                    val end = s.indexOf('>', p)
+                    if (end < 0) fail(n, "XML document structures must start and end within the same entity.")
+                    val model = s.substring(p, end).filterNot { isXmlSpace(it) }
+                    if (model.isEmpty() || model.contains('%') || model.contains('<') || model.contains('"') || model.contains('\'')) {
+                        fail(p, "The content model of element type \"$name\" is not supported or malformed.")
+                    }
+                    items.add(DtdItem.ElementDecl(name, model))
+                    k = end + 1
+                }
+                s.startsWith("<!NOTATION", k) -> {
+                    var p = k + 10
+                    if (p >= n || !isXmlSpace(s[p])) fail(p, "White space is required after \"<!NOTATION\" in the notation declaration.")
+                    p = skipSpace(p)
+                    val nStart = p
+                    while (p < n && !isXmlSpace(s[p]) && s[p] != '>') p++
+                    if (p == nStart) fail(p, "The notation name is required in the notation declaration.")
+                    checkName(nStart, p, "The notation name is required in the notation declaration.")
+                    val name = s.substring(nStart, p)
+                    val q = skipSpace(p)
+                    if (q == p || !(s.startsWith("PUBLIC", q) || s.startsWith("SYSTEM", q))) {
+                        fail(q, "The external identifier is required in the declaration for notation \"$name\".")
+                    }
+                    val ids = externalId(q, requireSystem = false)
+                    val end = skipSpace(ids.end)
+                    if (end >= n || s[end] != '>') fail(end, "The declaration for notation \"$name\" must end with '>'.")
+                    items.add(DtdItem.Notation(name, ids.publicId, ids.systemId))
+                    k = end + 1
+                }
+                s.startsWith("<!ATTLIST", k) ->
+                    fail(k, "kdom does not support attribute-list declarations in a DOCTYPE internal subset (default attribute values would change the tree).")
+                s[k] == '%' -> fail(k, "kdom does not support parameter-entity references in a DOCTYPE internal subset.")
+                else -> fail(k, "The markup declarations contained or pointed to by the document type declaration must be well-formed.")
+            }
+        }
+    }
+
+    private fun entityDeclaration(
+        at: Int,
+        items: MutableList<DtdItem>,
+        entities: MutableMap<String, DtdItem.Entity>,
+        parameterEntities: MutableSet<String>,
+    ): Int {
+        var p = at + 8
+        if (p >= n || !isXmlSpace(s[p])) fail(p, "White space is required after \"<!ENTITY\" in the entity declaration.")
+        p = skipSpace(p)
+        var parameter = false
+        if (p < n && s[p] == '%') {
+            parameter = true
+            p++
+            if (p >= n || !isXmlSpace(s[p])) fail(p, "White space is required before the entity name in the parameter entity declaration.")
+            p = skipSpace(p)
+        }
+        val nStart = p
+        while (p < n && !isXmlSpace(s[p]) && s[p] != '>' && s[p] != '"' && s[p] != '\'') p++
+        if (p == nStart) fail(p, "The entity name is required in the entity declaration.")
+        checkName(nStart, p, "The entity name is required in the entity declaration.")
+        val name = s.substring(nStart, p)
+        val q = skipSpace(p)
+        if (q == p) fail(q, "White space is required between the entity name \"$name\" and the definition in the entity declaration.")
+        val decl: DtdItem.Entity
+        var end: Int
+        if (q < n && (s[q] == '"' || s[q] == '\'')) {
+            val lit = literal(q)
+            decl = DtdItem.Entity(if (parameter) "%$name" else name, entityValue(lit.first, lit.second), null, null, null)
+            end = lit.second + 1
+        } else {
+            if (!(s.startsWith("PUBLIC", q) || s.startsWith("SYSTEM", q))) fail(q, "The entity value or external identifier is required for entity \"$name\".")
+            val ids = externalId(q, requireSystem = true)
+            end = ids.end
+            var notation: String? = null
+            val r = skipSpace(end)
+            if (!parameter && s.startsWith("NDATA", r)) {
+                if (r == end) fail(r, "White space is required before NDATA.")
+                var t = r + 5
+                if (t >= n || !isXmlSpace(s[t])) fail(t, "White space is required after NDATA.")
+                t = skipSpace(t)
+                val nn = t
+                while (t < n && !isXmlSpace(s[t]) && s[t] != '>') t++
+                if (t == nn) fail(t, "The notation name is required after NDATA.")
+                checkName(nn, t, "The notation name is required after NDATA.")
+                notation = s.substring(nn, t)
+                end = t
+            }
+            decl = DtdItem.Entity(if (parameter) "%$name" else name, null, ids.publicId, ids.systemId, notation)
+        }
+        end = skipSpace(end)
+        if (end >= n || s[end] != '>') fail(end, "The declaration for the entity \"$name\" must end with '>'.")
+        val first = if (parameter) parameterEntities.add(name) else !entities.containsKey(name)
+        if (first) {
+            if (!parameter) entities[name] = decl
+            items.add(decl)
+        }
+        return end + 1
+    }
+
+    /** Replacement text of an entity value literal `s[from, to)`: character references expanded, general entity references kept. */
+    private fun entityValue(from: Int, to: Int): String {
+        val sb = StringBuilder()
+        var k = from
+        while (k < to) {
+            val c = s[k]
+            when {
+                c == '%' -> fail(k, "kdom does not support parameter-entity references in a DOCTYPE internal subset.")
+                c == '&' && k + 1 < to && s[k + 1] == '#' -> {
+                    val after = charRef(k)
+                    sb.append(charRefText(k, after))
+                    k = after
+                }
+                c == '&' -> {
+                    val semi = s.indexOf(';', k)
+                    if (semi < 0 || semi >= to || semi == k + 1) fail(k, "The reference to an entity must end with the ';' delimiter.")
+                    checkName(k + 1, semi, "The entity name must immediately follow the '&' in the entity reference.")
+                    sb.append(s, k, semi + 1)
+                    k = semi + 1
+                }
+                else -> { sb.append(c); k++ }
+            }
+        }
+        return normalizeLineEnds(sb.toString())
+    }
+
+    /** The character of the (already validated) character reference `s[from, after)`. */
+    private fun charRefText(from: Int, after: Int): String {
+        val hex = s[from + 2] == 'x'
+        val digits = s.substring(from + (if (hex) 3 else 2), after - 1)
+        val cp = digits.toInt(if (hex) 16 else 10)
+        return if (cp >= 0x10000) {
+            val v = cp - 0x10000
+            charArrayOf((0xD800 + (v shr 10)).toChar(), (0xDC00 + (v and 0x3FF)).toChar()).concatToString()
+        } else cp.toChar().toString()
+    }
+
+    /**
+     * A non-predefined entity reference `&name;` at [at] in content ([inAttribute] false) or an attribute value, in a document
+     * with a DOCTYPE (permissive mode). As the JDK parser with `load-external-dtd` off: an internal entity is expanded; an
+     * external parsed entity is skipped in content and an error in an attribute value; an undeclared entity is skipped (in
+     * content) or dropped (in an attribute value) when the DOCTYPE has an external id that was not read and the document
+     * is not `standalone="yes"`, else it is an error. Returns the offset after `;`.
+     */
+    private fun entityRef(at: Int, inAttribute: Boolean): Int {
+        val semi = s.indexOf(';', at)
+        val nameEnd = nameEnd(at + 1).let { e -> if (semi in (at + 1) until e) semi else e }
+        if (nameEnd == at + 1) fail(at + 1, "The entity name must immediately follow the '&' in the entity reference.")
+        checkName(at + 1, nameEnd, "The entity name must immediately follow the '&' in the entity reference.")
+        val name = s.substring(at + 1, nameEnd)
+        if (nameEnd >= n || s[nameEnd] != ';') fail(nameEnd, "The reference to entity \"$name\" must end with the ';' delimiter.")
+        if (name in PREDEFINED) return nameEnd + 1
+        val dt = docType!!
+        val decl = dt.entities[name]
+        val use: EntityUse = when {
+            decl == null -> {
+                if (dt.systemId == null && dt.publicId == null || standaloneYes) {
+                    fail(at, "The entity \"$name\" was referenced, but not declared.")
+                }
+                if (inAttribute) EntityUse.Expand("") else EntityUse.Skip(name)
+            }
+            decl.notation != null -> fail(at, "The unparsed entity reference \"&$name;\" is not permitted.")
+            decl.value == null -> {
+                if (inAttribute) fail(at, "The external entity reference \"&$name;\" is not permitted in an attribute value.")
+                EntityUse.Skip(name)
+            }
+            else -> {
+                val text = expandReplacementText(decl.value, at, name)
+                EntityUse.Expand(if (inAttribute) text.map { if (it == '\t' || it == '\n' || it == '\r') ' ' else it }.joinToString("") else text)
+            }
+        }
+        entityRefs.add(intArrayOf(at, nameEnd + 1, entityUses.size))
+        entityUses.add(use)
+        return nameEnd + 1
+    }
+
+    /** Replacement text of an internal entity as character data; markup or nested entity references are not supported. */
+    private fun expandReplacementText(value: String, at: Int, name: String): String {
+        if (!value.contains('&') && !value.contains('<')) return value
+        if (value.contains('<')) fail(at, "kdom does not support entity \"$name\": its replacement text contains markup.")
+        val sb = StringBuilder()
+        var k = 0
+        while (k < value.length) {
+            val c = value[k]
+            if (c != '&') { sb.append(c); k++; continue }
+            val semi = value.indexOf(';', k)
+            if (semi < 0) fail(at, "XML document structures must start and end within the same entity (in entity \"$name\").")
+            when (val ref = value.substring(k + 1, semi)) {
+                "lt" -> sb.append('<')
+                "gt" -> sb.append('>')
+                "amp" -> sb.append('&')
+                "apos" -> sb.append('\'')
+                "quot" -> sb.append('"')
+                else -> fail(at, "kdom does not support entity \"$name\": its replacement text references entity \"$ref\".")
+            }
+            k = semi + 1
+        }
+        return sb.toString()
+    }
+
     private fun fail(at: Int, message: String): Nothing {
         val lc = lineColumnOf(s, at)
         throw SAXParseException(message, lc[0], lc[1])
+    }
+
+    private companion object {
+        val PREDEFINED = setOf("lt", "gt", "amp", "apos", "quot")
+        val STANDALONE_YES = Regex("standalone[ \t\r\n]*=[ \t\r\n]*([\"'])yes\\1")
+
+        fun normalizeLineEnds(v: String): String = if (v.indexOf('\r') < 0) v else v.replace("\r\n", "\n").replace('\r', '\n')
+
+        /** SAX normalizes a public id: white space runs become one space, leading/trailing white space is removed. */
+        fun normalizePublicId(v: String): String = v.split(' ', '\t', '\r', '\n').filter { it.isNotEmpty() }.joinToString(" ")
     }
 }

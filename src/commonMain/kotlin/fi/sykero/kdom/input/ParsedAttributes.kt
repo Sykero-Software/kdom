@@ -45,4 +45,15 @@ internal interface LexicalEventHandler {
     fun comment(ch: CharArray, start: Int, length: Int)
     fun startCDATA()
     fun endCDATA()
+
+    // DOCTYPE events (permissive mode only), as SAX's LexicalHandler.startDTD/endDTD and DeclHandler report them.
+    // Between startDTD and endDTD, comments of the internal subset arrive as [comment]; its processing instructions are
+    // not reported (as by the JDK parser).
+    fun startDTD(name: String, publicId: String?, systemId: String?) {}
+    fun endDTD() {}
+    fun elementDecl(name: String, model: String) {}
+    fun internalEntityDecl(name: String, value: String) {}
+    fun externalEntityDecl(name: String, publicId: String?, systemId: String?) {}
+    fun notationDecl(name: String, publicId: String?, systemId: String?) {}
+    fun unparsedEntityDecl(name: String, publicId: String?, systemId: String?, notationName: String) {}
 }

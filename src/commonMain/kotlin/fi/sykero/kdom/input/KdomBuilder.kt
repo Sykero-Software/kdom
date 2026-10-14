@@ -5,6 +5,7 @@ import fi.sykero.kdom.JDOMException
 import fi.sykero.kdom.sax.SAXException
 import fi.sykero.kdom.sax.SAXParseException
 import kotlin.Throws
+import kotlin.jvm.JvmOverloads
 
 /**
  * Replacement for jdom2's `SAXBuilder` (namespace-aware, no DTD, no external entities). Not thread-safe per instance,
@@ -20,8 +21,16 @@ import kotlin.Throws
  * that the parser accepts but `Namespace` rejects) is also wrapped in a [JDOMParseException] with the position of the
  * event, so callers that catch [JDOMException] (JSword's fallback chain) see every rejected input.
  */
-public class KdomBuilder {
-    private val parser = XmlEventParser(namespaceAware = true)
+public class KdomBuilder @JvmOverloads constructor(
+    /**
+     * false (default, strict, P7): a DOCTYPE is a parse error; JSword's OSIS/ThML parsing keeps this. true (permissive, R11):
+     * for EPUB XHTML/OPF/NCX and other non-Sword XML; the DOCTYPE becomes a [fi.sykero.kdom.DocType] (as jdom2's
+     * SAXBuilder builds it), the external subset is never read, internal-subset entities are expanded, and an undeclared
+     * entity under an unread external subset becomes an [fi.sykero.kdom.EntityRef] (see [XmlEventParser.allowDocType]).
+     */
+    public val allowDocType: Boolean = false,
+) {
+    private val parser = XmlEventParser(namespaceAware = true, allowDocType = allowDocType)
 
     @Throws(JDOMException::class)
     public fun build(xml: String): Document = build { parser.parse(xml, it) }

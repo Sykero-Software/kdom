@@ -13,6 +13,7 @@ import fi.sykero.kdom.sax.SAXParseException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -231,6 +232,63 @@ class KdomBuilderTest {
         assertEquals("x", KdomBuilder().build(le("<?xml version=\"1.0\" encoding=\"UTF-16LE\"?><a>x</a>")).rootElement.text)
         assertFailsWith<JDOMParseException> { KdomBuilder().build(le("<?xml version=\"1.0\" encoding=\"UTF-8\"?><a/>")) }
         assertFailsWith<JDOMParseException> { KdomBuilder().build(le("<?xml version=\"1.0\" encoding=\"UTF-16BE\"?><a/>")) }
+    }
+
+    // ---- permissive DOCTYPE mode (R11) ----
+
+    private fun buildEpub(xml: String) = KdomBuilder(allowDocType = true).build(xml)
+
+    @Test fun permissiveModeBuildsTheDocTypeLikeJdom2() {
+        val doc = buildEpub("<!--c-->\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n<html/>")
+        assertEquals(listOf("Comment", "DocType", "Element"), doc.content.map { it::class.simpleName })
+        val dt = assertNotNull(doc.docType)
+        assertEquals("html", dt.elementName)
+        assertEquals("-//W3C//DTD XHTML 1.1//EN", dt.publicID)
+        assertEquals("http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd", dt.systemID)
+        assertEquals("", dt.internalSubset)
+        val html5 = assertNotNull(buildEpub("<!DOCTYPE html><html/>").docType)
+        assertNull(html5.publicID)
+        assertNull(html5.systemID)
+    }
+
+    @Test fun undeclaredEntitiesUnderAnUnreadExternalSubsetBecomeEntityRefs() {
+        val root = buildEpub("<!DOCTYPE html SYSTEM \"x.dtd\"><html t=\"a&nbsp;b\">x&nbsp;y&copy;</html>").rootElement
+        assertEquals(listOf("Text:x", "EntityRef:nbsp", "Text:y", "EntityRef:copy"),
+            root.content.map { it::class.simpleName + ":" + (if (it is fi.sykero.kdom.EntityRef) it.name else it.value) })
+        assertEquals("ab", root.getAttributeValue("t")) // dropped from the attribute value, as by the JDK parser
+        // no external id, or standalone="yes": an undeclared entity stays an error
+        assertFailsWith<JDOMParseException> { buildEpub("<!DOCTYPE html><html>&nbsp;</html>") }
+        assertFailsWith<JDOMParseException> { buildEpub("<?xml version=\"1.0\" standalone=\"yes\"?><!DOCTYPE html SYSTEM \"x\"><html>&nbsp;</html>") }
+        assertFailsWith<JDOMParseException> { buildEpub("<html>&nbsp;</html>") }
+    }
+
+    @Test fun internalSubsetEntitiesAreExpandedAndTheSubsetIsKept() {
+        val doc = buildEpub("<!DOCTYPE a [\n<!ENTITY e \"v&#233;\">\n<!ELEMENT a (#PCDATA | b)*>\n<!-- k -->\n]><a x=\"&e;\">1&e;2</a>")
+        assertEquals("1v\u00E92", doc.rootElement.text)
+        assertEquals("v\u00E9", doc.rootElement.getAttributeValue("x"))
+        assertEquals("  <!ENTITY e \"v\u00E9\">\n  <!ELEMENT a (#PCDATA|b)*>\n  <!-- k -->\n", doc.docType!!.internalSubset)
+    }
+
+    @Test fun unsupportedInternalSubsetFeaturesAreRejected() {
+        assertFailsWith<JDOMParseException> { buildEpub("<!DOCTYPE a [<!ATTLIST a b CDATA \"d\">]><a/>") }
+        assertFailsWith<JDOMParseException> { buildEpub("<!DOCTYPE a [<!ENTITY % p \"x\"> %p;]><a/>") }
+        assertFailsWith<JDOMParseException> { buildEpub("<!DOCTYPE a [<!ENTITY e \"<b/>\">]><a>&e;</a>") }
+    }
+
+    @Test fun positionsAfterADocTypeAreUnchanged() {
+        val e = assertFailsWith<JDOMParseException> { buildEpub("<!DOCTYPE a\n PUBLIC \"p\"\n \"s\" [\n]\n>\n<a>\n</b>") }
+        assertEquals(7, e.lineNumber)
+        val p = assertFailsWith<JDOMParseException> { buildEpub("<!DOCTYPE a [<!ENTITY q \"<\">]>\n<a x=\"<\"/>") }
+        assertEquals(2, p.lineNumber) // the raw '<' in the attribute (R7), not the one inside the entity value
+    }
+
+    @Test fun strictModeIsTheDefault() {
+        assertFalse(KdomBuilder().allowDocType)
+        assertFailsWith<JDOMParseException> { KdomBuilder().build("<!DOCTYPE html><html/>") }
+        val b = KdomBuilder(allowDocType = true)
+        assertFailsWith<JDOMParseException> { b.build("<!DOCTYPE a><!DOCTYPE a><a/>") }
+        assertEquals("a", b.build("<!DOCTYPE a><a/>").docType!!.elementName) // reusable after a failure
+        assertNull(b.build("<a/>").docType)
     }
 
     @Test fun unsupportedEncodingIsRejected() {

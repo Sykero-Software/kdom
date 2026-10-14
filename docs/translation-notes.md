@@ -300,7 +300,16 @@ so a `catch (JDOMException)` fallback chain (JSword) sees every rejected input. 
 (Java callers can catch the checked exceptions; compiles for iOS).
 
 Remaining differences from a JAXP SAX parser / jdom2 `SAXBuilder` (all deliberate):
-- **DOCTYPE is rejected** (plan rule P7; SAX accepts it and expands internal entities).
+- **DOCTYPE is rejected by default** (plan rule P7; SAX accepts it and expands internal entities). Permissive opt-in
+  `allowDocType = true` (R11, M0 gate fix I2) accepts it as described in `docs/xmlutil-probes.md` ("DOCTYPE policy"); there
+  the remaining differences from jdom2 `SAXBuilder` as AndBible configures it (`external-general-entities` off, which in
+  jdom2 also turns entity *expansion* off) are: an internal entity used in content is expanded to text (jdom2 builds an
+  `EntityRef` and, on the JDK, keeps a parser-dependent part of the replacement text); `ATTLIST` declarations,
+  parameter-entity references and entities whose replacement text holds markup are rejected (jdom2/JDK accept them);
+  relative system ids of declarations in the internal subset are kept as written (the JDK expands them against the
+  working directory); internal-subset comments are kept in `DocType.internalSubset` and PIs are dropped (as jdom2 with that
+  configuration). **Task 18 note**: AndBible's `CommonUtils.useSaxBuilder` (EPUB and other non-Sword XML) constructs
+  `KdomBuilder(allowDocType = true)`; JSword's `OSISFilter` (and every Sword-text parse) keeps the strict default.
 - **Errors found by the raw pre-scan are reported before any event** (illegal character, `<` in an attribute value, bad
   character reference, DOCTYPE, raw duplicate attribute, missing white space between attributes, `]]>` in text, unterminated
   comment/CDATA/PI). SAX reports the events before the error first; only a handler that keeps state across a failed parse (or
@@ -463,7 +472,7 @@ Differences from the Java tests (none changes an expectation):
 Every translated file carries its upstream jdom2 source's `/*-- ... */` licence block **byte for byte** (taken from
 hunterhacker/jdom tag `JDOM-2.0.6.1`, including upstream's trailing white space, year ranges and the
 `<request_AT_jdom_DOT_org).` typo in some files), with the single line
-` Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.` inserted as the block's last text line
+` Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Syker\u00F6 Software.` inserted as the block's last text line
 (before the closing blank line and ` */`). `scripts/fix-headers.py <kdom> <jdom2 checkout>` (run with `python3 -I`) rewrites
 the blocks; it maps each `src/*/fi/sykero/kdom/<path>` to `core|test/src/java/org/jdom2/<path>.java` (plus an explicit map,
 e.g. `input/TreeBuildingHandler.kt` <- `input/sax/SAXHandler.java`). Check: rerun the script (it must report `changed 0`) and

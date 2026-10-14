@@ -13,6 +13,7 @@ import nl.adaptivity.xmlutil.ExperimentalXmlUtilApi
 import nl.adaptivity.xmlutil.XmlReader
 import nl.adaptivity.xmlutil.xmlStreaming
 import kotlin.Throws
+import kotlin.jvm.JvmOverloads
 
 /**
  * Streams SAX-shaped events from xmlutil's reader; rejects every input a JAXP SAX parser rejects (no DTD support).
@@ -29,18 +30,25 @@ import kotlin.Throws
  *
  * An instance holds no parse state: one instance may be used by several threads at once.
  */
-public class XmlEventParser(
+public class XmlEventParser @JvmOverloads constructor(
     /** true: SAX2 namespace processing (uri/localName set, xmlns not reported as attributes, prefix mappings reported);
      *  false: like a default `SAXParserFactory` (uri = "", localName = "", qName = raw name, xmlns* reported as attributes). */
     public val namespaceAware: Boolean = true,
+    /**
+     * false (default, strict, requirement P7): every DOCTYPE is a parse error. true (permissive, for EPUB and other
+     * non-Sword XML, ruling R11): a DOCTYPE is accepted and reported; its external subset is never read; entities of the
+     * internal subset are expanded; an undeclared entity in a document whose DOCTYPE has an (unread) external id is reported
+     * as `skippedEntity` (dropped in an attribute value), as by the JDK parser with `load-external-dtd` off.
+     */
+    public val allowDocType: Boolean = false,
 ) {
     /** Calls the handler; on malformed input throws [fi.sykero.kdom.sax.SAXParseException] with line/column when known. */
     @Throws(SAXException::class)
     public fun parse(xml: String, handler: ContentHandler) {
-        val scanner = SourceScanner(xml, namespaceAware)
+        val scanner = SourceScanner(xml, namespaceAware, allowDocType)
         scanner.scan()
         val mask = XmlSourceMask.create(xml, scanner)
-        EventRun(mask?.masked ?: xml, mask, handler, namespaceAware).run()
+        EventRun(mask?.masked ?: xml, mask, handler, namespaceAware, scanner.docType).run()
     }
 
     /** Bytes with BOM / XML-declaration encoding detection (UTF-8, UTF-16 BE/LE, ISO-8859-1, US-ASCII). */
@@ -56,6 +64,7 @@ private class EventRun(
     private val mask: XmlSourceMask?,
     private val handler: ContentHandler,
     private val namespaceAware: Boolean,
+    private val docType: ScannedDocType?,
 ) {
     private val lexical = handler as? LexicalEventHandler
     private var reader: XmlReader? = null
@@ -113,7 +122,10 @@ private class EventRun(
                     val t = guarded { r.text }
                     // Outside the root element only white space reaches here (the reader rejects other text); SAX
                     // does not report it.
-                    if (depth > 0) text.append(content(t))
+                    if (depth > 0) {
+                        if (mask == null) text.append(t)
+                        else mask.textSegments(t, { text.append(it) }, { name -> flush(); handler.skippedEntity(name) })
+                    }
                 }
                 EventType.CDSECT -> {
                     val t = content(guarded { r.text })
@@ -130,6 +142,10 @@ private class EventRun(
                 EventType.PROCESSING_INSTRUCTION -> {
                     val t = content(guarded { r.text })
                     flush()
+                    if (docType != null && t == mask?.docTypeTarget) {
+                        reportDocType(docType)
+                        continue
+                    }
                     var k = 0
                     while (k < t.length && !isXmlSpace(t[k])) k++
                     val target = t.substring(0, k)
@@ -140,6 +156,25 @@ private class EventRun(
             }
         }
         handler.endDocument()
+    }
+
+    /** The DOCTYPE's SAX events: startDTD, the internal subset's declarations/comments/PIs in order, endDTD. */
+    private fun reportDocType(dt: ScannedDocType) {
+        lexical?.startDTD(dt.name, dt.publicId, dt.systemId)
+        for (item in dt.items) {
+            when (item) {
+                is DtdItem.ElementDecl -> lexical?.elementDecl(item.name, item.model)
+                is DtdItem.Entity -> when {
+                    item.value != null -> lexical?.internalEntityDecl(item.name, item.value)
+                    item.notation != null -> lexical?.unparsedEntityDecl(item.name, item.publicId, item.systemId, item.notation)
+                    else -> lexical?.externalEntityDecl(item.name, item.publicId, item.systemId)
+                }
+                is DtdItem.Notation -> lexical?.notationDecl(item.name, item.publicId, item.systemId)
+                is DtdItem.Comment -> lexical?.comment(item.text.toCharArray(), 0, item.text.length)
+                is DtdItem.Pi -> {} // the JDK parser does not report processing instructions of the internal subset
+            }
+        }
+        lexical?.endDTD()
     }
 
     private fun flush() {

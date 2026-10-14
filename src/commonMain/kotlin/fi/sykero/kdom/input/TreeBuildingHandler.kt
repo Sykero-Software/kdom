@@ -49,7 +49,7 @@
  created by Jason Hunter <jhunter_AT_jdom_DOT_org> and
  Brett McLaughlin <brett_AT_jdom_DOT_org>.  For more information
  on the JDOM Project, please see <http://www.jdom.org/>.
- Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
+ Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Syker\u00F6 Software.
 
  */
 
@@ -59,8 +59,10 @@ import fi.sykero.kdom.Attribute
 import fi.sykero.kdom.AttributeType
 import fi.sykero.kdom.CDATA
 import fi.sykero.kdom.Comment
+import fi.sykero.kdom.DocType
 import fi.sykero.kdom.Document
 import fi.sykero.kdom.Element
+import fi.sykero.kdom.EntityRef
 import fi.sykero.kdom.Namespace
 import fi.sykero.kdom.ProcessingInstruction
 import fi.sykero.kdom.Text
@@ -163,17 +165,76 @@ internal class TreeBuildingHandler : ContentHandler, LexicalEventHandler {
     }
 
     override fun processingInstruction(target: String, data: String?) {
+        if (inDTD) return // a PI of the internal subset is not part of the tree (as with jdom2)
         flushCharacters()
         val pi = ProcessingInstruction(target, data)
         if (atRoot) document.addContent(pi) else currentElement!!.addContent(pi)
     }
 
+    /** An entity that was not expanded (permissive DOCTYPE mode) becomes an [EntityRef], as in jdom2's SAXHandler. */
     override fun skippedEntity(name: String) {
-        // XmlEventParser never reports one (an undefined entity is a parse error).
-        throw SAXException("Unexpected skipped entity $name")
+        if (name.startsWith("%")) return
+        flushCharacters()
+        currentElement!!.addContent(EntityRef(name))
+    }
+
+    // DOCTYPE (permissive mode): jdom2's SAXHandler startDTD/endDTD and DeclHandler methods. The internal subset text is
+    // collected as jdom2 does with AndBible's configuration (entity expansion off, so comments are kept in it).
+    private var inDTD = false
+    private val internalSubset = StringBuilder()
+
+    override fun startDTD(name: String, publicId: String?, systemId: String?) {
+        flushCharacters()
+        document.addContent(DocType(name, publicId, systemId))
+        inDTD = true
+    }
+
+    override fun endDTD() {
+        document.docType!!.internalSubset = internalSubset.toString()
+        inDTD = false
+    }
+
+    override fun elementDecl(name: String, model: String) {
+        internalSubset.append("  <!ELEMENT ").append(name).append(' ').append(model).append(">\n")
+    }
+
+    override fun internalEntityDecl(name: String, value: String) {
+        internalSubset.append("  <!ENTITY ")
+        if (name.startsWith("%")) internalSubset.append("% ").append(name.substring(1)) else internalSubset.append(name)
+        internalSubset.append(" \"").append(value).append("\">\n")
+    }
+
+    override fun externalEntityDecl(name: String, publicId: String?, systemId: String?) {
+        internalSubset.append("  <!ENTITY ").append(name)
+        appendExternalId(publicId, systemId)
+        internalSubset.append(">\n")
+    }
+
+    override fun notationDecl(name: String, publicId: String?, systemId: String?) {
+        internalSubset.append("  <!NOTATION ").append(name)
+        appendExternalId(publicId, systemId)
+        internalSubset.append(">\n")
+    }
+
+    override fun unparsedEntityDecl(name: String, publicId: String?, systemId: String?, notationName: String) {
+        internalSubset.append("  <!ENTITY ").append(name)
+        appendExternalId(publicId, systemId)
+        internalSubset.append(" NDATA ").append(notationName).append(">\n")
+    }
+
+    private fun appendExternalId(publicId: String?, systemId: String?) {
+        if (publicId != null) internalSubset.append(" PUBLIC \"").append(publicId).append('"')
+        if (systemId != null) {
+            if (publicId == null) internalSubset.append(" SYSTEM ") else internalSubset.append(' ')
+            internalSubset.append('"').append(systemId).append('"')
+        }
     }
 
     override fun comment(ch: CharArray, start: Int, length: Int) {
+        if (inDTD) {
+            internalSubset.append("  <!--").append(ch.concatToString(start, start + length)).append("-->\n")
+            return
+        }
         flushCharacters()
         val commentText = ch.concatToString(start, start + length)
         if (commentText != "") {
