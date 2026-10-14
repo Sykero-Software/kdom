@@ -1,4 +1,4 @@
-/*--
+/*-- 
 
  Copyright (C) 2000-2012 Jason Hunter & Brett McLaughlin.
  All rights reserved.
@@ -11,8 +11,8 @@
     notice, this list of conditions, and the following disclaimer.
 
  2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions, and the disclaimer that follows
-    these conditions in the documentation and/or other materials
+    notice, this list of conditions, and the disclaimer that follows 
+    these conditions in the documentation and/or other materials 
     provided with the distribution.
 
  3. The name "JDOM" must not be used to endorse or promote products
@@ -21,14 +21,14 @@
 
  4. Products derived from this software may not be called "JDOM", nor
     may "JDOM" appear in their name, without prior written permission
-    from the JDOM Project Management <request_AT_jdom_DOT_org).
+    from the JDOM Project Management <request_AT_jdom_DOT_org>.
 
- In addition, we request (but do not require) that you include in the
- end-user documentation provided with the redistribution and/or in the
+ In addition, we request (but do not require) that you include in the 
+ end-user documentation provided with the redistribution and/or in the 
  software itself an acknowledgement equivalent to the following:
      "This product includes software developed by the
       JDOM Project (http://www.jdom.org/)."
- Alternatively, the acknowledgment may be graphical using the logos
+ Alternatively, the acknowledgment may be graphical using the logos 
  available at http://www.jdom.org/images/logos.
 
  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
@@ -44,8 +44,8 @@
  OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  SUCH DAMAGE.
 
- This software consists of voluntary contributions made by many
- individuals on behalf of the JDOM Project and was originally
+ This software consists of voluntary contributions made by many 
+ individuals on behalf of the JDOM Project and was originally 
  created by Jason Hunter <jhunter_AT_jdom_DOT_org> and
  Brett McLaughlin <brett_AT_jdom_DOT_org>.  For more information
  on the JDOM Project, please see <http://www.jdom.org/>.
@@ -54,12 +54,14 @@
 
  */
 
-package fi.sykero.kdom;
+package fi.sykero.kdom
 
-import java.util.*;
-
-import fi.sykero.kdom.filter.*;
-import fi.sykero.kdom.internal.ArrayCopy;
+import fi.sykero.kdom.filter.Filter
+import fi.sykero.kdom.internal.ArrayCopy
+import java.util.Arrays
+import java.util.Comparator
+import java.util.ConcurrentModificationException
+import java.util.RandomAccess
 
 /**
  * A non-public list implementation holding only legal JDOM content, including
@@ -78,1412 +80,1449 @@ import fi.sykero.kdom.internal.ArrayCopy;
  * @author Bradley S. Huffman
  * @author Rolf Lear
  */
-final class ContentList extends AbstractList<Content>
-		implements RandomAccess {
+internal class ContentList
+/**
+ * Force either a Document or Element parent
+ *
+ * @param parent
+ *        the Element this ContentList belongs to.
+ */
+(
+    /** Document or Element this list belongs to  */
+    private val parent: Parent
+) : AbstractMutableList<Content>(), RandomAccess {
 
-	private static final int INITIAL_ARRAY_SIZE = 4;
+    /** Our backing list  */
+    private var elementData: Array<Content?>? = null
 
-	/** Our backing list */
-	private Content elementData[] = null;
-	
-	/** The amount of valid content in elementData */
-	private int size;
-	
-	/**
-	 * Completely remove references to AbstractList.modCount because in
-	 * ContentList it is confusing. As a consequence we also need to implement
-	 * a custom ListIterator for ContentList so that we don't use any of the
-	 * AbstractList iterators which use modCount.... so we have our own 
-	 * ConcurrentModification checking.
-	 * 
-	 */
-	private transient int sizeModCount = Integer.MIN_VALUE;
+    /**
+     * The amount of valid content in elementData
+     * (Named `count` here, not `size`: the inner [FilterList] has its own `size`, which would shadow
+     * the outer field that Java code reached as plain `size`.)
+     */
+    private var count: Int = 0
 
-	/**
-	 * modCount is used for concurrent modification, but dataModCount is used
-	 * for refreshing filters.
-	 */
-	private transient int dataModiCount = Integer.MIN_VALUE;
+    /**
+     * Completely remove references to AbstractList.modCount because in
+     * ContentList it is confusing. As a consequence we also need to implement
+     * a custom ListIterator for ContentList so that we don't use any of the
+     * AbstractList iterators which use modCount.... so we have our own
+     * ConcurrentModification checking.
+     *
+     */
+    @Transient
+    private var sizeModCount = Int.MIN_VALUE
 
-	/** Document or Element this list belongs to */
-	private final Parent parent;
+    /**
+     * modCount is used for concurrent modification, but dataModCount is used
+     * for refreshing filters.
+     */
+    @Transient
+    private var dataModiCount = Int.MIN_VALUE
 
-	/**
-	 * Force either a Document or Element parent
-	 * 
-	 * @param parent
-	 *        the Element this ContentList belongs to.
-	 */
-	ContentList(final Parent parent) {
-		this.parent = parent;
-	}
-	
-	/**
-	 * Package internal method to support building from sources that are 100%
-	 * trusted.
-	 * 
-	 * @param c
-	 *        content to add without any checks
-	 */
-	final void uncheckedAddContent(final Content c) {
-		c.parentRef = parent;
-		ensureCapacity(size + 1);
-		elementData[size++] = c;
-		incModCount();
-	}
+    /**
+     * Package internal method to support building from sources that are 100%
+     * trusted.
+     *
+     * @param c
+     *        content to add without any checks
+     */
+    fun uncheckedAddContent(c: Content) {
+        c.parentRef = parent
+        ensureCapacity(count + 1)
+        elementData!![count++] = c
+        incModCount()
+    }
 
-	/**
-	 * In the FilterList and FilterList iterators it becomes confusing as to
-	 * which modCount is being used. This formalizes the process, and using
-	 * (set/get/inc)ModCount() is the only thing you should see in the remainder
-	 * of this code.
-	 * 
-	 * @param sizemod
-	 *        the value to set for the size-mod count.
-	 * @param datamod
-	 *        the value to set for the data-mod count.
-	 */
-	private final void setModCount(final int sizemod, final int datamod) {
-		sizeModCount = sizemod;
-		dataModiCount = datamod;
-	}
+    /**
+     * In the FilterList and FilterList iterators it becomes confusing as to
+     * which modCount is being used. This formalizes the process, and using
+     * (set/get/inc)ModCount() is the only thing you should see in the remainder
+     * of this code.
+     *
+     * @param sizemod
+     *        the value to set for the size-mod count.
+     * @param datamod
+     *        the value to set for the data-mod count.
+     */
+    private fun setModCount(sizemod: Int, datamod: Int) {
+        sizeModCount = sizemod
+        dataModiCount = datamod
+    }
 
-	/**
-	 * In the FilterList and FilterList iterators it becomes confusing as to
-	 * which modCount is being used. This formalizes the process, and using
-	 * (set/get/inc)ModCount() is the only thing you should see in the remainder
-	 * of this code.
-	 * 
-	 * @return mod the value.
-	 */
-	private final int getModCount() {
-		return sizeModCount;
-	}
+    /**
+     * In the FilterList and FilterList iterators it becomes confusing as to
+     * which modCount is being used. This formalizes the process, and using
+     * (set/get/inc)ModCount() is the only thing you should see in the remainder
+     * of this code.
+     *
+     * @return mod the value.
+     */
+    private fun getModCount(): Int {
+        return sizeModCount
+    }
 
-	/**
-	 * In the FilterList and FilterList iterators it becomes confusing as to
-	 * which modCount is being used. This formalizes the process, and using
-	 * (set/get/inc)ModCount() is the only thing you should see in the remainder
-	 * of this code.
-	 */
-	private final void incModCount() {
-		// indicate there's a change to data
-		dataModiCount++;
-		// indicate there's a change to the size
-		sizeModCount++;
-	}
-	
-	private final void incDataModOnly() {
-		dataModiCount++;
-	}
+    /**
+     * In the FilterList and FilterList iterators it becomes confusing as to
+     * which modCount is being used. This formalizes the process, and using
+     * (set/get/inc)ModCount() is the only thing you should see in the remainder
+     * of this code.
+     */
+    private fun incModCount() {
+        // indicate there's a change to data
+        dataModiCount++
+        // indicate there's a change to the size
+        sizeModCount++
+    }
 
-	/**
-	 * Get the modcount of data changes.
-	 * @return the current data mode count.
-	 */
-	private final int getDataModCount() {
-		return dataModiCount;
-	}
+    private fun incDataModOnly() {
+        dataModiCount++
+    }
 
-	private final void checkIndex(final int index, final boolean excludes) {
-		final int max = excludes ? size - 1 : size;
+    /**
+     * Get the modcount of data changes.
+     * @return the current data mode count.
+     */
+    private fun getDataModCount(): Int {
+        return dataModiCount
+    }
 
-		if (index < 0 || index > max) {
-			throw new IndexOutOfBoundsException("Index: " + index +
-					" Size: " + size);
-		}
+    private fun checkIndex(index: Int, excludes: Boolean) {
+        val max = if (excludes) count - 1 else count
 
-	}
+        if (index < 0 || index > max) {
+            throw IndexOutOfBoundsException(
+                "Index: " + index +
+                        " Size: " + count
+            )
+        }
 
-	private final void checkPreConditions(final Content child, final int index,
-			final boolean replace) {
-		if (child == null) {
-			throw new NullPointerException("Cannot add null object");
-		}
+    }
 
-		checkIndex(index, replace);
+    private fun checkPreConditions(
+        child: Content?, index: Int,
+        replace: Boolean
+    ) {
+        if (child == null) {
+            throw NullPointerException("Cannot add null object")
+        }
 
-		if (child.getParent() != null) {
-			// the content to be added already has a parent.
-			final Parent p = child.getParent();
-			if (p instanceof Document) {
-				throw new IllegalAddException((Element) child,
-						"The Content already has an existing parent document");
-			}
-			throw new IllegalAddException(
-					"The Content already has an existing parent \"" +
-							((Element) p).getQualifiedName() + "\"");
-		}
+        checkIndex(index, replace)
 
-		if (child == parent) {
-			throw new IllegalAddException(
-					"The Element cannot be added to itself");
-		}
+        if (child.parent != null) {
+            // the content to be added already has a parent.
+            val p = child.parent
+            if (p is Document) {
+                throw IllegalAddException(
+                    child as Element,
+                    "The Content already has an existing parent document"
+                )
+            }
+            throw IllegalAddException(
+                "The Content already has an existing parent \"" +
+                        (p as Element).qualifiedName + "\""
+            )
+        }
 
-		// Detect if we have <a><b><c/></b></a> and c.add(a)
-		if ((parent instanceof Element && child instanceof Element) &&
-				((Element) child).isAncestor((Element) parent)) {
-			throw new IllegalAddException(
-					"The Element cannot be added as a descendent of itself");
-		}
+        if (child === parent) {
+            throw IllegalAddException(
+                "The Element cannot be added to itself"
+            )
+        }
 
-	}
+        // Detect if we have <a><b><c/></b></a> and c.add(a)
+        if ((parent is Element && child is Element) &&
+            child.isAncestor(parent)
+        ) {
+            throw IllegalAddException(
+                "The Element cannot be added as a descendent of itself"
+            )
+        }
 
-	/**
-	 * Check and add the <code>Content</code> to this list at the given index.
-	 * Inserts the specified object at the specified position in this list.
-	 * Shifts the object currently at that position (if any) and any subsequent
-	 * objects to the right (adds one to their indices).
-	 * 
-	 * @param index
-	 *        index where to add <code>Element</code>
-	 * @param child
-	 *        <code>Content</code> to add
-	 */
-	@Override
-	public void add(final int index, final Content child) {
-		// Confirm basic sanity of child.
-		checkPreConditions(child, index, false);
-		// Check to see whether this parent believes it can contain this content
-		parent.canContainContent(child, index, false);
+    }
 
-		child.setParent(parent);
+    /**
+     * Check and add the `Content` to this list at the given index.
+     * Inserts the specified object at the specified position in this list.
+     * Shifts the object currently at that position (if any) and any subsequent
+     * objects to the right (adds one to their indices).
+     *
+     * @param index
+     *        index where to add `Element`
+     * @param element
+     *        `Content` to add
+     */
+    override fun add(index: Int, element: Content) {
+        val child = element
+        // Confirm basic sanity of child.
+        checkPreConditions(child, index, false)
+        // Check to see whether this parent believes it can contain this content
+        parent.canContainContent(child, index, false)
 
-		ensureCapacity(size + 1);
-		if (index == size) {
-			elementData[size++] = child;
-		} else {
-			System.arraycopy(elementData, index, elementData, index + 1, size - index);
-			elementData[index] = child;
-			size++;
-		}
-		// Successful add's increment the AbstractList's modCount
-		incModCount();
-	}
+        child.setParent(parent)
 
-	/**
-	 * Add the specified collection to the end of this list.
-	 * 
-	 * @param collection
-	 *        The collection to add to the list.
-	 * @return <code>true</code> if the list was modified as a result of the
-	 *         add.
-	 */
-	@Override
-	public boolean addAll(final Collection<? extends Content> collection) {
-		return addAll(size, collection);
-	}
+        ensureCapacity(count + 1)
+        if (index == count) {
+            elementData!![count++] = child
+        } else {
+            System.arraycopy(elementData!!, index, elementData!!, index + 1, count - index)
+            elementData!![index] = child
+            count++
+        }
+        // Successful add's increment the AbstractList's modCount
+        incModCount()
+    }
 
-	/**
-	 * Inserts the specified collection at the specified position in this list.
-	 * Shifts the object currently at that position (if any) and any subsequent
-	 * objects to the right (adds one to their indices).
-	 * 
-	 * @param index
-	 *        The offset to start adding the data in the collection
-	 * @param collection
-	 *        The collection to insert into the list.
-	 * @return <code>true</code> if the list was modified as a result of the
-	 *         add. throws IndexOutOfBoundsException if index < 0 || index >
-	 *         size()
-	 */
-	@Override
-	public boolean addAll(final int index, 
-			final Collection<? extends Content> collection) {
-		if ((collection == null)) {
-			throw new NullPointerException(
-					"Can not add a null collection to the ContentList");
-		}
+    /**
+     * Add the specified collection to the end of this list.
+     *
+     * @param elements
+     *        The collection to add to the list.
+     * @return `true` if the list was modified as a result of the
+     *         add.
+     */
+    override fun addAll(elements: Collection<Content>): Boolean {
+        return addAll(count, elements)
+    }
 
-		checkIndex(index, false);
+    /**
+     * Inserts the specified collection at the specified position in this list.
+     * Shifts the object currently at that position (if any) and any subsequent
+     * objects to the right (adds one to their indices).
+     *
+     * @param index
+     *        The offset to start adding the data in the collection
+     * @param elements
+     *        The collection to insert into the list.
+     * @return `true` if the list was modified as a result of the
+     *         add. throws IndexOutOfBoundsException if index < 0 || index >
+     *         size()
+     */
+    override fun addAll(
+        index: Int,
+        elements: Collection<Content>
+    ): Boolean {
+        val collection: Collection<Content>? = elements
+        if ((collection == null)) {
+            throw NullPointerException(
+                "Can not add a null collection to the ContentList"
+            )
+        }
 
-		if (collection.isEmpty()) {
-			// some collections are expensive to get the size of.
-			// use isEmpty().
-			return false;
-		}
-		final int addcnt = collection.size();
-		if (addcnt == 1) {
-			// quick check for single-add.
-			add(index, collection.iterator().next());
-			return true;
-		}
+        checkIndex(index, false)
 
-		ensureCapacity(size() + addcnt);
+        if (collection.isEmpty()) {
+            // some collections are expensive to get the size of.
+            // use isEmpty().
+            return false
+        }
+        val addcnt = collection.size
+        if (addcnt == 1) {
+            // quick check for single-add.
+            add(index, collection.iterator().next())
+            return true
+        }
 
-		final int tmpmodcount = getModCount();
-		final int tmpdmc = getDataModCount();
-		boolean ok = false;
+        ensureCapacity(size + addcnt)
 
-		int count = 0;
+        val tmpmodcount = getModCount()
+        val tmpdmc = getDataModCount()
+        var ok = false
 
-		try {
-			for (Content c : collection) {
-				add(index + count, c);
-				count++;
-			}
-			ok = true;
-		} finally {
-			if (!ok) {
-				// something failed... remove all added content
-				while (--count >= 0) {
-					remove(index + count);
-				}
-				// restore the mod-counts.
-				setModCount(tmpmodcount, tmpdmc);
-			}
-		}
+        var cnt = 0
 
-		return true;
-	}
+        try {
+            for (c in collection) {
+                add(index + cnt, c)
+                cnt++
+            }
+            ok = true
+        } finally {
+            if (!ok) {
+                // something failed... remove all added content
+                while (--cnt >= 0) {
+                    removeAt(index + cnt)
+                }
+                // restore the mod-counts.
+                setModCount(tmpmodcount, tmpdmc)
+            }
+        }
 
-	/**
-	 * Clear the current list.
-	 */
-	@Override
-	public void clear() {
-		if (elementData != null) {
-			for (int i = 0; i < size; i++) {
-				Content obj = elementData[i];
-				removeParent(obj);
-			}
-			elementData = null;
-			size = 0;
-		}
-		incModCount();
-	}
+        return true
+    }
 
-	/**
-	 * Clear the current list and set it to the contents of the
-	 * <code>Collection</code>. object.
-	 * 
-	 * @param collection
-	 *        The collection to use.
-	 */
-	void clearAndSet(final Collection<? extends Content> collection) {
-		if (collection == null || collection.isEmpty()) {
-			clear();
-			return;
-		}
+    /**
+     * Clear the current list.
+     */
+    override fun clear() {
+        if (elementData != null) {
+            for (i in 0 until count) {
+                val obj = elementData!![i]!!
+                removeParent(obj)
+            }
+            elementData = null
+            count = 0
+        }
+        incModCount()
+    }
 
-		// keep a backup in case we need to roll-back...
-		final Content[] old = elementData;
-		final int oldSize = size;
-		final int oldModCount = getModCount();
-		final int oldDataModCount = getDataModCount();
+    /**
+     * Clear the current list and set it to the contents of the
+     * `Collection`. object.
+     *
+     * @param collection
+     *        The collection to use.
+     */
+    fun clearAndSet(collection: Collection<Content>?) {
+        if (collection == null || collection.isEmpty()) {
+            clear()
+            return
+        }
 
-		// clear the current system
-		// we need to detach before we add so that we don't run in to a problem
-		// where a content in the to-add list is one that we are 'clearing'
-		// first.
-		while (size > 0) {
-			old[--size].setParent(null);
-		}
-		size = 0;
-		elementData = null;
+        // keep a backup in case we need to roll-back...
+        val old = elementData
+        val oldSize = count
+        val oldModCount = getModCount()
+        val oldDataModCount = getDataModCount()
 
-		boolean ok = false;
-		try {
-			addAll(0, collection);
-			ok = true;
-		} finally {
-			if (!ok) {
-				// we have an exception pending....
-				// restore the old system.
-				// we do not need to worry about the added content
-				// because the failed addAll will clear it up.
-				// re-attach the old stuff
-				elementData = old;
-				while (size < oldSize) {
-					elementData[size++].setParent(parent);
-				}
-				setModCount(oldModCount, oldDataModCount);
-			}
-		}
+        // clear the current system
+        // we need to detach before we add so that we don't run in to a problem
+        // where a content in the to-add list is one that we are 'clearing'
+        // first.
+        while (count > 0) {
+            old!![--count]!!.setParent(null)
+        }
+        count = 0
+        elementData = null
 
-	}
+        var ok = false
+        try {
+            addAll(0, collection)
+            ok = true
+        } finally {
+            if (!ok) {
+                // we have an exception pending....
+                // restore the old system.
+                // we do not need to worry about the added content
+                // because the failed addAll will clear it up.
+                // re-attach the old stuff
+                elementData = old
+                while (count < oldSize) {
+                    elementData!![count++]!!.setParent(parent)
+                }
+                setModCount(oldModCount, oldDataModCount)
+            }
+        }
 
-	/**
-	 * Increases the capacity of this <code>ContentList</code> instance, if
-	 * necessary, to ensure that it can hold at least the number of items
-	 * specified by the minimum capacity argument.
-	 * 
-	 * @param minCapacity
-	 *        the desired minimum capacity.
-	 */
-	void ensureCapacity(final int minCapacity) {
-		if (elementData == null) {
-			elementData = new Content[Math.max(minCapacity, INITIAL_ARRAY_SIZE)];
-			return;
-		} else if (minCapacity < elementData.length) {
-			return;
-		}
-		// use algorithm Wilf suggests which is essentially the same
-		// as algorithm as ArrayList.ensureCapacity....
-		// typically the minCapacity is only slightly larger than
-		// the current capacity.... so grow from the current capacity
-		// with a double-check.
-		final int newcap = ((size * 3) / 2) + 1;
-		elementData = ArrayCopy.copyOf(elementData, 
-				(newcap < minCapacity ? minCapacity : newcap));
-	}
+    }
 
-	/**
-	 * Return the object at the specified offset.
-	 * 
-	 * @param index
-	 *        The offset of the object.
-	 * @return The Object which was returned.
-	 */
-	@Override
-	public Content get(final int index) {
-		checkIndex(index, true);
-		return elementData[index];
-	}
+    /**
+     * Increases the capacity of this `ContentList` instance, if
+     * necessary, to ensure that it can hold at least the number of items
+     * specified by the minimum capacity argument.
+     *
+     * @param minCapacity
+     *        the desired minimum capacity.
+     */
+    fun ensureCapacity(minCapacity: Int) {
+        val data = elementData
+        if (data == null) {
+            elementData = arrayOfNulls<Content>(Math.max(minCapacity, INITIAL_ARRAY_SIZE))
+            return
+        } else if (minCapacity < data.size) {
+            return
+        }
+        // use algorithm Wilf suggests which is essentially the same
+        // as algorithm as ArrayList.ensureCapacity....
+        // typically the minCapacity is only slightly larger than
+        // the current capacity.... so grow from the current capacity
+        // with a double-check.
+        val newcap = ((count * 3) / 2) + 1
+        elementData = ArrayCopy.copyOf(
+            data,
+            (if (newcap < minCapacity) minCapacity else newcap)
+        )
+    }
 
-	/**
-	 * Return a view of this list based on the given filter.
-	 * 
-	 * @param <E>
-	 *        The Generic type of the content as set by the Filter.
-	 * @param filter
-	 *        <code>Filter</code> for this view.
-	 * @return a list representing the rules of the <code>Filter</code>.
-	 */
-	<E extends Content> List<E> getView(final Filter<E> filter) {
-		return new FilterList<E>(filter);
-	}
+    /**
+     * Return the object at the specified offset.
+     *
+     * @param index
+     *        The offset of the object.
+     * @return The Object which was returned.
+     */
+    override fun get(index: Int): Content {
+        checkIndex(index, true)
+        return elementData!![index]!!
+    }
 
-	/**
-	 * Return the index of the first Element in the list. If the parent is a
-	 * <code>Document</code> then the element is the root element. If the list
-	 * contains no Elements, it returns -1.
-	 * 
-	 * @return index of first element, or -1 if one doesn't exist
-	 */
-	int indexOfFirstElement() {
-		if (elementData != null) {
-			for (int i = 0; i < size; i++) {
-				if (elementData[i] instanceof Element) {
-					return i;
-				}
-			}
-		}
-		return -1;
-	}
+    /**
+     * Return a view of this list based on the given filter.
+     *
+     * @param <E>
+     *        The Generic type of the content as set by the Filter.
+     * @param filter
+     *        `Filter` for this view.
+     * @return a list representing the rules of the `Filter`.
+     */
+    fun <E : Content> getView(filter: Filter<E>): MutableList<E> {
+        return FilterList<E>(filter)
+    }
 
-	/**
-	 * Return the index of the DocType element in the list. If the list contains
-	 * no DocType, it returns -1.
-	 * 
-	 * @return index of the DocType, or -1 if it doesn't exist
-	 */
-	int indexOfDocType() {
-		if (elementData != null) {
-			for (int i = 0; i < size; i++) {
-				if (elementData[i] instanceof DocType) {
-					return i;
-				}
-			}
-		}
-		return -1;
-	}
+    /**
+     * Return the index of the first Element in the list. If the parent is a
+     * `Document` then the element is the root element. If the list
+     * contains no Elements, it returns -1.
+     *
+     * @return index of first element, or -1 if one doesn't exist
+     */
+    fun indexOfFirstElement(): Int {
+        if (elementData != null) {
+            for (i in 0 until count) {
+                if (elementData!![i] is Element) {
+                    return i
+                }
+            }
+        }
+        return -1
+    }
 
-	/**
-	 * Remove the object at the specified offset.
-	 * 
-	 * @param index
-	 *        The offset of the object.
-	 * @return The Object which was removed.
-	 */
-	@Override
-	public Content remove(final int index) {
-		checkIndex(index, true);
+    /**
+     * Return the index of the DocType element in the list. If the list contains
+     * no DocType, it returns -1.
+     *
+     * @return index of the DocType, or -1 if it doesn't exist
+     */
+    fun indexOfDocType(): Int {
+        if (elementData != null) {
+            for (i in 0 until count) {
+                if (elementData!![i] is DocType) {
+                    return i
+                }
+            }
+        }
+        return -1
+    }
 
-		final Content old = elementData[index];
-		removeParent(old);
-		System.arraycopy(elementData, index + 1, elementData, index, size - index - 1);
-		elementData[--size] = null; // Let gc do its work
-		incModCount();
-		return old;
-	}
+    /**
+     * Remove the object at the specified offset.
+     *
+     * @param index
+     *        The offset of the object.
+     * @return The Object which was removed.
+     */
+    override fun removeAt(index: Int): Content {
+        checkIndex(index, true)
 
-	/** Remove the parent of a Object */
-	private static void removeParent(final Content c) {
-		c.setParent(null);
-	}
+        val old = elementData!![index]!!
+        removeParent(old)
+        System.arraycopy(elementData!!, index + 1, elementData!!, index, count - index - 1)
+        elementData!![--count] = null // Let gc do its work
+        incModCount()
+        return old
+    }
 
-	/**
-	 * Set the object at the specified location to the supplied object.
-	 * 
-	 * @param index
-	 *        The location to set the value to.
-	 * @param child
-	 *        The location to set the value to.
-	 * @return The object which was replaced. throws IndexOutOfBoundsException
-	 *         if index < 0 || index >= size()
-	 */
-	@Override
-	public Content set(final int index, final Content child) {
-		// Confirm basic sanity of child.
-		checkPreConditions(child, index, true);
+    /**
+     * Set the object at the specified location to the supplied object.
+     *
+     * @param index
+     *        The location to set the value to.
+     * @param element
+     *        The location to set the value to.
+     * @return The object which was replaced. throws IndexOutOfBoundsException
+     *         if index < 0 || index >= size()
+     */
+    override fun set(index: Int, element: Content): Content {
+        val child = element
+        // Confirm basic sanity of child.
+        checkPreConditions(child, index, true)
 
-		// Ensure the detail checks out OK too.
-		parent.canContainContent(child, index, true);
+        // Ensure the detail checks out OK too.
+        parent.canContainContent(child, index, true)
 
-		/*
-		 * Do a special case of set() where we don't do a remove() then add()
-		 * because that affects the modCount. We want to do a true set(). See
-		 * issue #15
-		 */
+        /*
+         * Do a special case of set() where we don't do a remove() then add()
+         * because that affects the modCount. We want to do a true set(). See
+         * issue #15
+         */
 
-		final Content old = elementData[index];
-		removeParent(old);
-		child.setParent(parent);
-		elementData[index] = child;
-		// for set method we increment dataModCount, but not modCount
-		// set does not change the structure of the List (size())
-		incDataModOnly();
-		return old;
-	}
+        val old = elementData!![index]!!
+        removeParent(old)
+        child.setParent(parent)
+        elementData!![index] = child
+        // for set method we increment dataModCount, but not modCount
+        // set does not change the structure of the List (size())
+        incDataModOnly()
+        return old
+    }
 
-	/**
-	 * Return the number of items in this list
-	 * 
-	 * @return The number of items in this list.
-	 */
-	@Override
-	public int size() {
-		return size;
-	}
+    /**
+     * Return the number of items in this list
+     *
+     * @return The number of items in this list.
+     */
+    override val size: Int
+        get() = count
 
-	@Override
-	public Iterator<Content> iterator() {
-		return new CLIterator();
-	}
-	
-	@Override
-	public ListIterator<Content> listIterator() {
-		return new CLListIterator(0);
-	}
+    override fun iterator(): MutableIterator<Content> {
+        return CLIterator()
+    }
 
-	@Override
-	public ListIterator<Content> listIterator(final int start) {
-		return new CLListIterator(start);
-	}
+    override fun listIterator(): MutableListIterator<Content> {
+        return CLListIterator(0)
+    }
 
-	/**
-	 * Return this list as a <code>String</code>
-	 * 
-	 * @return The String representation of this list.
-	 */
-	@Override
-	public String toString() {
-		return super.toString();
-	}
-	
-	private void sortInPlace(final int[] indexes) {
-		// the indexes are a discrete set of values that have no duplicates,
-		// and describe the relative order of each of them.
-		// as a result, we can do some tricks....
-		final int[] unsorted = ArrayCopy.copyOf(indexes, indexes.length);
-		Arrays.sort(unsorted);
-		final Content[] usc = new Content[unsorted.length];
-		for (int i = 0; i < usc.length; i++) {
-			usc[i] = elementData[indexes[i]];
-		}
-		// usc contains the content in their pre-sorted order....
-		for (int i = 0; i < indexes.length; i ++) {
-			elementData[unsorted[i]] = usc[i];
-		}
-	}
+    override fun listIterator(index: Int): MutableListIterator<Content> {
+        return CLListIterator(index)
+    }
 
-	/**
-	 * Unlike the Arrays.binarySearch, this method never expects an
-	 * "already exists" condition, we only ever add, thus there will never
-	 * be a negative insertion-point.
-	 * @param indexes THe pointers to search within
-	 * @param len The number of pointers to search within
-	 * @param val The pointer we are checking for.
-	 * @param comp The Comparator to compare with
-	 * @return the insertion point.
-	 */
-	private final int binarySearch(final int[] indexes, final int len,
-			final int val, final Comparator<? super Content> comp) {
-		int left = 0, mid = 0, right = len - 1, cmp = 0;
-		final Content base = elementData[val];
-		while (left <= right) {
-			mid = (left + right) >>> 1;
-			cmp = comp.compare(base, elementData[indexes[mid]]);
-			if (cmp == 0) {
-				while (cmp == 0 && mid < right && comp.compare(
-						base, elementData[indexes[mid + 1]]) == 0) {
-					mid++;
-				}
-				return mid + 1;
-			} else if (cmp < 0) {
-				right = mid - 1;
-			} else {
-				left = mid + 1;
-			}
-		}
-		return left;
-	}
-	
+    /**
+     * Return this list as a `String`
+     *
+     * @return The String representation of this list.
+     */
+    override fun toString(): String {
+        return super.toString()
+    }
+
+    private fun sortInPlace(indexes: IntArray) {
+        // the indexes are a discrete set of values that have no duplicates,
+        // and describe the relative order of each of them.
+        // as a result, we can do some tricks....
+        val unsorted = ArrayCopy.copyOf(indexes, indexes.size)
+        Arrays.sort(unsorted)
+        val usc = arrayOfNulls<Content>(unsorted.size)
+        for (i in usc.indices) {
+            usc[i] = elementData!![indexes[i]]
+        }
+        // usc contains the content in their pre-sorted order....
+        for (i in indexes.indices) {
+            elementData!![unsorted[i]] = usc[i]
+        }
+    }
+
+    /**
+     * Unlike the Arrays.binarySearch, this method never expects an
+     * "already exists" condition, we only ever add, thus there will never
+     * be a negative insertion-point.
+     * @param indexes THe pointers to search within
+     * @param len The number of pointers to search within
+     * @param `val` The pointer we are checking for.
+     * @param comp The Comparator to compare with
+     * @return the insertion point.
+     */
+    private fun binarySearch(
+        indexes: IntArray, len: Int,
+        `val`: Int, comp: Comparator<in Content>
+    ): Int {
+        var left = 0
+        var mid = 0
+        var right = len - 1
+        var cmp = 0
+        val base = elementData!![`val`]
+        while (left <= right) {
+            mid = (left + right) ushr 1
+            cmp = comp.compare(base, elementData!![indexes[mid]])
+            if (cmp == 0) {
+                while (cmp == 0 && mid < right && comp.compare(
+                        base, elementData!![indexes[mid + 1]]
+                    ) == 0
+                ) {
+                    mid++
+                }
+                return mid + 1
+            } else if (cmp < 0) {
+                right = mid - 1
+            } else {
+                left = mid + 1
+            }
+        }
+        return left
+    }
+
     /**
      * Sorts this list using the supplied Comparator to compare elements.
-     * 
+     *
      * @param comp - the Comparator used to compare list elements. A null value indicates that the elements' natural ordering should be used
      * @Since 2.0.6
      */
-	// @Override - only in Java8
-	public final void sort(final Comparator<? super Content> comp) {
+    // @Override - only in Java8
+    override fun sort(comp: Comparator<in Content>?) {
 
-	    if (comp == null) {
+        if (comp == null) {
             // sort by the 'natural order', which, there is none.
             // options, throw exception, or let the current-order represent the natural order.
             // do nothing is the better alternative.
-            return;
+            return
         }
 
-		final int sz = size;
-		int[] indexes = new int[sz];
-		for (int i = 0 ; i < sz; i++) {
-			final int ip = binarySearch(indexes, i, i, comp);
-			if (ip < i) {
-				System.arraycopy(indexes, ip, indexes, ip+1, i - ip);
-			}
-			indexes[ip] = i;
-		}
-		sortInPlace(indexes);
-	}
-	
-	/* * * * * * * * * * * * * ContentListIterator * * * * * * * * * * * * * * * */
-	/* * * * * * * * * * * * * ContentListIterator * * * * * * * * * * * * * * * */
-	/**
-	 * A fast implementation of Iterator.
-	 * <p>
-	 * It is fast because it is tailored to the ContentList, and not the
-	 * flexible implementation used by AbstractList. It needs to be fast because
-	 * iterator() is used extensively in the for-each type loop.
-	 * 
-	 * @author Rolf Lear
-	 */
-	private final class CLIterator implements Iterator<Content> {
-		private int expect = -1;
-		private int cursor = 0;
-		private boolean canremove = false;
-
-		private CLIterator() {
-			expect = getModCount();
-		}
-
-		@Override
-		public boolean hasNext() {
-			return cursor < size;
-		}
-
-		@Override
-		public Content next() {
-			if (getModCount() != expect) {
-				throw new ConcurrentModificationException("ContentList was " +
-						"modified outside of this Iterator");
-			}
-			if (cursor >= size) {
-				throw new NoSuchElementException("Iterated beyond the end of " +
-						"the ContentList.");
-			}
-			canremove = true;
-			return elementData[cursor++];
-		}
-
-		@Override
-		public void remove() {
-			if (getModCount() != expect) {
-				throw new ConcurrentModificationException("ContentList was " +
-						"modified outside of this Iterator");
-			}
-			if (!canremove) {
-				throw new IllegalStateException("Can only remove() content " +
-						"after a call to next()");
-			}
-			canremove = false;
-			ContentList.this.remove(--cursor);
-			expect = getModCount();
-		}
-
-	}
-
-	/* * * * * * * * * * * * * ContentListIterator * * * * * * * * * * * * * * * */
-	/* * * * * * * * * * * * * ContentListIterator * * * * * * * * * * * * * * * */
-	/**
-	 * A fast implementation of Iterator.
-	 * <p>
-	 * It is fast because it is tailored to the ContentList, and not the
-	 * flexible implementation used by AbstractList. It needs to be fast because
-	 * iterator() is used extensively in the for-each type loop.
-	 * 
-	 * @author Rolf Lear
-	 */
-	private final class CLListIterator implements ListIterator<Content> {
-		/** Whether this iterator is in forward or reverse. */
-		private boolean forward = false;
-		/** Whether a call to remove() is valid */
-		private boolean canremove = false;
-		/** Whether a call to set() is valid */
-		private boolean canset = false;
-
-		/** Expected modCount in our backing list */
-		private int expectedmod = -1;
-
-		private int cursor = -1;
-
-		/**
-		 * Default constructor
-		 * 
-		 * @param flist
-		 *        The FilterList over which we will iterate.
-		 * @param start
-		 *        where in the FilterList to start iteration.
-		 */
-		CLListIterator(final int start) {
-			expectedmod = getModCount();
-			// always start list iterators in backward mode ....
-			// it makes sense... really.
-			forward = false;
-
-			checkIndex(start, false);
-
-			cursor = start;
-		}
-
-		private void checkConcurrent() {
-			if (expectedmod != getModCount()) {
-				throw new ConcurrentModificationException("The ContentList " +
-						"supporting this iterator has been modified by" +
-						"something other than this Iterator.");
-			}
-		}
-
-		/**
-		 * Returns <code>true</code> if this list iterator has a next element.
-		 */
-		@Override
-		public boolean hasNext() {
-			return (forward ? cursor + 1 : cursor) < size;
-		}
-
-		/**
-		 * Returns <code>true</code> if this list iterator has more elements
-		 * when traversing the list in the reverse direction.
-		 */
-		@Override
-		public boolean hasPrevious() {
-			return (forward ? cursor : cursor - 1) >= 0;
-		}
-
-		/**
-		 * Returns the index of the element that would be returned by a
-		 * subsequent call to <code>next</code>.
-		 */
-		@Override
-		public int nextIndex() {
-			return forward ? cursor + 1 : cursor;
-		}
-
-		/**
-		 * Returns the index of the element that would be returned by a
-		 * subsequent call to <code>previous</code>. (Returns -1 if the list
-		 * iterator is at the beginning of the list.)
-		 */
-		@Override
-		public int previousIndex() {
-			return forward ? cursor : cursor - 1;
-		}
-
-		/**
-		 * Returns the next element in the list.
-		 */
-		@Override
-		public Content next() {
-			checkConcurrent();
-			final int next = forward ? cursor + 1 : cursor;
-
-			if (next >= size) {
-				throw new NoSuchElementException("next() is beyond the end of the Iterator");
-			}
-
-			cursor = next;
-			forward = true;
-			canremove = true;
-			canset = true;
-			return elementData[cursor];
-		}
-
-		/**
-		 * Returns the previous element in the list.
-		 */
-		@Override
-		public Content previous() {
-			checkConcurrent();
-			final int prev = forward ? cursor : cursor - 1;
-
-			if (prev < 0) {
-				throw new NoSuchElementException("previous() is beyond the beginning of the Iterator");
-			}
-
-			cursor = prev;
-			forward = false;
-			canremove = true;
-			canset = true;
-			return elementData[cursor];
-		}
-
-		/**
-		 * Inserts the specified element into the list .
-		 */
-		@Override
-		public void add(final Content obj) {
-			checkConcurrent();
-			// always add before what would normally be returned by next();
-			final int next = forward ? cursor + 1 : cursor;
-
-			ContentList.this.add(next, obj);
-
-			expectedmod = getModCount();
-
-			canremove = canset = false;
-
-			// a call to next() should be unaffected, so, whatever was going to
-			// be next will still be next, remember, what was going to be next
-			// has been shifted 'right' by our insert.
-			// we ensure this by setting the cursor to next(), and making it
-			// forward
-			cursor = next;
-			forward = true;
-		}
-
-		/**
-		 * Removes from the list the last element that was returned by the last
-		 * call to <code>next</code> or <code>previous</code>.
-		 */
-		@Override
-		public void remove() {
-			checkConcurrent();
-			if (!canremove)
-				throw new IllegalStateException("Can not remove an "
-						+ "element unless either next() or previous() has been called "
-						+ "since the last remove()");
-			// we are removing the last entry returned by either next() or
-			// previous().
-			// the idea is to remove it, and pretend that we used to be at the
-			// entry that happened *after* the removed entry.
-			// so, get what would be the next entry (set at tmpcursor).
-			// so call nextIndex to set tmpcursor to what would come after.
-			ContentList.this.remove(cursor);
-			forward = false;
-			expectedmod = getModCount();
-
-			canremove = false;
-			canset = false;
-		}
-
-		/**
-		 * Replaces the last element returned by <code>next</code> or
-		 * <code>previous</code> with the specified element.
-		 */
-		@Override
-		public void set(final Content obj) {
-			checkConcurrent();
-			if (!canset) {
-				throw new IllegalStateException("Can not set an element "
-						+ "unless either next() or previous() has been called since the "
-						+ "last remove() or set()");
-			}
-
-			ContentList.this.set(cursor, obj);
-			expectedmod = getModCount();
-
-		}
-
-	}
-
-	/* * * * * * * * * * * * * FilterList * * * * * * * * * * * * * * * */
-	/* * * * * * * * * * * * * FilterList * * * * * * * * * * * * * * * */
-
-	/**
-	 * <code>FilterList</code> represents legal JDOM content, including content
-	 * for <code>Document</code>s or <code>Element</code>s.
-	 * <p>
-	 * FilterList represents a dynamic view of the backing ContentList, changes
-	 * to the backing list are reflected in the FilterList, and visa-versa.
-	 * 
-	 * @param <F>
-	 *        The Generic type of content accepted by the underlying Filter.
-	 */
-
-	class FilterList<F extends Content> extends AbstractList<F> {
-
-		// The filter to apply
-		final Filter<F> filter;
-		// correlate the position in the filtered list to the index in the
-		// backing ContentList.
-		int[] backingpos = new int[size + INITIAL_ARRAY_SIZE];
-		int backingsize = 0;
-		// track data modifications in the backing ContentList.
-		int xdata = -1;
-
-		/**
-		 * Create a new instance of the FilterList with the specified Filter.
-		 * 
-		 * @param filter
-		 *        The underlying Filter to use for filtering the content.
-		 */
-		FilterList(final Filter<F> filter) {
-			this.filter = filter;
-		}
-		
-		/**
-		 * Returns true if there is no content in this FilterList.
-		 * @return true if there is no content in this FilterList
-		 */
-		@Override
-		public boolean isEmpty() {
-			// More efficient implementation than default size() == 0
-			// we use resync() to accomplish the task. If there is an
-			// element 0 in this FilterList, then it is not empty!
-			// we may already have resync'd 0, which will be a fast return then,
-			// or, if we have not resync'd 0, then we only have to filter up to
-			// the first matching element to get a result (or the whole list
-			// if isEmpty() is true).
-			return resync(0) == size;
-		}
-
-		/**
-		 * Synchronise our view to the backing list. Only synchronise the first
-		 * <code>index</code> view elements. For want of a better word, we'll
-		 * call this a 'Lazy' implementation.
-		 * 
-		 * @param index
-		 *        how much we want to sync. Set to -1 to synchronise everything.
-		 * @return the index in the backing array of the <i>index'th</i> match.
-		 *         or the backing data size if there is no match for the index.
-		 */
-		private final int resync(final int index) {
-			if (xdata != getDataModCount()) {
-				// The underlying list was modified somehow...
-				// we need to invalidate our research...
-				xdata = getDataModCount();
-				backingsize = 0;
-				if (size >= backingpos.length) {
-					backingpos = new int[size + 1];
-				}
-			}
-
-			if (index >= 0 && index < backingsize) {
-				// we have already indexed far enough...
-				// return the backing index.
-				return backingpos[index];
-			}
-
-			// the index in the backing list of the next value to check.
-			int bpi = 0;
-			if (backingsize > 0) {
-				bpi = backingpos[backingsize - 1] + 1;
-			}
-
-			while (bpi < size) {
-				final F gotit = filter.filter(elementData[bpi]);
-				if (gotit != null) {
-					backingpos[backingsize] = bpi;
-					if (backingsize++ == index) {
-						return bpi;
-					}
-				}
-				bpi++;
-			}
-			return size;
-		}
-
-		/**
-		 * Inserts the specified object at the specified position in this list.
-		 * Shifts the object currently at that position (if any) and any
-		 * subsequent objects to the right (adds one to their indices).
-		 * 
-		 * @param index
-		 *        The location to set the value to.
-		 * @param obj
-		 *        The object to insert into the list. throws
-		 *        IndexOutOfBoundsException if index < 0 || index > size()
-		 */
-		@Override
-		public void add(final int index, final Content obj) {
-			if (index < 0) {
-				throw new IndexOutOfBoundsException("Index: " + index + " Size: " + size());
-			}
-			int adj = resync(index);
-			if (adj == size && index > size()) {
-				throw new IndexOutOfBoundsException("Index: " + index + " Size: " + size());
-			}
-			if (filter.matches(obj)) {
-				ContentList.this.add(adj, obj);
-
-				// we can optimise the laziness now by doing a partial reset on
-				// the backing list... invalidate everything *after* the added
-				// content
-				if (backingpos.length <= size) {
-					backingpos = ArrayCopy.copyOf(backingpos, backingpos.length + 1);
-				}
-				backingpos[index] = adj;
-				backingsize = index + 1;
-				xdata = getDataModCount();
-
-			} else {
-				throw new IllegalAddException("Filter won't allow the " +
-						obj.getClass().getName() +
-						" '" + obj + "' to be added to the list");
-			}
-		}
-
-		@Override
-		public boolean addAll(final int index, 
-				final Collection<? extends F> collection) {
-			if (collection == null) {
-				throw new NullPointerException("Cannot add a null collection");
-			}
-
-			if (index < 0) {
-				throw new IndexOutOfBoundsException("Index: " + index + " Size: " + size());
-			}
-
-			final int adj = resync(index);
-			if (adj == size && index > size()) {
-				throw new IndexOutOfBoundsException("Index: " + index + " Size: " + size());
-			}
-
-			final int addcnt = collection.size();
-			if (addcnt == 0) {
-				return false;
-			}
-
-			ContentList.this.ensureCapacity(ContentList.this.size() + addcnt);
-
-			final int tmpmodcount = getModCount();
-			final int tmpdmc = getDataModCount();
-			boolean ok = false;
-
-			int count = 0;
-
-			try {
-				for (Content c : collection) {
-					if (c == null) {
-						throw new NullPointerException(
-								"Cannot add null content");
-					}
-					if (filter.matches(c)) {
-						ContentList.this.add(adj + count, c);
-						// we can optimise the laziness now by doing a partial
-						// reset on
-						// the backing list... invalidate everything *after* the
-						// added
-						// content
-						if (backingpos.length <= size) {
-							backingpos = ArrayCopy.copyOf(backingpos, backingpos.length + addcnt);
-						}
-						backingpos[index + count] = adj + count;
-						backingsize = index + count + 1;
-						xdata = getDataModCount();
-
-						count++;
-					} else {
-						throw new IllegalAddException("Filter won't allow the " +
-								c.getClass().getName() +
-								" '" + c + "' to be added to the list");
-
-					}
-				}
-				ok = true;
-			} finally {
-				if (!ok) {
-					// something failed... remove all added content
-					while (--count >= 0) {
-						ContentList.this.remove(adj + count);
-					}
-					// restore the mod-counts.
-					setModCount(tmpmodcount, tmpdmc);
-					// reset the cache... will need to redo some work on another
-					// call maybe....
-					backingsize = index;
-					xdata = tmpmodcount;
-				}
-			}
-
-			return true;
-		}
-
-		/**
-		 * Return the object at the specified offset.
-		 * 
-		 * @param index
-		 *        The offset of the object.
-		 * @return The Object which was returned.
-		 */
-		@Override
-		public F get(final int index) {
-			if (index < 0) {
-				throw new IndexOutOfBoundsException("Index: " + index + " Size: " + size());
-			}
-			final int adj = resync(index);
-			if (adj == size) {
-				throw new IndexOutOfBoundsException("Index: " + index + " Size: " + size());
-			}
-			return filter.filter(ContentList.this.get(adj));
-		}
-
-		@Override
-		public Iterator<F> iterator() {
-			return new FilterListIterator<F>(this, 0);
-		}
-
-		@Override
-		public ListIterator<F> listIterator() {
-			return new FilterListIterator<F>(this, 0);
-		}
-
-		@Override
-		public ListIterator<F> listIterator(final int index) {
-			return new FilterListIterator<F>(this, index);
-		}
-
-		/**
-		 * Remove the object at the specified offset.
-		 * 
-		 * @param index
-		 *        The offset of the object.
-		 * @return The Object which was removed.
-		 */
-		@Override
-		public F remove(final int index) {
-			if (index < 0) {
-				throw new IndexOutOfBoundsException("Index: " + index + " Size: " + size());
-			}
-			final int adj = resync(index);
-			if (adj == size) {
-				throw new IndexOutOfBoundsException("Index: " + index + " Size: " + size());
-			}
-			final Content oldc = ContentList.this.remove(adj);
-			// optimise the backing cache.
-			backingsize = index;
-			xdata = getDataModCount();
-			// use Filter to ensure the cast is right.
-			return filter.filter(oldc);
-		}
-
-		/**
-		 * Set the object at the specified location to the supplied object.
-		 * 
-		 * @param index
-		 *        The location to set the value to.
-		 * @param obj
-		 *        The location to set the value to.
-		 * @return The object which was replaced. throws
-		 *         IndexOutOfBoundsException if index < 0 || index >= size()
-		 */
-		@Override
-		public F set(final int index, final F obj) {
-			if (index < 0) {
-				throw new IndexOutOfBoundsException("Index: " + index + " Size: " + size());
-			}
-			final int adj = resync(index);
-			if (adj == size) {
-				throw new IndexOutOfBoundsException("Index: " + index + " Size: " + size());
-			}
-			final F ins = filter.filter(obj);
-			if (ins != null) {
-				final F oldc = filter.filter(ContentList.this.set(adj, ins));
-				// optimize the backing....
-				xdata = getDataModCount();
-				return oldc;
-			}
-			throw new IllegalAddException("Filter won't allow index " +
-					index + " to be set to " +
-					(obj.getClass()).getName());
-		}
-
-		/**
-		 * Return the number of items in this list
-		 * 
-		 * @return The number of items in this list.
-		 */
-		@Override
-		public int size() {
-			resync(-1);
-			return backingsize;
-		}
-
-		/**
-		 * Unlike the Arrays.binarySearch, this method never expects an
-		 * "already exists" condition, we only ever add, thus there will never
-		 * be a negative insertion-point.
-		 * @param indexes THe pointers to search within
-		 * @param len The number of pointers to search within
-		 * @param val The pointer we are checking for.
-		 * @param comp The Comparator to compare with
-		 * @return the insertion point.
-		 */
-		@SuppressWarnings("unchecked")
-		private final int fbinarySearch(final int[] indexes, final int len,
-				final int val, final Comparator<? super F> comp) {
-			int left = 0, mid = 0, right = len - 1, cmp = 0;
-			final F base = (F)elementData[backingpos[val]];
-			while (left <= right) {
-				mid = (left + right) >>> 1;
-				cmp = comp.compare(base, (F)elementData[indexes[mid]]);
-				if (cmp == 0) {
-					while (cmp == 0 && mid < right && comp.compare(
-							base, (F)elementData[indexes[mid + 1]]) == 0) {
-						mid++;
-					}
-					return mid + 1;
-				} else if (cmp < 0) {
-					right = mid - 1;
-				} else {
-					left = mid + 1;
-				}
-			}
-			return left;
-		}
-		
-
-		/**
-		 * Sorts this list using the supplied Comparator to compare elements.
-		 * 
-		 * @param comp - the Comparator used to compare list elements. A null value indicates that the elements' natural ordering should be used
+        val sz = count
+        val indexes = IntArray(sz)
+        for (i in 0 until sz) {
+            val ip = binarySearch(indexes, i, i, comp)
+            if (ip < i) {
+                System.arraycopy(indexes, ip, indexes, ip + 1, i - ip)
+            }
+            indexes[ip] = i
+        }
+        sortInPlace(indexes)
+    }
+
+    /* * * * * * * * * * * * * ContentListIterator * * * * * * * * * * * * * * * */
+    /* * * * * * * * * * * * * ContentListIterator * * * * * * * * * * * * * * * */
+    /**
+     * A fast implementation of Iterator.
+     *
+     * It is fast because it is tailored to the ContentList, and not the
+     * flexible implementation used by AbstractList. It needs to be fast because
+     * iterator() is used extensively in the for-each type loop.
+     *
+     * @author Rolf Lear
+     */
+    private inner class CLIterator : MutableIterator<Content> {
+        private var expect = -1
+        private var cursor = 0
+        private var canremove = false
+
+        init {
+            expect = getModCount()
+        }
+
+        override fun hasNext(): Boolean {
+            return cursor < count
+        }
+
+        override fun next(): Content {
+            if (getModCount() != expect) {
+                throw ConcurrentModificationException(
+                    "ContentList was " +
+                            "modified outside of this Iterator"
+                )
+            }
+            if (cursor >= count) {
+                throw NoSuchElementException(
+                    "Iterated beyond the end of " +
+                            "the ContentList."
+                )
+            }
+            canremove = true
+            return elementData!![cursor++]!!
+        }
+
+        override fun remove() {
+            if (getModCount() != expect) {
+                throw ConcurrentModificationException(
+                    "ContentList was " +
+                            "modified outside of this Iterator"
+                )
+            }
+            if (!canremove) {
+                throw IllegalStateException(
+                    "Can only remove() content " +
+                            "after a call to next()"
+                )
+            }
+            canremove = false
+            this@ContentList.removeAt(--cursor)
+            expect = getModCount()
+        }
+
+    }
+
+    /* * * * * * * * * * * * * ContentListIterator * * * * * * * * * * * * * * * */
+    /* * * * * * * * * * * * * ContentListIterator * * * * * * * * * * * * * * * */
+    /**
+     * A fast implementation of Iterator.
+     *
+     * It is fast because it is tailored to the ContentList, and not the
+     * flexible implementation used by AbstractList. It needs to be fast because
+     * iterator() is used extensively in the for-each type loop.
+     *
+     * @author Rolf Lear
+     */
+    private inner class CLListIterator
+    /**
+     * Default constructor
+     *
+     * @param flist
+     *        The FilterList over which we will iterate.
+     * @param start
+     *        where in the FilterList to start iteration.
+     */
+    (start: Int) : MutableListIterator<Content> {
+        /** Whether this iterator is in forward or reverse.  */
+        private var forward = false
+
+        /** Whether a call to remove() is valid  */
+        private var canremove = false
+
+        /** Whether a call to set() is valid  */
+        private var canset = false
+
+        /** Expected modCount in our backing list  */
+        private var expectedmod = -1
+
+        private var cursor = -1
+
+        init {
+            expectedmod = getModCount()
+            // always start list iterators in backward mode ....
+            // it makes sense... really.
+            forward = false
+
+            checkIndex(start, false)
+
+            cursor = start
+        }
+
+        private fun checkConcurrent() {
+            if (expectedmod != getModCount()) {
+                throw ConcurrentModificationException(
+                    "The ContentList " +
+                            "supporting this iterator has been modified by" +
+                            "something other than this Iterator."
+                )
+            }
+        }
+
+        /**
+         * Returns `true` if this list iterator has a next element.
+         */
+        override fun hasNext(): Boolean {
+            return (if (forward) cursor + 1 else cursor) < count
+        }
+
+        /**
+         * Returns `true` if this list iterator has more elements
+         * when traversing the list in the reverse direction.
+         */
+        override fun hasPrevious(): Boolean {
+            return (if (forward) cursor else cursor - 1) >= 0
+        }
+
+        /**
+         * Returns the index of the element that would be returned by a
+         * subsequent call to `next`.
+         */
+        override fun nextIndex(): Int {
+            return if (forward) cursor + 1 else cursor
+        }
+
+        /**
+         * Returns the index of the element that would be returned by a
+         * subsequent call to `previous`. (Returns -1 if the list
+         * iterator is at the beginning of the list.)
+         */
+        override fun previousIndex(): Int {
+            return if (forward) cursor else cursor - 1
+        }
+
+        /**
+         * Returns the next element in the list.
+         */
+        override fun next(): Content {
+            checkConcurrent()
+            val next = if (forward) cursor + 1 else cursor
+
+            if (next >= count) {
+                throw NoSuchElementException("next() is beyond the end of the Iterator")
+            }
+
+            cursor = next
+            forward = true
+            canremove = true
+            canset = true
+            return elementData!![cursor]!!
+        }
+
+        /**
+         * Returns the previous element in the list.
+         */
+        override fun previous(): Content {
+            checkConcurrent()
+            val prev = if (forward) cursor else cursor - 1
+
+            if (prev < 0) {
+                throw NoSuchElementException("previous() is beyond the beginning of the Iterator")
+            }
+
+            cursor = prev
+            forward = false
+            canremove = true
+            canset = true
+            return elementData!![cursor]!!
+        }
+
+        /**
+         * Inserts the specified element into the list .
+         */
+        override fun add(element: Content) {
+            checkConcurrent()
+            // always add before what would normally be returned by next();
+            val next = if (forward) cursor + 1 else cursor
+
+            this@ContentList.add(next, element)
+
+            expectedmod = getModCount()
+
+            canset = false
+            canremove = canset
+
+            // a call to next() should be unaffected, so, whatever was going to
+            // be next will still be next, remember, what was going to be next
+            // has been shifted 'right' by our insert.
+            // we ensure this by setting the cursor to next(), and making it
+            // forward
+            cursor = next
+            forward = true
+        }
+
+        /**
+         * Removes from the list the last element that was returned by the last
+         * call to `next` or `previous`.
+         */
+        override fun remove() {
+            checkConcurrent()
+            if (!canremove)
+                throw IllegalStateException(
+                    "Can not remove an "
+                            + "element unless either next() or previous() has been called "
+                            + "since the last remove()"
+                )
+            // we are removing the last entry returned by either next() or
+            // previous().
+            // the idea is to remove it, and pretend that we used to be at the
+            // entry that happened *after* the removed entry.
+            // so, get what would be the next entry (set at tmpcursor).
+            // so call nextIndex to set tmpcursor to what would come after.
+            this@ContentList.removeAt(cursor)
+            forward = false
+            expectedmod = getModCount()
+
+            canremove = false
+            canset = false
+        }
+
+        /**
+         * Replaces the last element returned by `next` or
+         * `previous` with the specified element.
+         */
+        override fun set(element: Content) {
+            checkConcurrent()
+            if (!canset) {
+                throw IllegalStateException(
+                    "Can not set an element "
+                            + "unless either next() or previous() has been called since the "
+                            + "last remove() or set()"
+                )
+            }
+
+            this@ContentList.set(cursor, element)
+            expectedmod = getModCount()
+
+        }
+
+    }
+
+    /* * * * * * * * * * * * FilterList * * * * * * * * * * * * * * * */
+    /* * * * * * * * * * * * * FilterList * * * * * * * * * * * * * * * */
+
+    /**
+     * `FilterList` represents legal JDOM content, including content
+     * for `Document`s or `Element`s.
+     *
+     * FilterList represents a dynamic view of the backing ContentList, changes
+     * to the backing list are reflected in the FilterList, and visa-versa.
+     *
+     * @param <F>
+     *        The Generic type of content accepted by the underlying Filter.
+     */
+    inner class FilterList<F : Content>
+    /**
+     * Create a new instance of the FilterList with the specified Filter.
+     *
+     * @param filter
+     *        The underlying Filter to use for filtering the content.
+     */
+    internal constructor(
+        // The filter to apply
+        @JvmField internal val filter: Filter<F>
+    ) : AbstractMutableList<F>() {
+
+        // correlate the position in the filtered list to the index in the
+        // backing ContentList.
+        @JvmField
+        internal var backingpos: IntArray = IntArray(count + INITIAL_ARRAY_SIZE)
+
+        @JvmField
+        internal var backingsize = 0
+
+        // track data modifications in the backing ContentList.
+        @JvmField
+        internal var xdata = -1
+
+        /**
+         * Returns true if there is no content in this FilterList.
+         * @return true if there is no content in this FilterList
+         */
+        override fun isEmpty(): Boolean {
+            // More efficient implementation than default size() == 0
+            // we use resync() to accomplish the task. If there is an
+            // element 0 in this FilterList, then it is not empty!
+            // we may already have resync'd 0, which will be a fast return then,
+            // or, if we have not resync'd 0, then we only have to filter up to
+            // the first matching element to get a result (or the whole list
+            // if isEmpty() is true).
+            return resync(0) == count
+        }
+
+        /**
+         * Synchronise our view to the backing list. Only synchronise the first
+         * `index` view elements. For want of a better word, we'll
+         * call this a 'Lazy' implementation.
+         *
+         * @param index
+         *        how much we want to sync. Set to -1 to synchronise everything.
+         * @return the index in the backing array of the *index'th* match.
+         *         or the backing data size if there is no match for the index.
+         */
+        internal fun resync(index: Int): Int {
+            if (xdata != getDataModCount()) {
+                // The underlying list was modified somehow...
+                // we need to invalidate our research...
+                xdata = getDataModCount()
+                backingsize = 0
+                if (count >= backingpos.size) {
+                    backingpos = IntArray(count + 1)
+                }
+            }
+
+            if (index >= 0 && index < backingsize) {
+                // we have already indexed far enough...
+                // return the backing index.
+                return backingpos[index]
+            }
+
+            // the index in the backing list of the next value to check.
+            var bpi = 0
+            if (backingsize > 0) {
+                bpi = backingpos[backingsize - 1] + 1
+            }
+
+            while (bpi < count) {
+                val gotit: F? = filter.filter(elementData!![bpi])
+                if (gotit != null) {
+                    backingpos[backingsize] = bpi
+                    if (backingsize++ == index) {
+                        return bpi
+                    }
+                }
+                bpi++
+            }
+            return count
+        }
+
+        /**
+         * Inserts the specified object at the specified position in this list.
+         * Shifts the object currently at that position (if any) and any
+         * subsequent objects to the right (adds one to their indices).
+         *
+         * @param index
+         *        The location to set the value to.
+         * @param element
+         *        The object to insert into the list. throws
+         *        IndexOutOfBoundsException if index < 0 || index > size()
+         */
+        override fun add(index: Int, element: F) {
+            val obj: Content = element
+            if (index < 0) {
+                throw IndexOutOfBoundsException("Index: " + index + " Size: " + size)
+            }
+            val adj = resync(index)
+            if (adj == count && index > size) {
+                throw IndexOutOfBoundsException("Index: " + index + " Size: " + size)
+            }
+            if (filter.matches(obj)) {
+                this@ContentList.add(adj, obj)
+
+                // we can optimise the laziness now by doing a partial reset on
+                // the backing list... invalidate everything *after* the added
+                // content
+                if (backingpos.size <= count) {
+                    backingpos = ArrayCopy.copyOf(backingpos, backingpos.size + 1)
+                }
+                backingpos[index] = adj
+                backingsize = index + 1
+                xdata = getDataModCount()
+
+            } else {
+                throw IllegalAddException(
+                    "Filter won't allow the " +
+                            obj.javaClass.name +
+                            " '" + obj + "' to be added to the list"
+                )
+            }
+        }
+
+        override fun addAll(
+            index: Int,
+            elements: Collection<F>
+        ): Boolean {
+            val collection: Collection<F>? = elements
+            if (collection == null) {
+                throw NullPointerException("Cannot add a null collection")
+            }
+
+            if (index < 0) {
+                throw IndexOutOfBoundsException("Index: " + index + " Size: " + size)
+            }
+
+            val adj = resync(index)
+            if (adj == count && index > size) {
+                throw IndexOutOfBoundsException("Index: " + index + " Size: " + size)
+            }
+
+            val addcnt = collection.size
+            if (addcnt == 0) {
+                return false
+            }
+
+            this@ContentList.ensureCapacity(this@ContentList.size + addcnt)
+
+            val tmpmodcount = getModCount()
+            val tmpdmc = getDataModCount()
+            var ok = false
+
+            var cnt = 0
+
+            try {
+                for (c0 in collection) {
+                    val c: Content? = c0
+                    if (c == null) {
+                        throw NullPointerException(
+                            "Cannot add null content"
+                        )
+                    }
+                    if (filter.matches(c)) {
+                        this@ContentList.add(adj + cnt, c)
+                        // we can optimise the laziness now by doing a partial
+                        // reset on
+                        // the backing list... invalidate everything *after* the
+                        // added
+                        // content
+                        if (backingpos.size <= count) {
+                            backingpos = ArrayCopy.copyOf(backingpos, backingpos.size + addcnt)
+                        }
+                        backingpos[index + cnt] = adj + cnt
+                        backingsize = index + cnt + 1
+                        xdata = getDataModCount()
+
+                        cnt++
+                    } else {
+                        throw IllegalAddException(
+                            "Filter won't allow the " +
+                                    c.javaClass.name +
+                                    " '" + c + "' to be added to the list"
+                        )
+
+                    }
+                }
+                ok = true
+            } finally {
+                if (!ok) {
+                    // something failed... remove all added content
+                    while (--cnt >= 0) {
+                        this@ContentList.removeAt(adj + cnt)
+                    }
+                    // restore the mod-counts.
+                    setModCount(tmpmodcount, tmpdmc)
+                    // reset the cache... will need to redo some work on another
+                    // call maybe....
+                    backingsize = index
+                    xdata = tmpmodcount
+                }
+            }
+
+            return true
+        }
+
+        /**
+         * Return the object at the specified offset.
+         *
+         * @param index
+         *        The offset of the object.
+         * @return The Object which was returned.
+         */
+        override fun get(index: Int): F {
+            if (index < 0) {
+                throw IndexOutOfBoundsException("Index: " + index + " Size: " + size)
+            }
+            val adj = resync(index)
+            if (adj == count) {
+                throw IndexOutOfBoundsException("Index: " + index + " Size: " + size)
+            }
+            return filter.filter(this@ContentList.get(adj))!!
+        }
+
+        override fun iterator(): MutableIterator<F> {
+            return FilterListIterator<F>(this, 0)
+        }
+
+        override fun listIterator(): MutableListIterator<F> {
+            return FilterListIterator<F>(this, 0)
+        }
+
+        override fun listIterator(index: Int): MutableListIterator<F> {
+            return FilterListIterator<F>(this, index)
+        }
+
+        /**
+         * Remove the object at the specified offset.
+         *
+         * @param index
+         *        The offset of the object.
+         * @return The Object which was removed.
+         */
+        override fun removeAt(index: Int): F {
+            if (index < 0) {
+                throw IndexOutOfBoundsException("Index: " + index + " Size: " + size)
+            }
+            val adj = resync(index)
+            if (adj == count) {
+                throw IndexOutOfBoundsException("Index: " + index + " Size: " + size)
+            }
+            val oldc = this@ContentList.removeAt(adj)
+            // optimise the backing cache.
+            backingsize = index
+            xdata = getDataModCount()
+            // use Filter to ensure the cast is right.
+            return filter.filter(oldc)!!
+        }
+
+        /**
+         * Set the object at the specified location to the supplied object.
+         *
+         * @param index
+         *        The location to set the value to.
+         * @param element
+         *        The location to set the value to.
+         * @return The object which was replaced. throws
+         *         IndexOutOfBoundsException if index < 0 || index >= size()
+         */
+        override fun set(index: Int, element: F): F {
+            val obj = element
+            if (index < 0) {
+                throw IndexOutOfBoundsException("Index: " + index + " Size: " + size)
+            }
+            val adj = resync(index)
+            if (adj == count) {
+                throw IndexOutOfBoundsException("Index: " + index + " Size: " + size)
+            }
+            val ins: F? = filter.filter(obj)
+            if (ins != null) {
+                val oldc: F = filter.filter(this@ContentList.set(adj, ins))!!
+                // optimize the backing....
+                xdata = getDataModCount()
+                return oldc
+            }
+            throw IllegalAddException(
+                "Filter won't allow index " +
+                        index + " to be set to " +
+                        (obj.javaClass).name
+            )
+        }
+
+        /**
+         * Return the number of items in this list
+         *
+         * @return The number of items in this list.
+         */
+        override val size: Int
+            get() {
+                resync(-1)
+                return backingsize
+            }
+
+        /**
+         * Unlike the Arrays.binarySearch, this method never expects an
+         * "already exists" condition, we only ever add, thus there will never
+         * be a negative insertion-point.
+         * @param indexes THe pointers to search within
+         * @param len The number of pointers to search within
+         * @param `val` The pointer we are checking for.
+         * @param comp The Comparator to compare with
+         * @return the insertion point.
+         */
+        @Suppress("UNCHECKED_CAST")
+        private fun fbinarySearch(
+            indexes: IntArray, len: Int,
+            `val`: Int, comp: Comparator<in F>
+        ): Int {
+            var left = 0
+            var mid = 0
+            var right = len - 1
+            var cmp = 0
+            val base = elementData!![backingpos[`val`]] as F
+            while (left <= right) {
+                mid = (left + right) ushr 1
+                cmp = comp.compare(base, elementData!![indexes[mid]] as F)
+                if (cmp == 0) {
+                    while (cmp == 0 && mid < right && comp.compare(
+                            base, elementData!![indexes[mid + 1]] as F
+                        ) == 0
+                    ) {
+                        mid++
+                    }
+                    return mid + 1
+                } else if (cmp < 0) {
+                    right = mid - 1
+                } else {
+                    left = mid + 1
+                }
+            }
+            return left
+        }
+
+
+        /**
+         * Sorts this list using the supplied Comparator to compare elements.
+         *
+         * @param comp - the Comparator used to compare list elements. A null value indicates that the elements' natural ordering should be used
          * @Since 2.0.6
-		 */
-		//Not till Java8 @Override
-		public final void sort(final Comparator<? super F> comp) {
-			// this size() forces a full scan/update of the list.
-		    if (comp == null) {
-		        // sort by the 'natural order', which, there is none.
-		        // options, throw exception, or let the current-order represent the natural order.
-		        // do nothing is the better alternative.
-		        return;
-		    }
-			final int sz = size();
-			final int[] indexes = new int[sz];
-			for (int i = 0 ; i < sz; i++) {
-				final int ip = fbinarySearch(indexes, i, i, comp);
-				if (ip < i) {
-					System.arraycopy(indexes, ip, indexes, ip+1, i - ip);
-				}
-				indexes[ip] = backingpos[i];
-			}
-			sortInPlace(indexes);
-		}
-		
-	}
+         */
+        //Not till Java8 @Override
+        override fun sort(comp: Comparator<in F>?) {
+            // this size() forces a full scan/update of the list.
+            if (comp == null) {
+                // sort by the 'natural order', which, there is none.
+                // options, throw exception, or let the current-order represent the natural order.
+                // do nothing is the better alternative.
+                return
+            }
+            val sz = size
+            val indexes = IntArray(sz)
+            for (i in 0 until sz) {
+                val ip = fbinarySearch(indexes, i, i, comp)
+                if (ip < i) {
+                    System.arraycopy(indexes, ip, indexes, ip + 1, i - ip)
+                }
+                indexes[ip] = backingpos[i]
+            }
+            sortInPlace(indexes)
+        }
 
-	/* * * * * * * * * * * * * FilterListIterator * * * * * * * * * * * */
-	/* * * * * * * * * * * * * FilterListIterator * * * * * * * * * * * */
+    }
 
-	final class FilterListIterator<F extends Content> implements ListIterator<F> {
+    /* * * * * * * * * * * * * FilterListIterator * * * * * * * * * * * */
+    /* * * * * * * * * * * * * FilterListIterator * * * * * * * * * * * */
 
-		/** The Filter that applies */
-		private final FilterList<F> filterlist;
+    inner class FilterListIterator<F : Content>
+    /**
+     * Default constructor
+     *
+     * @param flist
+     *        The FilterList over which we will iterate.
+     * @param start
+     *        where in the FilterList to start iteration.
+     */
+    internal constructor(
+        /** The Filter that applies  */
+        private val filterlist: FilterList<F>,
+        start: Int
+    ) : MutableListIterator<F> {
 
-		/** Whether this iterator is in forward or reverse. */
-		private boolean forward = false;
-		/** Whether a call to remove() is valid */
-		private boolean canremove = false;
-		/** Whether a call to set() is valid */
-		private boolean canset = false;
+        /** Whether this iterator is in forward or reverse.  */
+        private var forward = false
 
-		/** Expected modCount in our backing list */
-		private int expectedmod = -1;
+        /** Whether a call to remove() is valid  */
+        private var canremove = false
 
-		private int cursor = -1;
+        /** Whether a call to set() is valid  */
+        private var canset = false
 
-		/**
-		 * Default constructor
-		 * 
-		 * @param flist
-		 *        The FilterList over which we will iterate.
-		 * @param start
-		 *        where in the FilterList to start iteration.
-		 */
-		FilterListIterator(final FilterList<F> flist, final int start) {
-			filterlist = flist;
-			expectedmod = getModCount();
-			// always start list iterators in backward mode ....
-			// it makes sense... really.
-			forward = false;
+        /** Expected modCount in our backing list  */
+        private var expectedmod = -1
 
-			if (start < 0) {
-				throw new IndexOutOfBoundsException("Index: " + start + " Size: " + filterlist.size());
-			}
+        private var cursor = -1
 
-			final int adj = filterlist.resync(start);
+        init {
+            expectedmod = getModCount()
+            // always start list iterators in backward mode ....
+            // it makes sense... really.
+            forward = false
 
-			if (adj == size && start > filterlist.size()) {
-				// the start point is after the end of the list.
-				// it is only allowed to be the same as size(), no larger.
-				throw new IndexOutOfBoundsException("Index: " + start + " Size: " + filterlist.size());
-			}
+            if (start < 0) {
+                throw IndexOutOfBoundsException("Index: " + start + " Size: " + filterlist.size)
+            }
 
-			cursor = start;
-		}
+            val adj = filterlist.resync(start)
 
-		private void checkConcurrent() {
-			if (expectedmod != getModCount()) {
-				throw new ConcurrentModificationException("The ContentList " +
-						"supporting the FilterList this iterator is " +
-						"processing has been modified by something other " +
-						"than this Iterator.");
-			}
-		}
+            if (adj == count && start > filterlist.size) {
+                // the start point is after the end of the list.
+                // it is only allowed to be the same as size(), no larger.
+                throw IndexOutOfBoundsException("Index: " + start + " Size: " + filterlist.size)
+            }
 
-		/**
-		 * Returns <code>true</code> if this list iterator has a next element.
-		 */
-		@Override
-		public boolean hasNext() {
-			return filterlist.resync(forward ? cursor + 1 : cursor) < size;
-		}
+            cursor = start
+        }
 
-		/**
-		 * Returns <code>true</code> if this list iterator has more elements
-		 * when traversing the list in the reverse direction.
-		 */
-		@Override
-		public boolean hasPrevious() {
-			return (forward ? cursor : cursor - 1) >= 0;
-		}
+        private fun checkConcurrent() {
+            if (expectedmod != getModCount()) {
+                throw ConcurrentModificationException(
+                    "The ContentList " +
+                            "supporting the FilterList this iterator is " +
+                            "processing has been modified by something other " +
+                            "than this Iterator."
+                )
+            }
+        }
 
-		/**
-		 * Returns the index of the element that would be returned by a
-		 * subsequent call to <code>next</code>.
-		 */
-		@Override
-		public int nextIndex() {
-			return forward ? cursor + 1 : cursor;
-		}
+        /**
+         * Returns `true` if this list iterator has a next element.
+         */
+        override fun hasNext(): Boolean {
+            return filterlist.resync(if (forward) cursor + 1 else cursor) < count
+        }
 
-		/**
-		 * Returns the index of the element that would be returned by a
-		 * subsequent call to <code>previous</code>. (Returns -1 if the list
-		 * iterator is at the beginning of the list.)
-		 */
-		@Override
-		public int previousIndex() {
-			return forward ? cursor : cursor - 1;
-		}
+        /**
+         * Returns `true` if this list iterator has more elements
+         * when traversing the list in the reverse direction.
+         */
+        override fun hasPrevious(): Boolean {
+            return (if (forward) cursor else cursor - 1) >= 0
+        }
 
-		/**
-		 * Returns the next element in the list.
-		 */
-		@Override
-		public F next() {
-			checkConcurrent();
-			final int next = forward ? cursor + 1 : cursor;
+        /**
+         * Returns the index of the element that would be returned by a
+         * subsequent call to `next`.
+         */
+        override fun nextIndex(): Int {
+            return if (forward) cursor + 1 else cursor
+        }
 
-			if (filterlist.resync(next) >= size) {
-				throw new NoSuchElementException("next() is beyond the end of the Iterator");
-			}
+        /**
+         * Returns the index of the element that would be returned by a
+         * subsequent call to `previous`. (Returns -1 if the list
+         * iterator is at the beginning of the list.)
+         */
+        override fun previousIndex(): Int {
+            return if (forward) cursor else cursor - 1
+        }
 
-			cursor = next;
-			forward = true;
-			canremove = true;
-			canset = true;
-			return filterlist.get(cursor);
-		}
+        /**
+         * Returns the next element in the list.
+         */
+        override fun next(): F {
+            checkConcurrent()
+            val next = if (forward) cursor + 1 else cursor
 
-		/**
-		 * Returns the previous element in the list.
-		 */
-		@Override
-		public F previous() {
-			checkConcurrent();
-			final int prev = forward ? cursor : cursor - 1;
+            if (filterlist.resync(next) >= count) {
+                throw NoSuchElementException("next() is beyond the end of the Iterator")
+            }
 
-			if (prev < 0) {
-				throw new NoSuchElementException("previous() is beyond the beginning of the Iterator");
-			}
+            cursor = next
+            forward = true
+            canremove = true
+            canset = true
+            return filterlist.get(cursor)
+        }
 
-			cursor = prev;
-			forward = false;
-			canremove = true;
-			canset = true;
-			return filterlist.get(cursor);
-		}
+        /**
+         * Returns the previous element in the list.
+         */
+        override fun previous(): F {
+            checkConcurrent()
+            val prev = if (forward) cursor else cursor - 1
 
-		/**
-		 * Inserts the specified element into the list .
-		 */
-		@Override
-		public void add(final Content obj) {
-			checkConcurrent();
-			// always add before what would normally be returned by next();
-			final int next = forward ? cursor + 1 : cursor;
+            if (prev < 0) {
+                throw NoSuchElementException("previous() is beyond the beginning of the Iterator")
+            }
 
-			filterlist.add(next, obj);
+            cursor = prev
+            forward = false
+            canremove = true
+            canset = true
+            return filterlist.get(cursor)
+        }
 
-			expectedmod = getModCount();
+        /**
+         * Inserts the specified element into the list .
+         */
+        override fun add(element: F) {
+            checkConcurrent()
+            // always add before what would normally be returned by next();
+            val next = if (forward) cursor + 1 else cursor
 
-			canremove = canset = false;
+            filterlist.add(next, element)
 
-			// a call to next() should be unaffected, so, whatever was going to
-			// be next will still be next, remember, what was going to be next
-			// has been shifted 'right' by our insert.
-			// we ensure this by setting the cursor to next(), and making it
-			// forward
-			cursor = next;
-			forward = true;
-		}
+            expectedmod = getModCount()
 
-		/**
-		 * Removes from the list the last element that was returned by the last
-		 * call to <code>next</code> or <code>previous</code>.
-		 */
-		@Override
-		public void remove() {
-			checkConcurrent();
-			if (!canremove)
-				throw new IllegalStateException("Can not remove an "
-						+ "element unless either next() or previous() has been called "
-						+ "since the last remove()");
-			// we are removing the last entry returned by either next() or
-			// previous().
-			// the idea is to remove it, and pretend that we used to be at the
-			// entry that happened *after* the removed entry.
-			// so, get what would be the next entry (set at tmpcursor).
-			// so call nextIndex to set tmpcursor to what would come after.
-			filterlist.remove(cursor);
-			forward = false;
-			expectedmod = getModCount();
+            canset = false
+            canremove = canset
 
-			canremove = false;
-			canset = false;
-		}
+            // a call to next() should be unaffected, so, whatever was going to
+            // be next will still be next, remember, what was going to be next
+            // has been shifted 'right' by our insert.
+            // we ensure this by setting the cursor to next(), and making it
+            // forward
+            cursor = next
+            forward = true
+        }
 
-		/**
-		 * Replaces the last element returned by <code>next</code> or
-		 * <code>previous</code> with the specified element.
-		 */
-		@Override
-		public void set(final F obj) {
-			checkConcurrent();
-			if (!canset) {
-				throw new IllegalStateException("Can not set an element "
-						+ "unless either next() or previous() has been called since the "
-						+ "last remove() or set()");
-			}
+        /**
+         * Removes from the list the last element that was returned by the last
+         * call to `next` or `previous`.
+         */
+        override fun remove() {
+            checkConcurrent()
+            if (!canremove)
+                throw IllegalStateException(
+                    "Can not remove an "
+                            + "element unless either next() or previous() has been called "
+                            + "since the last remove()"
+                )
+            // we are removing the last entry returned by either next() or
+            // previous().
+            // the idea is to remove it, and pretend that we used to be at the
+            // entry that happened *after* the removed entry.
+            // so, get what would be the next entry (set at tmpcursor).
+            // so call nextIndex to set tmpcursor to what would come after.
+            filterlist.removeAt(cursor)
+            forward = false
+            expectedmod = getModCount()
 
-			filterlist.set(cursor, obj);
-			expectedmod = getModCount();
+            canremove = false
+            canset = false
+        }
 
-		}
+        /**
+         * Replaces the last element returned by `next` or
+         * `previous` with the specified element.
+         */
+        override fun set(element: F) {
+            checkConcurrent()
+            if (!canset) {
+                throw IllegalStateException(
+                    "Can not set an element "
+                            + "unless either next() or previous() has been called since the "
+                            + "last remove() or set()"
+                )
+            }
 
-	}
+            filterlist.set(cursor, element)
+            expectedmod = getModCount()
+
+        }
+
+    }
+
+    private companion object {
+        private const val INITIAL_ARRAY_SIZE = 4
+
+        /** Remove the parent of a Object  */
+        private fun removeParent(c: Content) {
+            c.setParent(null)
+        }
+    }
 
 }
