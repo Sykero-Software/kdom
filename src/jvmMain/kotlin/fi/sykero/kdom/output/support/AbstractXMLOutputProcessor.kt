@@ -202,7 +202,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
     @Throws(IOException::class)
     override fun process(out: Appendable, format: Format, cdata: CDATA) {
         // we use the powers of the Walker to manage text-like content.
-        val list: List<CDATA> = java.util.Collections.singletonList(cdata)
+        val list: List<CDATA> = listOf(cdata)
         val fstack = FormatStack(format)
         val walker = buildWalker(fstack, list, true)
         if (walker.hasNext()) {
@@ -214,7 +214,7 @@ abstract class AbstractXMLOutputProcessor : AbstractOutputProcessor(), XMLOutput
     @Throws(IOException::class)
     override fun process(out: Appendable, format: Format, text: Text) {
         // we use the powers of the Walker to manage text-like content.
-        val list: List<Text> = java.util.Collections.singletonList(text)
+        val list: List<Text> = listOf(text)
         val fstack = FormatStack(format)
         val walker = buildWalker(fstack, list, true)
         if (walker.hasNext()) {

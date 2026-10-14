@@ -56,12 +56,9 @@
 
 package fi.sykero.kdom
 
+import fi.sykero.kdom.internal.KdomMutableList
 import fi.sykero.kdom.filter.Filter
 import fi.sykero.kdom.internal.ArrayCopy
-import java.util.Arrays
-import java.util.Comparator
-import java.util.ConcurrentModificationException
-import java.util.RandomAccess
 
 /**
  * A non-public list implementation holding only legal JDOM content, including
@@ -90,7 +87,7 @@ internal class ContentList
 (
     /** Document or Element this list belongs to  */
     private val parent: Parent
-) : AbstractMutableList<Content>(), RandomAccess {
+) : KdomMutableList<Content>(), RandomAccess {
 
     /** Our backing list  */
     private var elementData: Array<Content?>? = null
@@ -263,7 +260,7 @@ internal class ContentList
         if (index == count) {
             elementData!![count++] = child
         } else {
-            System.arraycopy(elementData!!, index, elementData!!, index + 1, count - index)
+            elementData!!.copyInto(elementData!!, index + 1, index, index + (count - index))
             elementData!![index] = child
             count++
         }
@@ -514,7 +511,7 @@ internal class ContentList
 
         val old = elementData!![index]!!
         removeParent(old)
-        System.arraycopy(elementData!!, index + 1, elementData!!, index, count - index - 1)
+        elementData!!.copyInto(elementData!!, index, index + 1, index + 1 + (count - index - 1))
         elementData!![--count] = null // Let gc do its work
         incModCount()
         return old
@@ -588,7 +585,7 @@ internal class ContentList
         // and describe the relative order of each of them.
         // as a result, we can do some tricks....
         val unsorted = ArrayCopy.copyOf(indexes, indexes.size)
-        Arrays.sort(unsorted)
+        unsorted.sort()
         val usc = arrayOfNulls<Content>(unsorted.size)
         for (i in usc.indices) {
             usc[i] = elementData!![indexes[i]]
@@ -645,7 +642,8 @@ internal class ContentList
      * @Since 2.0.6
      */
     // @Override - only in Java8
-    override fun sort(comp: Comparator<in Content>?) {
+    // kdom: the JVM `sort(Comparator)` override lives in KdomMutableList (common code has no `List.sort` member).
+    override fun sortLive(comp: Comparator<in Content>?) {
         sortContent(comp)
     }
 
@@ -667,7 +665,7 @@ internal class ContentList
         for (i in 0 until sz) {
             val ip = binarySearch(indexes, i, i, comp)
             if (ip < i) {
-                System.arraycopy(indexes, ip, indexes, ip + 1, i - ip)
+                indexes.copyInto(indexes, ip + 1, ip, ip + (i - ip))
             }
             indexes[ip] = i
         }
@@ -953,7 +951,7 @@ internal class ContentList
     internal constructor(
         // The filter to apply
         @JvmField internal val filter: Filter<F>
-    ) : AbstractMutableList<F>() {
+    ) : KdomMutableList<F>() {
 
         // correlate the position in the filtered list to the index in the
         // backing ContentList.
@@ -1297,7 +1295,7 @@ internal class ContentList
          * @Since 2.0.6
          */
         //Not till Java8 @Override
-        override fun sort(comp: Comparator<in F>?) {
+        override fun sortLive(comp: Comparator<in F>?) {
             sortContent(comp)
         }
 
@@ -1315,7 +1313,7 @@ internal class ContentList
             for (i in 0 until sz) {
                 val ip = fbinarySearch(indexes, i, i, comp)
                 if (ip < i) {
-                    System.arraycopy(indexes, ip, indexes, ip + 1, i - ip)
+                    indexes.copyInto(indexes, ip + 1, ip, ip + (i - ip))
                 }
                 indexes[ip] = backingpos[i]
             }

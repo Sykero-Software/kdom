@@ -58,7 +58,6 @@
 package fi.sykero.kdom.output.support
 
 import fi.sykero.kdom.Content
-import java.util.NoSuchElementException
 
 /**
  * This Walker implementation walks a list of Content in its original RAW

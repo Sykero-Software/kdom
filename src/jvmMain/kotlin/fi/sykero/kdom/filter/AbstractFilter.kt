@@ -56,10 +56,8 @@
 
 package fi.sykero.kdom.filter
 
+import fi.sykero.kdom.internal.unmodifiableList
 import fi.sykero.kdom.Content
-import java.util.ArrayList
-import java.util.Collections
-import java.util.RandomAccess
 
 /**
  * Partial implementation of [Filter].
@@ -76,7 +74,7 @@ abstract class AbstractFilter<T> : Filter<T> {
 
     override fun filter(content: List<*>?): List<T> {
         if (content == null) {
-            return Collections.emptyList()
+            return emptyList()
         }
         if (content is RandomAccess) {
             val sz = content.size
@@ -88,9 +86,9 @@ abstract class AbstractFilter<T> : Filter<T> {
                 }
             }
             if (ret.isEmpty()) {
-                return Collections.emptyList()
+                return emptyList()
             }
-            return Collections.unmodifiableList(ret)
+            return unmodifiableList(ret)
         }
         val ret = ArrayList<T>(10)
         val it = content.iterator()
@@ -101,9 +99,9 @@ abstract class AbstractFilter<T> : Filter<T> {
             }
         }
         if (ret.isEmpty()) {
-            return Collections.emptyList()
+            return emptyList()
         }
-        return Collections.unmodifiableList(ret)
+        return unmodifiableList(ret)
     }
 
     final override fun negate(): Filter<*> {

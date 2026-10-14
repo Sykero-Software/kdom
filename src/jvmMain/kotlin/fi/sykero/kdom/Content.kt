@@ -56,7 +56,6 @@
 
 package fi.sykero.kdom
 
-import java.util.Collections
 
 /**
  * Superclass for JDOM objects which can be legal child content
@@ -271,12 +270,12 @@ abstract class Content protected constructor(type: CType) : CloneBase(), Namespa
     override val namespacesInScope: List<Namespace>
         get() {
             // Element class will override this method to do it differently.
-            val emt = parentElement ?: return Collections.singletonList(Namespace.XML_NAMESPACE)
+            val emt = parentElement ?: return listOf(Namespace.XML_NAMESPACE)
             return emt.namespacesInScope
         }
 
     override val namespacesIntroduced: List<Namespace>
-        get() = Collections.emptyList()
+        get() = emptyList()
 
     override val namespacesInherited: List<Namespace>
         get() = namespacesInScope // Element class will override

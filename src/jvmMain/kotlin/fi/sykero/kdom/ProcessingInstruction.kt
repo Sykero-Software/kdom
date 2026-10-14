@@ -56,11 +56,9 @@
 
 package fi.sykero.kdom
 
+import fi.sykero.kdom.internal.EmptyUnmodifiableMap
 import fi.sykero.kdom.internal.unsafeNull
 
-import java.util.ArrayList
-import java.util.Collections
-import java.util.LinkedHashMap
 
 /**
  * An XML processing instruction. Methods allow the user to obtain the target of
@@ -332,7 +330,7 @@ open class ProcessingInstruction : Content {
                     )
                     // A null value means a parse error and we return empty!
                     if (bounds == null) {
-                        return Collections.emptyMap()
+                        return EmptyUnmodifiableMap() // jdom2: Collections.emptyMap()
                     }
                     value = inputData.substring(
                         bounds[0] + pos + 1,

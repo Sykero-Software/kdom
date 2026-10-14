@@ -7,3 +7,12 @@ internal actual fun flushIfPossible(out: Appendable) {
 internal actual fun systemLineSeparator(): String = System.getProperty("line.separator")
 
 actual typealias IOException = java.io.IOException
+
+internal actual abstract class KdomMutableList<E> actual constructor() : AbstractMutableList<E>() {
+    protected actual abstract fun sortLive(comp: Comparator<in E>?)
+
+    /** jdom2's `List.sort(Comparator)` override (the JDK default would re-set attached content). */
+    override fun sort(c: Comparator<in E>?) {
+        sortLive(c)
+    }
+}

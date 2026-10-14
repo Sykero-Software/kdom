@@ -23,3 +23,14 @@ expect open class IOException : Exception {
     constructor(message: String?)
     constructor(message: String?, cause: Throwable?)
 }
+
+/**
+ * Base of kdom's live lists (`AttributeList`, `ContentList`, `ContentList.FilterList`). On the JVM it overrides
+ * `java.util.List.sort(Comparator)` to call [sortLive], as jdom2's lists did: the JDK default `sort` re-sets every
+ * element through a list iterator, which a live list rejects for already-attached content. Other platforms have no
+ * such member (Kotlin's `sortWith` extension on a live list is not supported; use `Element.sortContent` etc.).
+ */
+internal expect abstract class KdomMutableList<E>() : AbstractMutableList<E> {
+    /** Sorts the list in place, keeping the relative order of equal entries (jdom2's `sort(Comparator)` body). */
+    protected abstract fun sortLive(comp: Comparator<in E>?)
+}

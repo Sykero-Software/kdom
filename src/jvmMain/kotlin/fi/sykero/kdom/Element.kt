@@ -56,6 +56,7 @@
 
 package fi.sykero.kdom
 
+import fi.sykero.kdom.internal.unmodifiableList
 import fi.sykero.kdom.internal.unsafeNull
 
 import fi.sykero.kdom.ContentList.FilterList
@@ -65,11 +66,6 @@ import fi.sykero.kdom.filter.ElementFilter
 import fi.sykero.kdom.filter.Filter
 import fi.sykero.kdom.filter.Filters
 import fi.sykero.kdom.util.IteratorIterable
-import java.util.ArrayList
-import java.util.Collections
-import java.util.Comparator
-import java.util.HashMap
-import java.util.TreeMap
 
 /**
  * An XML element. Methods allow the user to get and manipulate its child
@@ -433,9 +429,9 @@ open class Element : Content, Parent {
             // new list object when XMLOutputter calls this method on an element
             // with an empty list.
             if (additionalNamespaceList == null) {
-                return Collections.emptyList()
+                return emptyList()
             }
-            return Collections.unmodifiableList(additionalNamespaceList!!)
+            return unmodifiableList(additionalNamespaceList!!)
         }
 
     /**
@@ -1709,7 +1705,9 @@ open class Element : Content, Parent {
             // It does not make reference to this Element instance's other
             // getNamespace*() methods
 
-            val namespaces = TreeMap<String, Namespace>()
+            // kdom: jdom2 used a TreeMap (no TreeMap in common code); the values are sorted by prefix at the read
+            // below, which gives the same order.
+            val namespaces = LinkedHashMap<String, Namespace>()
             namespaces.put(Namespace.XML_NAMESPACE.prefix, Namespace.XML_NAMESPACE)
             namespaces.put(namespacePrefix, namespace)
             if (additionalNamespaceList != null) {
@@ -1746,9 +1744,9 @@ open class Element : Content, Parent {
             val al = ArrayList<Namespace>(namespaces.size)
             al.add(namespace)
             namespaces.remove(namespacePrefix)
-            al.addAll(namespaces.values)
+            namespaces.keys.sorted().mapTo(al) { namespaces.getValue(it) }
 
-            return Collections.unmodifiableList(al)
+            return unmodifiableList(al)
         }
 
     override val namespacesInherited: List<Namespace>
@@ -1763,7 +1761,7 @@ open class Element : Content, Parent {
                     }
                     it.remove()
                 }
-                return Collections.unmodifiableList(ret)
+                return unmodifiableList(ret)
             }
 
             // OK, the things we inherit are the prefixes we have in scope that
@@ -1781,7 +1779,7 @@ open class Element : Content, Parent {
                 }
             }
 
-            return Collections.unmodifiableList(al)
+            return unmodifiableList(al)
         }
 
     override val namespacesIntroduced: List<Namespace>
@@ -1796,7 +1794,7 @@ open class Element : Content, Parent {
                         it.remove()
                     }
                 }
-                return Collections.unmodifiableList(ret)
+                return unmodifiableList(ret)
             }
 
             // OK, the things we introduce are the prefixes we have in scope that
@@ -1814,7 +1812,7 @@ open class Element : Content, Parent {
                 }
             }
 
-            return Collections.unmodifiableList(al)
+            return unmodifiableList(al)
         }
 
     override fun detach(): Element {

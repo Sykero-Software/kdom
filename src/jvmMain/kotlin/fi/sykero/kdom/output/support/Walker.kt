@@ -61,7 +61,6 @@ import fi.sykero.kdom.CDATA
 import fi.sykero.kdom.Content
 import fi.sykero.kdom.EntityRef
 import fi.sykero.kdom.Text
-import java.util.NoSuchElementException
 
 /**
  * A model for walking the (potentially formatted) content of an Element.

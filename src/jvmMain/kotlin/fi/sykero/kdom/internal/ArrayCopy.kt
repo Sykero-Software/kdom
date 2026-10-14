@@ -56,8 +56,6 @@
 
 package fi.sykero.kdom.internal
 
-import java.lang.reflect.Array
-
 /**
  * The copyOf methods on java.util.Arrays are introduced in Java6. Need an
  * alternative to support Java5.
@@ -79,9 +77,8 @@ class ArrayCopy private constructor() {
         @JvmStatic
         @Suppress("UNCHECKED_CAST")
         fun <E> copyOf(source: kotlin.Array<E>, len: Int): kotlin.Array<E> {
-            val dest = Array.newInstance(source.javaClass.componentType, len) as kotlin.Array<E>
-            System.arraycopy(source, 0, dest, 0, if (len < source.size) len else source.size)
-            return dest
+            // kdom: Array.copyOf keeps the runtime component type (jdom2 used java.lang.reflect.Array).
+            return source.copyOf(len) as kotlin.Array<E>
         }
 
 	/**
@@ -99,10 +96,12 @@ class ArrayCopy private constructor() {
             if (len < 0) {
                 throw IllegalArgumentException("From($from) > To ($to)")
             }
-            val dest = Array.newInstance(source.javaClass.componentType, len) as kotlin.Array<E>
+            // kdom: Array.copyOf keeps the runtime component type (jdom2 used java.lang.reflect.Array).
+            val dest = source.copyOf(len)
+            dest.fill(null)
             val tocopy = if (from + len > source.size) source.size - from else len
-            System.arraycopy(source, from, dest, 0, tocopy)
-            return dest
+            source.copyInto(dest, 0, from, from + tocopy)
+            return dest as kotlin.Array<E>
         }
 
 	/**
@@ -114,7 +113,7 @@ class ArrayCopy private constructor() {
         @JvmStatic
         fun copyOf(source: CharArray, len: Int): CharArray {
             val dest = CharArray(len)
-            System.arraycopy(source, 0, dest, 0, if (len < source.size) len else source.size)
+            source.copyInto(dest, 0, 0, (if (len < source.size) len else source.size))
             return dest
         }
 
@@ -127,7 +126,7 @@ class ArrayCopy private constructor() {
         @JvmStatic
         fun copyOf(source: IntArray, len: Int): IntArray {
             val dest = IntArray(len)
-            System.arraycopy(source, 0, dest, 0, if (len < source.size) len else source.size)
+            source.copyInto(dest, 0, 0, (if (len < source.size) len else source.size))
             return dest
         }
 
@@ -140,7 +139,7 @@ class ArrayCopy private constructor() {
         @JvmStatic
         fun copyOf(source: BooleanArray, len: Int): BooleanArray {
             val dest = BooleanArray(len)
-            System.arraycopy(source, 0, dest, 0, if (len < source.size) len else source.size)
+            source.copyInto(dest, 0, 0, (if (len < source.size) len else source.size))
             return dest
         }
     }

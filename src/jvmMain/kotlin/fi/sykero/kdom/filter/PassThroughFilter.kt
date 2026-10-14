@@ -56,9 +56,7 @@
 
 package fi.sykero.kdom.filter
 
-import java.util.ArrayList
-import java.util.Collections
-import java.util.RandomAccess
+import fi.sykero.kdom.internal.unmodifiableList
 
 /**
  * A filter that does not actual filtering.
@@ -76,17 +74,17 @@ internal class PassThroughFilter : AbstractFilter<Any>() {
     @Suppress("UNCHECKED_CAST")
     override fun filter(content: List<*>?): List<Any> {
         if (content == null || content.isEmpty()) {
-            return Collections.emptyList()
+            return emptyList()
         }
         if (content is RandomAccess) {
-            return Collections.unmodifiableList(content as List<Any>)
+            return unmodifiableList(content as List<Any>)
         }
         val ret = ArrayList<Any>()
         val it = content.iterator()
         while (it.hasNext()) {
             ret.add(it.next() as Any)
         }
-        return Collections.unmodifiableList(ret)
+        return unmodifiableList(ret)
     }
 
 }

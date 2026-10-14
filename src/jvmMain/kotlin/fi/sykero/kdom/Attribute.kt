@@ -56,11 +56,9 @@
 
 package fi.sykero.kdom
 
+import fi.sykero.kdom.internal.unmodifiableList
 import fi.sykero.kdom.internal.unsafeNull
 
-import java.util.ArrayList
-import java.util.Collections
-import java.util.TreeMap
 
 /**
  * An XML attribute. Methods allow the user to obtain the value of the attribute
@@ -726,7 +724,7 @@ open class Attribute : CloneBase, NamespaceAware {
                 val ret = ArrayList<Namespace>(3)
                 ret.add(namespace)
                 ret.add(Namespace.XML_NAMESPACE)
-                return Collections.unmodifiableList(ret)
+                return unmodifiableList(ret)
             }
             return orderFirst(namespace, p.namespacesInScope)
         }
@@ -734,16 +732,16 @@ open class Attribute : CloneBase, NamespaceAware {
     override val namespacesIntroduced: List<Namespace>
         get() {
             if (parent == null) {
-                return Collections.singletonList(namespace)
+                return listOf(namespace)
             }
-            return Collections.emptyList()
+            return emptyList()
         }
 
     override val namespacesInherited: List<Namespace>
         get() {
             val p = parent
             if (p == null) {
-                return Collections.singletonList(Namespace.XML_NAMESPACE)
+                return listOf(Namespace.XML_NAMESPACE)
             }
             return orderFirst(namespace, p.namespacesInScope)
         }
@@ -801,7 +799,9 @@ open class Attribute : CloneBase, NamespaceAware {
             }
             // OK, we have our namespace list, but our's is not the first.
             // we need the Attribute's Namespace to be up front.
-            val tm = TreeMap<String, Namespace>()
+            // kdom: jdom2 used a TreeMap (no TreeMap in common code); a map plus a sort by prefix at the read
+            // gives the same order.
+            val tm = LinkedHashMap<String, Namespace>()
             for (ns in nsl) {
                 if (ns !== nsa) {
                     tm.put(ns.prefix, ns)
@@ -809,8 +809,8 @@ open class Attribute : CloneBase, NamespaceAware {
             }
             val ret = ArrayList<Namespace>(tm.size + 1)
             ret.add(nsa)
-            ret.addAll(tm.values)
-            return Collections.unmodifiableList(ret)
+            tm.keys.sorted().mapTo(ret) { tm.getValue(it) }
+            return unmodifiableList(ret)
         }
     }
 

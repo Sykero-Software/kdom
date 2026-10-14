@@ -60,8 +60,6 @@ import fi.sykero.kdom.Attribute
 import fi.sykero.kdom.Element
 import fi.sykero.kdom.Namespace
 import fi.sykero.kdom.internal.ArrayCopy
-import java.util.Arrays
-import java.util.Collections
 
 /**
  * A high-performance stack for processing those Namespaces that are introduced
@@ -324,7 +322,7 @@ class NamespaceStack(seed: Array<Namespace>) : Iterable<Namespace> {
         pushStack(namespaces[0], newscope, toadd)
     }
 
-    private fun pushStack(mns: Namespace, newscope: Array<Namespace>, toadd: MutableList<Namespace>) {
+    private fun pushStack(mns: Namespace, newscope: Array<Namespace>, toadd: List<Namespace>) {
         var newscope = newscope
         // OK, we've checked the namespaces in the Element, and 'toadd' contains
         // all namespaces that are not already in scope.
@@ -344,9 +342,9 @@ class NamespaceStack(seed: Array<Namespace>) : Iterable<Namespace> {
             val addedNow = toadd.toTypedArray()
             added[depth] = addedNow
             if (addedNow[0] === mns) {
-                Arrays.sort(addedNow, 1, addedNow.size, NSCOMP)
+                addedNow.sortWith(NSCOMP, 1, addedNow.size)
             } else {
-                Arrays.sort(addedNow, NSCOMP)
+                addedNow.sortWith(NSCOMP)
             }
         }
 
@@ -366,12 +364,12 @@ class NamespaceStack(seed: Array<Namespace>) : Iterable<Namespace> {
             // we also know that we want to move the data before the ip
             // backwards one spot, so the math is slightly different....
             ip--
-            System.arraycopy(newscope, 1, newscope, 0, ip)
+            newscope.copyInto(newscope, 0, 1, 1 + ip)
             newscope[ip] = tmp
 
             ip = binarySearch(newscope, 0, newscope.size, mns)
             // we can be sure that ip is >= 0
-            System.arraycopy(newscope, 0, newscope, 1, ip)
+            newscope.copyInto(newscope, 1, 0, ip)
             newscope[0] = mns
         }
 
@@ -538,7 +536,7 @@ class NamespaceStack(seed: Array<Namespace>) : Iterable<Namespace> {
         /** A simple empty Namespace Array to avoid redundant empty instances */
         private val EMPTY: Array<Namespace> = arrayOf()
 
-        private val EMPTYLIST: MutableList<Namespace> = Collections.emptyList()
+        private val EMPTYLIST: List<Namespace> = emptyList()
 
         /** A simple Iterable instance that is always empty. Saves some memory */
         private val EMPTYITER: Iterable<Namespace> = EmptyIterable()
@@ -658,7 +656,7 @@ class NamespaceStack(seed: Array<Namespace>) : Iterable<Namespace> {
             // We are a new prefix in-scope.
             val nscope = ArrayCopy.copyOf(scope, scope.size + 1)
             ip = -ip - 1
-            System.arraycopy(nscope, ip, nscope, ip + 1, nscope.size - ip - 1)
+            nscope.copyInto(nscope, ip + 1, ip, ip + (nscope.size - ip - 1))
             nscope[ip] = namespace
             return nscope
         }

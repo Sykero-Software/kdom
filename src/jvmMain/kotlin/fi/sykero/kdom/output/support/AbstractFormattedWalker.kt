@@ -62,7 +62,6 @@ import fi.sykero.kdom.Content
 import fi.sykero.kdom.internal.ArrayCopy
 import fi.sykero.kdom.output.EscapeStrategy
 import fi.sykero.kdom.output.Format
-import java.util.NoSuchElementException
 
 /**
  * This Walker implementation walks a list of Content in a Formatted form of

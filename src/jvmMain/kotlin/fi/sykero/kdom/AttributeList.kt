@@ -56,11 +56,8 @@
 
 package fi.sykero.kdom
 
+import fi.sykero.kdom.internal.KdomMutableList
 import fi.sykero.kdom.internal.ArrayCopy
-import java.util.Arrays
-import java.util.Comparator
-import java.util.ConcurrentModificationException
-import java.util.RandomAccess
 
 /**
  * `AttributeList` represents legal JDOM
@@ -87,7 +84,7 @@ internal class AttributeList
 (
     /** The parent Element  */
     private val parent: Element
-) : AbstractMutableList<Attribute>(), RandomAccess {
+) : KdomMutableList<Attribute>(), RandomAccess {
 
     /** The backing array  */
     private var attributeData: Array<Attribute?>? = null
@@ -194,10 +191,7 @@ internal class AttributeList
         if (index == size) {
             attributeData!![size++] = attribute
         } else {
-            System.arraycopy(
-                attributeData!!, index, attributeData!!, index + 1,
-                size - index
-            )
+            attributeData!!.copyInto(attributeData!!, index + 1, index, index + (size - index))
             attributeData!![index] = attribute
             size++
         }
@@ -449,10 +443,7 @@ internal class AttributeList
 
         val old = attributeData!![index]!!
         old.setParent(null)
-        System.arraycopy(
-            attributeData!!, index + 1, attributeData!!, index,
-            size - index - 1
-        )
+        attributeData!!.copyInto(attributeData!!, index, index + 1, index + 1 + (size - index - 1))
         attributeData!![--size] = null // Let gc do its work
         modCount++
         return old
@@ -595,7 +586,7 @@ internal class AttributeList
         // and describe the relative order of each of them.
         // as a result, we can do some tricks....
         val unsorted = ArrayCopy.copyOf(indexes, indexes.size)
-        Arrays.sort(unsorted)
+        unsorted.sort()
         val usc = arrayOfNulls<Attribute>(unsorted.size)
         for (i in usc.indices) {
             usc[i] = attributeData!![indexes[i]]
@@ -616,7 +607,8 @@ internal class AttributeList
      *
      * @param comp The Comparator to use for sorting.
      */
-    override fun sort(comp: Comparator<in Attribute>?) {
+    // kdom: the JVM `sort(Comparator)` override lives in KdomMutableList (common code has no `List.sort` member).
+    override fun sortLive(comp: Comparator<in Attribute>?) {
         sortAttributes(comp)
     }
 
@@ -631,7 +623,7 @@ internal class AttributeList
         for (i in 0 until sz) {
             val ip = binarySearch(indexes, i, i, comp)
             if (ip < i) {
-                System.arraycopy(indexes, ip, indexes, ip + 1, i - ip)
+                indexes.copyInto(indexes, ip + 1, ip, ip + (i - ip))
             }
             indexes[ip] = i
         }

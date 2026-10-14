@@ -56,13 +56,10 @@
 
 package fi.sykero.kdom
 
+import fi.sykero.kdom.internal.unmodifiableList
 import fi.sykero.kdom.filter.Filter
 import fi.sykero.kdom.filter.Filters
 import fi.sykero.kdom.util.IteratorIterable
-import java.util.ArrayList
-import java.util.Arrays
-import java.util.Collections
-import java.util.HashMap
 
 /**
  * An XML document. Methods allow access to the root element as well as the
@@ -836,21 +833,17 @@ open class Document : CloneBase, Parent {
      * [NamespaceAware.namespacesInScope]:
      */
     override val namespacesInScope: List<Namespace>
-        get() = Collections.unmodifiableList(
-            Arrays.asList(
-                *arrayOf(Namespace.NO_NAMESPACE, Namespace.XML_NAMESPACE)
-            )
+        get() = unmodifiableList(
+            listOf(Namespace.NO_NAMESPACE, Namespace.XML_NAMESPACE)
         )
 
     override val namespacesIntroduced: List<Namespace>
-        get() = Collections.unmodifiableList(
-            Arrays.asList(
-                *arrayOf(Namespace.NO_NAMESPACE, Namespace.XML_NAMESPACE)
-            )
+        get() = unmodifiableList(
+            listOf(Namespace.NO_NAMESPACE, Namespace.XML_NAMESPACE)
         )
 
     override val namespacesInherited: List<Namespace>
-        get() = Collections.emptyList()
+        get() = emptyList()
 
 
 }
