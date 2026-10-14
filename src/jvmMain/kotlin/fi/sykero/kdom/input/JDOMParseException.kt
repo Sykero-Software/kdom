@@ -54,10 +54,10 @@
 
  */
 
-package fi.sykero.kdom.input;
+package fi.sykero.kdom.input
 
-import fi.sykero.kdom.*;
-import org.xml.sax.*;
+import fi.sykero.kdom.Document
+import fi.sykero.kdom.JDOMException
 
 /**
  * Thrown during parse errors, with information about where the parse error
@@ -65,112 +65,89 @@ import org.xml.sax.*;
  *
  * @author  Laurent Bihanic
  */
-public class JDOMParseException extends JDOMException {
-
-	/**
-	 * Standard JDOM2 Exception Serialization. Default.
-	 */
-	private static final long serialVersionUID = 200L;
-
-	/**
-	 * The portion of the document that was successfully built before
-	 * the parse error occurred.
-	 */
-	private final Document partialDocument;
-
-	/**
-	 * This will create a parse <code>Exception</code> with the given
-	 * message and wrap the <code>Exception</code> that cause a document
-	 * parse to fail.
-	 *
-	 * @param message <code>String</code> message indicating
-	 *                the problem that occurred.
-	 * @param cause <code>Throwable</code> that caused this
-	 *              to be thrown.
-	 */
-	public JDOMParseException(String message, Throwable cause)  {
-		this(message, cause, null);
-	}
-
-	/**
-	 * This will create a parse <code>Exception</code> with the given
-	 * message and the partial document and wrap the
-	 * <code>Exception</code> that cause a document parse to fail.
-	 *
-	 * @param message <code>String</code> message indicating
-	 *                the problem that occurred.
-	 * @param cause <code>Throwable</code> that caused this
-	 *              to be thrown.
-	 * @param partialDocument <code>Document</code> the portion of
-	 *                        the input XML document that was
-	 *                        successfully built.
-	 */
-	public JDOMParseException(String message, Throwable cause,
-			Document partialDocument)  {
-		super(message, cause);
-		this.partialDocument = partialDocument;
-	}
-
+open class JDOMParseException(
+	message: String?,
+	cause: Throwable?,
 	/**
 	 * Returns the partial document that was successfully built before
 	 * the error occurred.
 	 *
-	 * @return the partial document or null if none.
+	 * The portion of the document that was successfully built before
+	 * the parse error occurred; null if none.
 	 */
-	public Document getPartialDocument() {
-		return partialDocument;
-	}
-
+	val partialDocument: Document?,
 	/**
 	 * Returns the public identifier of the entity where the
-	 * parse error occurred.
-	 *
-	 * @return a string containing the public identifier, or
-	 *         <code>null</code> if the information is not available.
+	 * parse error occurred, or `null` if the information is not available.
 	 */
-	public String getPublicId() {
-		return (getCause() instanceof SAXParseException)?
-				((SAXParseException)getCause()).getPublicId(): null;
-	}
-
+	val publicId: String?,
 	/**
 	 * Returns the system identifier of the entity where the
-	 * parse error occurred.
-	 *
-	 * @return a string containing the system identifier, or
-	 *         <code>null</code> if the information is not available.
+	 * parse error occurred, or `null` if the information is not available.
 	 */
-	public String getSystemId() {
-		return (getCause() instanceof SAXParseException)?
-				((SAXParseException)getCause()).getSystemId(): null;
-	}
-
+	val systemId: String?,
 	/**
 	 * Returns the line number of the end of the text where the
-	 * parse error occurred.
-	 * <p>
-	 * The first line in the document is line 1.</p>
+	 * parse error occurred, or -1 if the information is not available.
 	 *
-	 * @return an integer representing the line number, or -1
-	 *         if the information is not available.
+	 * The first line in the document is line 1.
 	 */
-	public int getLineNumber() {
-		return (getCause() instanceof SAXParseException)?
-				((SAXParseException)getCause()).getLineNumber(): -1;
-	}
-
+	val lineNumber: Int,
 	/**
 	 * Returns the column number of the end of the text where the
-	 * parse error occurred.
-	 * <p>
-	 * The first column in a line is position 1.</p>
+	 * parse error occurred, or -1 if the information is not available.
 	 *
-	 * @return an integer representing the column number, or -1
-	 *         if the information is not available.
+	 * The first column in a line is position 1.
 	 */
-	public int getColumnNumber() {
-		return (getCause() instanceof SAXParseException)?
-				((SAXParseException)getCause()).getColumnNumber(): -1;
+	val columnNumber: Int
+) : JDOMException(message, cause) {
+
+	/**
+	 * This will create a parse `Exception` with the given message only.
+	 * (kdom addition: location fields are -1 / null.)
+	 *
+	 * @param message `String` message indicating the problem that occurred.
+	 */
+	constructor(message: String?) : this(message, null)
+
+	/**
+	 * This will create a parse `Exception` with the given
+	 * message and wrap the `Exception` that cause a document
+	 * parse to fail.
+	 *
+	 * @param message `String` message indicating the problem that occurred.
+	 * @param cause `Throwable` that caused this to be thrown.
+	 */
+	constructor(message: String?, cause: Throwable?) : this(message, cause, null)
+
+	/**
+	 * This will create a parse `Exception` with the given
+	 * message and the partial document and wrap the
+	 * `Exception` that cause a document parse to fail.
+	 *
+	 * @param message `String` message indicating the problem that occurred.
+	 * @param cause `Throwable` that caused this to be thrown.
+	 * @param partialDocument `Document` the portion of the input XML
+	 *                        document that was successfully built.
+	 */
+	constructor(message: String?, cause: Throwable?, partialDocument: Document?) :
+		this(message, cause, partialDocument, null, null, -1, -1)
+
+	/**
+	 * This will create a parse `Exception` with the given message,
+	 * cause and the location where the parse error occurred.
+	 * (kdom addition, replaces reading the location from a `SAXParseException` cause.)
+	 *
+	 * @param message `String` message indicating the problem that occurred.
+	 * @param cause `Throwable` that caused this to be thrown.
+	 * @param lineNumber the line number (first line is 1), or -1 if unknown.
+	 * @param columnNumber the column number (first column is 1), or -1 if unknown.
+	 */
+	constructor(message: String?, cause: Throwable?, lineNumber: Int, columnNumber: Int) :
+		this(message, cause, null, null, null, lineNumber, columnNumber)
+
+	private companion object {
+		/** Standard JDOM2 Exception Serialization. Default. */
+		private const val serialVersionUID = 200L
 	}
 }
-

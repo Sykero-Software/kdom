@@ -54,7 +54,7 @@
 
  */
 
-package fi.sykero.kdom.output;
+package fi.sykero.kdom.output
 
 /**
  * Logic to determine which characters should be formatted as character
@@ -64,7 +64,7 @@ package fi.sykero.kdom.output;
  * @author Bradley S. Huffman
  * @author Jason Hunter
  */
-public interface EscapeStrategy {
+fun interface EscapeStrategy {
 
 	/**
 	 * Test whether the supplied character should be formatted literally
@@ -72,6 +72,6 @@ public interface EscapeStrategy {
 	 * @param ch The char to test to determine whether it should be escaped.
 	 * @return true if ch should be escaped.
 	 */
-	public boolean shouldEscape(char ch);
+	fun shouldEscape(ch: Char): Boolean
 }
 

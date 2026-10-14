@@ -54,7 +54,7 @@
 
  */
 
-package fi.sykero.kdom;
+package fi.sykero.kdom
 
 /**
  * Thrown when a name is supplied in construction of a JDOM construct whose
@@ -63,12 +63,7 @@ package fi.sykero.kdom;
  * @author  Brett McLaughlin
  * @author  Elliotte Rusty Harold
  */
-public class IllegalNameException extends IllegalArgumentException {
-
-	/**
-	 * Standard JDOM2 Exception Serialization. Default.
-	 */
-	private static final long serialVersionUID = 200L;
+open class IllegalNameException : IllegalArgumentException {
 
 	/**
 	 * This will create an <code>Exception</code> indicating
@@ -80,17 +75,17 @@ public class IllegalNameException extends IllegalArgumentException {
 	 *        that <code>name</code> was supplied to.
 	 * @param reason <code>String</code> message or reason name is illegal.
 	 */
-	IllegalNameException(String name, String construct, String reason) {
-		super(new StringBuilder()
-		.append("The name \"")
-		.append(name)
-		.append("\" is not legal for JDOM/XML ")
-		.append(construct)
-		.append("s: ")
-		.append(reason)
-		.append(".")
-		.toString());
-	}
+	internal constructor(name: String?, construct: String?, reason: String?) : super(
+		StringBuilder()
+			.append("The name \"")
+			.append(name)
+			.append("\" is not legal for JDOM/XML ")
+			.append(construct)
+			.append("s: ")
+			.append(reason)
+			.append(".")
+			.toString()
+	)
 
 	/**
 	 * This will create an <code>Exception</code> indicating
@@ -101,22 +96,25 @@ public class IllegalNameException extends IllegalArgumentException {
 	 * @param construct <code>String</code> name of JDOM construct
 	 *        that <code>name</code> was supplied to.
 	 */
-	IllegalNameException(String name, String construct) {
-		super(new StringBuilder()
-		.append("The name \"")
-		.append(name)
-		.append("\" is not legal for JDOM/XML ")
-		.append(construct)
-		.append("s.")
-		.toString());
-	}
+	internal constructor(name: String?, construct: String?) : super(
+		StringBuilder()
+			.append("The name \"")
+			.append(name)
+			.append("\" is not legal for JDOM/XML ")
+			.append(construct)
+			.append("s.")
+			.toString()
+	)
 
 	/**
 	 * Creates an exception with the specified error message.
 	 *
 	 * @param reason cause of the problem
 	 */
-	public IllegalNameException(String reason) {
-		super(reason);
+	constructor(reason: String?) : super(reason)
+
+	private companion object {
+		/** Standard JDOM2 Exception Serialization. Default. */
+		private const val serialVersionUID = 200L
 	}
 }

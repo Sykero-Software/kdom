@@ -54,10 +54,10 @@
 
  */
 
-package fi.sykero.kdom.output;
+package fi.sykero.kdom.output
 
-import fi.sykero.kdom.JDOMConstants;
-import fi.sykero.kdom.internal.SystemProperty;
+import fi.sykero.kdom.JDOMConstants
+import fi.sykero.kdom.internal.SystemProperty
 
 /**
  * An enumeration of common separators that are used for JDOM output.
@@ -113,7 +113,7 @@ import fi.sykero.kdom.internal.SystemProperty;
  * @author Rolf Lear
  *
  */
-public enum LineSeparator {
+enum class LineSeparator(private val value: String?) {
 	/**
 	 * The Separator sequence CRNL which is '\r\n'. 
 	 * This is the default sequence.
@@ -160,49 +160,43 @@ public enum LineSeparator {
 	
 	
 	
-	private static String getDefaultLineSeparator() {
-		// Android has some unique ordering requirements in this bootstrap process.
-		// also, Android will not have the system property set, so we can exit with the null.
-		final String prop = SystemProperty.get(JDOMConstants.JDOM2_PROPERTY_LINE_SEPARATOR, "DEFAULT");
-		if ("DEFAULT".equals(prop)) {
-			// need to do this to catch the normal process where the property is not set
-			// which will cause the value 'DEFAULT' to be returned by the getProperty(),
-			// or in an unlikely instance when someone sets
-			// -Dorg.jdom2.output.LineSeparator=DEFAULT
-			// which would create some sort of loop to happen....
-			return "\r\n";
-		} else if ("SYSTEM".equals(prop)) {
-			return System.getProperty("line.separator");
-		} else if ("CRNL".equals(prop)) {
-			return "\r\n";
-		} else if ("NL".equals(prop)) {
-			return "\n";
-		} else if ("CR".equals(prop)) {
-			return "\r";
-		} else if ("DOS".equals(prop)) {
-			return "\r\n";
-		} else if ("UNIX".equals(prop)) {
-			return "\n";
-		} else if ("NONE".equals(prop)) {
-			return null;
-		}
-		return prop;
-	}
-
-	
-	
-	private final String value;
-	
-	LineSeparator(String value) {
-		this.value = value;
-	}
-	
 	/**
 	 * The String sequence used for this Separator
 	 * @return an End-Of-Line String
 	 */
-	public String value() {
-		return value;
+	fun value(): String? {
+		return value
 	}
-	
+
+}
+
+// Kept outside the enum (a Java `private static` method of the enum): the enum constants call it while the
+// enum class is initializing, when a companion object would not exist yet.
+private fun getDefaultLineSeparator(): String? {
+	// Android has some unique ordering requirements in this bootstrap process.
+	// also, Android will not have the system property set, so we can exit with the null.
+	val prop = SystemProperty.get(JDOMConstants.JDOM2_PROPERTY_LINE_SEPARATOR, "DEFAULT")
+	if ("DEFAULT" == prop) {
+		// need to do this to catch the normal process where the property is not set
+		// which will cause the value 'DEFAULT' to be returned by the getProperty(),
+		// or in an unlikely instance when someone sets
+		// -Dorg.jdom2.output.LineSeparator=DEFAULT
+		// which would create some sort of loop to happen....
+		return "\r\n"
+	} else if ("SYSTEM" == prop) {
+		return System.getProperty("line.separator")
+	} else if ("CRNL" == prop) {
+		return "\r\n"
+	} else if ("NL" == prop) {
+		return "\n"
+	} else if ("CR" == prop) {
+		return "\r"
+	} else if ("DOS" == prop) {
+		return "\r\n"
+	} else if ("UNIX" == prop) {
+		return "\n"
+	} else if ("NONE" == prop) {
+		return null
+	}
+	return prop
 }

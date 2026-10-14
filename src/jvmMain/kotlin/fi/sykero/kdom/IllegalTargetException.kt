@@ -54,7 +54,7 @@
 
  */
 
-package fi.sykero.kdom;
+package fi.sykero.kdom
 
 /**
  * Thrown when a target is supplied in construction of a JDOM {@link
@@ -62,12 +62,7 @@ package fi.sykero.kdom;
  * 
  * @author  Brett McLaughlin
  */
-public class IllegalTargetException extends IllegalArgumentException {
-
-	/**
-	 * Standard JDOM2 Exception Serialization. Default.
-	 */
-	private static final long serialVersionUID = 200L;
+open class IllegalTargetException : IllegalArgumentException {
 
 	/**
 	 * This will create an <code>Exception</code> indicating
@@ -77,22 +72,25 @@ public class IllegalTargetException extends IllegalArgumentException {
 	 * @param target <code>String</code> target that breaks rules.
 	 * @param reason <code>String</code> message or reason target is illegal.
 	 */
-	IllegalTargetException(String target, String reason) {
-		super(new StringBuilder()
-		.append("The target \"")
-		.append(target)
-		.append("\" is not legal for JDOM/XML Processing Instructions: ")
-		.append(reason)
-		.append(".")
-		.toString());
-	}
+	internal constructor(target: String?, reason: String?) : super(
+		StringBuilder()
+			.append("The target \"")
+			.append(target)
+			.append("\" is not legal for JDOM/XML Processing Instructions: ")
+			.append(reason)
+			.append(".")
+			.toString()
+	)
 
 	/**
 	 * Creates an exception with the specified error message.
 	 *
 	 * @param reason cause of the problem
 	 */
-	public IllegalTargetException(String reason) {
-		super(reason);
+	constructor(reason: String?) : super(reason)
+
+	private companion object {
+		/** Standard JDOM2 Exception Serialization. Default. */
+		private const val serialVersionUID = 200L
 	}
 }
