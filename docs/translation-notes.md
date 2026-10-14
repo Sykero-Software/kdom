@@ -172,6 +172,48 @@ Shape decisions (no behaviour change intended):
 - The `Element(String, Namespace)`/`Element(String, String)` constructors etc. take nullable parameters; `Element(name)` delegates to
   `this(name, null as Namespace?)` to pick the overload.
 
+Task 6 (output package translated to Kotlin, JVM only; `Format`, `XMLOutputter`, `output/support/*`: 12 classes; `src/jvmMain/java` is gone).
+`java.io.Writer`/`OutputStream`/`java.nio.charset.CharsetEncoder`/`javax.xml.transform.Result` stay (Task 7 commonizes them).
+
+Property rule applications: `Format`: `escapeStrategy`, `lineSeparator` (`String?`), `omitEncoding`, `omitDeclaration`, `expandEmptyElements`,
+`ignoreTrAXEscapingPIs` (void setter: plain `var`), `textMode`, `indent` (`String?`), `encoding`, `isSpecifiedAttributesOnly` (void setter);
+`FormatStack`: `indent`, `lineSeparator`, `encoding`, `isOmitDeclaration`, `isOmitEncoding`, `isExpandEmptyElements`, `isSpecifiedAttributesOnly`,
+`escapeStrategy`, `defaultMode`, `padBetween`, `padLast` (vals) and `isIgnoreTrAXEscapingPIs`, `escapeOutput`, `levelIndent`, `levelEOL`, `textMode`
+(vars; setters are plain void, as in jdom2; the per-depth arrays are private `*s`/`*Stack` fields to avoid the name clash); `Walker`:
+`isAllText`, `isAllWhitespace`, `isCDATA` (`hasNext()`, `next()`, `text()` stay functions); `XMLOutputter`: `format`, `xmlOutputProcessor`.
+Exceptions: `XMLOutputter.getXMLOutputProcessor/setXMLOutputProcessor` -> `var xmlOutputProcessor` with `@get:JvmName("getXMLOutputProcessor")` /
+`@set:JvmName("setXMLOutputProcessor")` (a plain property would compile to `getXmlOutputProcessor`; Kotlin callers write `xmlOutputProcessor`
+exactly as before). `Format.getRawFormat/getPrettyFormat/getCompactFormat` are `@JvmStatic` companion functions, not properties (factories).
+
+Shape decisions:
+- **Dual setter API on `Format`** as in Task 5: `open fun setX(v): Format` (the fluent setters `setEscapeStrategy`, `setLineSeparator(String?)`,
+  `setLineSeparator(LineSeparator?)`, `setOmitEncoding`, `setOmitDeclaration`, `setExpandEmptyElements`, `setTextMode`, `setIndent`, `setEncoding`) next to
+  `var x` with a `@JvmSynthetic` setter. `Format` has a private constructor, so it cannot be subclassed; the setter bodies live in the property setters
+  (`encoding` also re-chooses the `EscapeStrategy`, `lineSeparator` maps `""` to `null`) and the fluent functions delegate to them. Parameter nullability:
+  `setIndent`/`setLineSeparator` accept `null` (meaningful), `setEncoding/setTextMode/setEscapeStrategy` take non-null (jdom2 threw an NPE later at output,
+  or immediately for the encoding; no AndBible caller passes null).
+- `Format.TextMode` is a nested `enum class`; the private escape strategies are nested private classes, the shared instances are private companion vals
+  (Java declaration order kept).
+- **Protected hooks.** Every `protected` member of `AbstractXMLOutputProcessor` (`write`, `textRaw` x2, `textEntityRef`, `textCDATA`, `attributeEscapedEntitiesFilter`,
+  `printDocument/Declaration/DocType/ProcessingInstruction/Comment/EntityRef/CDATA/Text/Element/Content/Namespace/Attribute`) is `protected open` with jdom2's
+  exact parameter list; the `process(...)` implementations are `open` too (jdom2 allowed overriding all). `CDATAPRE/CDATAPOST` are `protected const val` in the
+  companion (static protected fields on the outer class). `AbstractOutputProcessor.buildWalker` is `protected open`. The `Writer`/`FormatStack`/`Text`... parameters are
+  non-null (a Kotlin subclass in :app overrides `printText(out: Writer, fstack: FormatStack, text: Text)`); `write`, `textRaw(String)`, `textEntityRef`, `textCDATA`,
+  `attributeEscapedEntitiesFilter` take `String?` because jdom2's `write` ignores null and `walker.text()` is nullable.
+- `AbstractFormattedWalker`: `protected abstract analyzeMultiText`, `protected fun get(index)`; `next/hasNext/text/isAllText/isAllWhitespace/isCDATA` are final
+  (as in jdom2). `Trim` is a `protected enum class`, `MultiText` a `protected inner class` whose constructor is `internal` (the outer class constructs it; a private
+  inner constructor is not reachable from the outer class in Kotlin) and whose `forceAppend` is `internal` for the same reason (mangled JVM name; it was private).
+  The Walker subclasses (`WalkerTRIM`, ...) and `Walker` implementations are plain classes with the jdom2 constructors.
+- `FormatStack` is final (as in jdom2); `XMLOutputter` is final. `XMLOutputter(Format?, XMLOutputProcessor?)` is the primary constructor, the three other jdom2
+  constructors are secondary ones.
+- `XMLOutputter.toString()` read `Format`'s package-private fields in jdom2; it reads the properties now. `lineSeparator!!` keeps jdom2's NPE for a null separator
+  (jdom2 2.0.6.1 throws from `toString()` for `LineSeparator.NONE`, covered by a comment in `OutputDifferentialTest`).
+- `Walker.next()` returns `Content?` (null means "text follows"), `Walker.text()` `String?`.
+
+Output sanity check: `src/jvmTest/kotlin/fi/sykero/kdom/diff/OutputDifferentialTest.kt` (4 tests) builds the same trees in jdom2 and kdom and compares raw/pretty/compact
+(and five further format variants: encodings US-ASCII/ISO-8859-1/UTF-16, line separators, indent, expand-empty, omit declaration/encoding, TRIM_FULL_WHITE, NORMALIZE),
+string/writer/stream entry points, escaping helpers, TrAX PIs and `toString()` character for character. The full outputter differential is Task 12.
+
 ## Behaviour differences
 
 - `JDOMParseException` (R3): a SAX-carrying cause no longer supplies line/column/publicId/systemId; callers pass them
@@ -267,7 +309,7 @@ Each parse goes through a private placeholder `parseWithKdomBuilder(String)` in 
 ## Baseline
 
 `:kdom:jvmTest` on the JVM after Task 3: 40 test classes, 704 tests, 10 skipped (8 K5 `@Ignore` + 2 upstream), 0 failures,
-0 errors. After Task 4 fix round 1: 41 test classes, 708 tests (+4 `JDOMParseExceptionTest`), 10 skipped, 0 failures. After Task 5 (tree core and filters in Kotlin): 41 classes / 708 tests / 10 skipped / 0 failures; after fix round 1 (R8): 42 classes / 712 tests (+4 `PropertySyntaxTest`) / 10 skipped / 0 failures. This number may only grow; the 8 K5 ignores return in Task 9.
+0 errors. After Task 4 fix round 1: 41 test classes, 708 tests (+4 `JDOMParseExceptionTest`), 10 skipped, 0 failures. After Task 5 (tree core and filters in Kotlin): 41 classes / 708 tests / 10 skipped / 0 failures; after fix round 1 (R8): 42 classes / 712 tests (+4 `PropertySyntaxTest`) / 10 skipped / 0 failures. After Task 6 (output package in Kotlin, no Java left in `src/jvmMain/java`): 43 classes / 716 tests (+4 `OutputDifferentialTest`) / 10 skipped / 0 failures. This number may only grow; the 8 K5 ignores return in Task 9.
 
 ### Import notes (fix round 1)
 
