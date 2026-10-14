@@ -307,7 +307,7 @@ public class DocType extends Content {
 	}
 
 	@Override
-	protected DocType setParent(Parent parent) {
+	public DocType setParent(Parent parent) {
 		return (DocType)super.setParent(parent);
 	}
 	

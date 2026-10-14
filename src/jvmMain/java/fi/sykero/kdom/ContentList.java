@@ -126,7 +126,7 @@ final class ContentList extends AbstractList<Content>
 	 *        content to add without any checks
 	 */
 	final void uncheckedAddContent(final Content c) {
-		c.parent = parent;
+		c.parentRef = parent;
 		ensureCapacity(size + 1);
 		elementData[size++] = c;
 		incModCount();

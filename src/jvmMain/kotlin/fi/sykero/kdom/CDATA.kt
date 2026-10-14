@@ -1,4 +1,4 @@
-/*--
+/*-- 
 
  Copyright (C) 2000-2012 Jason Hunter & Brett McLaughlin.
  All rights reserved.
@@ -11,8 +11,8 @@
     notice, this list of conditions, and the following disclaimer.
 
  2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions, and the disclaimer that follows
-    these conditions in the documentation and/or other materials
+    notice, this list of conditions, and the disclaimer that follows 
+    these conditions in the documentation and/or other materials 
     provided with the distribution.
 
  3. The name "JDOM" must not be used to endorse or promote products
@@ -23,12 +23,12 @@
     may "JDOM" appear in their name, without prior written permission
     from the JDOM Project Management <request_AT_jdom_DOT_org>.
 
- In addition, we request (but do not require) that you include in the
- end-user documentation provided with the redistribution and/or in the
+ In addition, we request (but do not require) that you include in the 
+ end-user documentation provided with the redistribution and/or in the 
  software itself an acknowledgement equivalent to the following:
      "This product includes software developed by the
       JDOM Project (http://www.jdom.org/)."
- Alternatively, the acknowledgment may be graphical using the logos
+ Alternatively, the acknowledgment may be graphical using the logos 
  available at http://www.jdom.org/images/logos.
 
  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
@@ -44,8 +44,8 @@
  OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  SUCH DAMAGE.
 
- This software consists of voluntary contributions made by many
- individuals on behalf of the JDOM Project and was originally
+ This software consists of voluntary contributions made by many 
+ individuals on behalf of the JDOM Project and was originally 
  created by Jason Hunter <jhunter_AT_jdom_DOT_org> and
  Brett McLaughlin <brett_AT_jdom_DOT_org>.  For more information
  on the JDOM Project, please see <http://www.jdom.org/>.
@@ -54,12 +54,12 @@
 
  */
 
-package fi.sykero.kdom;
+package fi.sykero.kdom
 
 /**
  * An XML CDATA section. Represents character-based content within an XML
  * document that should be output within special CDATA tags. Semantically it's
- * identical to a simple {@link Text} object, but output behavior is different.
+ * identical to a simple [Text] object, but output behavior is different.
  * CDATA makes no guarantees about the underlying textual representation of
  * character data, but does expose that data as a Java String.
  *
@@ -70,161 +70,153 @@ package fi.sykero.kdom;
  * @author  Victor Toni
  * @author  Rolf Lear
  */
-public class CDATA extends Text {
+open class CDATA : Text {
 
-	/**
-	 * JDOM 2.0.0 Serialization version. CDATA is simple
-	 */
-	private static final long serialVersionUID = 200L;
+    /**
+     * This is the protected, no-args constructor standard in all JDOM
+     * classes. It allows subclassers to get a raw instance with no
+     * initialization.
+     */
+    protected constructor() : super(CType.CDATA)
 
-	/**
-	 * This is the protected, no-args constructor standard in all JDOM
-	 * classes. It allows subclassers to get a raw instance with no
-	 * initialization.
-	 */
-	protected CDATA() {
-		super(CType.CDATA);
-	}
+    /**
+     * This constructor creates a new `CDATA` node, with the
+     * supplied string value as its character content.
+     *
+     * @param string the node's character content.
+     * @throws IllegalDataException if `str` contains an
+     *         illegal character such as a vertical tab (as determined
+     *          by [fi.sykero.kdom.Verifier.checkCharacterData])
+     *         or the CDATA end delimiter `]]&gt;`.
+     */
+    constructor(string: String?) : super(CType.CDATA) {
+        setText(string)
+    }
 
-	/**
-	 * This constructor creates a new <code>CDATA</code> node, with the
-	 * supplied string value as its character content.
-	 *
-	 * @param string the node's character content.
-	 * @throws IllegalDataException if <code>str</code> contains an 
-	 *         illegal character such as a vertical tab (as determined
-	 *          by {@link fi.sykero.kdom.Verifier#checkCharacterData})
-	 *         or the CDATA end delimiter <code>]]&gt;</code>.
-	 */
-	public CDATA(final String string) {
-		super(CType.CDATA);
-		setText(string);
-	}
+    /**
+     * This will set the value of this `CDATA` node.
+     *
+     * @param str value for node's content.
+     * @return the object on which the method was invoked
+     * @throws IllegalDataException if `str` contains an
+     *         illegal character such as a vertical tab (as determined
+     *          by [fi.sykero.kdom.Verifier.checkCharacterData])
+     *         or the CDATA end delimiter `]]&gt;`.
+     */
+    override fun setText(str: String?): CDATA {
+        // Overrides Text.setText() because this needs to check that CDATA rules
+        // are enforced. We could have a separate Verifier check for CDATA
+        // beyond Text and call that alone before super.setText().
 
-	/**
-	 * This will set the value of this <code>CDATA</code> node.
-	 *
-	 * @param str value for node's content.
-	 * @return the object on which the method was invoked
-	 * @throws IllegalDataException if <code>str</code> contains an 
-	 *         illegal character such as a vertical tab (as determined
-	 *          by {@link fi.sykero.kdom.Verifier#checkCharacterData})
-	 *         or the CDATA end delimiter <code>]]&gt;</code>.
-	 */
-	@Override
-	public CDATA setText(final String str) {
-		// Overrides Text.setText() because this needs to check that CDATA rules
-		// are enforced. We could have a separate Verifier check for CDATA
-		// beyond Text and call that alone before super.setText().
+        if (str == null || "" == str) {
+            value = EMPTY_STRING
+            return this
+        }
 
-		if (str == null || "".equals(str)) {
-			value = EMPTY_STRING;
-			return this;
-		}
+        val reason = Verifier.checkCDATASection(str)
+        if (reason != null) {
+            throw IllegalDataException(str, "CDATA section", reason)
+        }
 
-		final String reason = Verifier.checkCDATASection(str);
-		if (reason != null) {
-			throw new IllegalDataException(str, "CDATA section", reason);
-		}
+        value = str
 
-		value = str;
+        return this
+    }
 
-		return this;
-	}
+    /**
+     * This will append character content to whatever content already
+     * exists within this `CDATA` node.
+     *
+     * @param str character content to append.
+     * @throws IllegalDataException if `str` contains an
+     *         illegal character such as a vertical tab (as determined
+     *          by [fi.sykero.kdom.Verifier.checkCharacterData])
+     *         or the CDATA end delimiter `]]&gt;`.
+     */
+    override fun append(str: String?) {
+        // Overrides Text.append(String) because this needs to check that CDATA
+        // rules are enforced. We could have a separate Verifier check for CDATA
+        // beyond Text and call that alone before super.setText().
 
-	/**
-	 * This will append character content to whatever content already
-	 * exists within this <code>CDATA</code> node.
-	 *
-	 * @param str character content to append.
-	 * @throws IllegalDataException if <code>str</code> contains an 
-	 *         illegal character such as a vertical tab (as determined
-	 *          by {@link fi.sykero.kdom.Verifier#checkCharacterData})
-	 *         or the CDATA end delimiter <code>]]&gt;</code>.
-	 */
-	@Override
-	public void append(final String str) {
-		// Overrides Text.append(String) because this needs to check that CDATA
-		// rules are enforced. We could have a separate Verifier check for CDATA
-		// beyond Text and call that alone before super.setText().
+        if (str == null || "" == str) {
+            return
+        }
 
-		if (str == null || "".equals(str)) {
-			return;
-		}
+        // we need a temp value to ensure that the value is changed _after_
+        // validation
+        val tmpValue: String
+        if (value === EMPTY_STRING) {
+            tmpValue = str
+        } else {
+            tmpValue = value + str
+        }
 
-		// we need a temp value to ensure that the value is changed _after_
-		// validation
-		final String tmpValue;
-		if (value == EMPTY_STRING) {
-			tmpValue = str;
-		} else {
-			tmpValue = value + str;
-		}
+        // we have to do late checking since the end of a CDATA section could
+        // have been created by concatenating both strings:
+        // "]" + "]>"
+        // or
+        // "]]" + ">"
+        // TODO: maybe this could be optimized for this two cases
+        val reason = Verifier.checkCDATASection(tmpValue)
+        if (reason != null) {
+            throw IllegalDataException(str, "CDATA section", reason)
+        }
 
-		// we have to do late checking since the end of a CDATA section could 
-		// have been created by concatenating both strings:
-		// "]" + "]>" 
-		// or 
-		// "]]" + ">"
-		// TODO: maybe this could be optimized for this two cases
-		final String reason = Verifier.checkCDATASection(tmpValue);
-		if (reason != null) {
-			throw new IllegalDataException(str, "CDATA section", reason);
-		}
+        value = tmpValue
+    }
 
-		value = tmpValue;
-	}
+    /**
+     * This will append the content of another `Text` node
+     * to this node.
+     *
+     * @param text Text node to append.
+     */
+    override fun append(text: Text?) {
+        // Overrides Text.append(Text) because this needs to check that CDATA
+        // rules are enforced. We could have a separate Verifier check for CDATA
+        // beyond Text and call that alone before super.setText().
 
-	/**
-	 * This will append the content of another <code>Text</code> node
-	 * to this node.
-	 *
-	 * @param text Text node to append.
-	 */
-	@Override
-	public void append(final Text text) {
-		// Overrides Text.append(Text) because this needs to check that CDATA
-		// rules are enforced. We could have a separate Verifier check for CDATA
-		// beyond Text and call that alone before super.setText().
+        if (text == null) {
+            return
+        }
+        append(text.text)
+    }
 
-		if (text == null) {
-			return;
-		}
-		append(text.getText());
-	}
+    /**
+     * This returns a `String` representation of the
+     * `CDATA` node, suitable for debugging. If the XML
+     * representation of the `CDATA` node is desired,
+     * either `[getText]` or
+     * [fi.sykero.kdom.output.XMLOutputter.output]`
+     * should be used.
+     *
+     * @return `String` - information about this node.
+     */
+    override fun toString(): String {
+        return StringBuilder(64)
+            .append("[CDATA: ")
+            .append(text)
+            .append("]")
+            .toString()
+    }
 
-	/**
-	 * This returns a <code>String</code> representation of the
-	 * <code>CDATA</code> node, suitable for debugging. If the XML
-	 * representation of the <code>CDATA</code> node is desired,
-	 * either <code>{@link #getText}</code> or
-	 * {@link fi.sykero.kdom.output.XMLOutputter#output(CDATA, java.io.Writer)}</code>
-	 * should be used.
-	 *
-	 * @return <code>String</code> - information about this node.
-	 */
-	@Override
-	public String toString() {
-		return new StringBuilder(64)
-		.append("[CDATA: ")
-		.append(getText())
-		.append("]")
-		.toString();
-	}
-	
-	@Override
-	public CDATA clone() {
-		return (CDATA)super.clone();
-	}
+    override fun clone(): CDATA {
+        return super.clone() as CDATA
+    }
 
-	@Override
-	public CDATA detach() {
-		return (CDATA)super.detach();
-	}
+    override fun detach(): CDATA {
+        return super.detach() as CDATA
+    }
 
-	@Override
-	protected CDATA setParent(Parent parent) {
-		return (CDATA)super.setParent(parent);
-	}
-	
+    override fun setParent(parent: Parent?): CDATA {
+        return super.setParent(parent) as CDATA
+    }
+
+    private companion object {
+        /**
+         * JDOM 2.0.0 Serialization version. CDATA is simple
+         */
+        private const val serialVersionUID = 200L
+    }
+
 }

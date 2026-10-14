@@ -1,4 +1,4 @@
-/*--
+/*-- 
 
  Copyright (C) 2000-2012 Jason Hunter & Brett McLaughlin.
  All rights reserved.
@@ -11,8 +11,8 @@
     notice, this list of conditions, and the following disclaimer.
 
  2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions, and the disclaimer that follows
-    these conditions in the documentation and/or other materials
+    notice, this list of conditions, and the disclaimer that follows 
+    these conditions in the documentation and/or other materials 
     provided with the distribution.
 
  3. The name "JDOM" must not be used to endorse or promote products
@@ -23,12 +23,12 @@
     may "JDOM" appear in their name, without prior written permission
     from the JDOM Project Management <request_AT_jdom_DOT_org>.
 
- In addition, we request (but do not require) that you include in the
- end-user documentation provided with the redistribution and/or in the
+ In addition, we request (but do not require) that you include in the 
+ end-user documentation provided with the redistribution and/or in the 
  software itself an acknowledgement equivalent to the following:
      "This product includes software developed by the
       JDOM Project (http://www.jdom.org/)."
- Alternatively, the acknowledgment may be graphical using the logos
+ Alternatively, the acknowledgment may be graphical using the logos 
  available at http://www.jdom.org/images/logos.
 
  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
@@ -44,8 +44,8 @@
  OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  SUCH DAMAGE.
 
- This software consists of voluntary contributions made by many
- individuals on behalf of the JDOM Project and was originally
+ This software consists of voluntary contributions made by many 
+ individuals on behalf of the JDOM Project and was originally 
  created by Jason Hunter <jhunter_AT_jdom_DOT_org> and
  Brett McLaughlin <brett_AT_jdom_DOT_org>.  For more information
  on the JDOM Project, please see <http://www.jdom.org/>.
@@ -54,9 +54,9 @@
 
  */
 
-package fi.sykero.kdom;
+package fi.sykero.kdom
 
-import fi.sykero.kdom.output.Format;
+import fi.sykero.kdom.output.Format
 
 /**
  * An XML character sequence. Provides a modular, parentable method of
@@ -67,214 +67,203 @@ import fi.sykero.kdom.output.Format;
  * @author  Jason Hunter
  * @author  Bradley S. Huffman
  */
-public class Text extends Content {
+open class Text : Content {
 
-	/**
-	 * JDOM2 Serialization. In this case, Text is simple. 
-	 */
-	private static final long serialVersionUID = 200L;
-	
-	static final String EMPTY_STRING = "";
+    /**
+     * The actual character content.
+     * This is also the XPath 1.0 string value of this element, which is the
+     * text itself.
+     *
+     * (Was the protected field `value`; the field is now the backing field of the
+     * `value` property, writable by subclasses via the protected setter. `null` for a raw instance
+     * made by the protected no-args constructor, as in jdom2.)
+     */
+    // XXX See http://www.servlets.com/archive/servlet/ReadMsg?msgId=8612
+    // from elharo for a description of why Java characters may not suffice
+    // long term
+    override var value: String? = null
+        protected set
 
-	/** The actual character content */
-	// XXX See http://www.servlets.com/archive/servlet/ReadMsg?msgId=8612
-	// from elharo for a description of why Java characters may not suffice
-	// long term
-	protected String value;
-	
-	/**
-	 * CData type extends Text, and it needs to be able to change the Content
-	 * type of this Content.
-	 * @param ctype The CType to set for this Text-based Content.
-	 */
-	protected Text(CType ctype) {
-		super(ctype);
-	}
+    /**
+     * CData type extends Text, and it needs to be able to change the Content
+     * type of this Content.
+     * @param ctype The CType to set for this Text-based Content.
+     */
+    protected constructor(ctype: CType) : super(ctype)
 
-	/**
-	 * This is the protected, no-args constructor standard in all JDOM
-	 * classes. It allows subclassers to get a raw instance with no
-	 * initialization.
-	 */
-	protected Text() {
-		this(CType.Text);
-	}
+    /**
+     * This is the protected, no-args constructor standard in all JDOM
+     * classes. It allows subclassers to get a raw instance with no
+     * initialization.
+     */
+    protected constructor() : this(CType.Text)
 
-	/**
-	 * This constructor creates a new <code>Text</code> node, with the
-	 * supplied string value as its character content.
-	 *
-	 * @param str the node's character content.
-	 * @throws IllegalDataException if <code>str</code> contains an
-	 *         illegal character such as a vertical tab (as determined
-	 *         by {@link fi.sykero.kdom.Verifier#checkCharacterData})
-	 */
-	public Text(String str) {
-		this(CType.Text);
-		setText(str);
-	}
+    /**
+     * This constructor creates a new `Text` node, with the
+     * supplied string value as its character content.
+     *
+     * @param str the node's character content.
+     * @throws IllegalDataException if `str` contains an
+     *         illegal character such as a vertical tab (as determined
+     *         by [fi.sykero.kdom.Verifier.checkCharacterData])
+     */
+    constructor(str: String?) : this(CType.Text) {
+        setText(str)
+    }
 
-	/**
-	 * This returns the value of this <code>Text</code> node as a Java
-	 * <code>String</code>.
-	 *
-	 * @return <code>String</code> - character content of this node.
-	 */
-	public String getText() {
-		return value;
-	}
+    /**
+     * This returns the value of this `Text` node as a Java
+     * `String`.
+     *
+     * @return `String` - character content of this node.
+     */
+    val text: String?
+        get() = value
 
-	/**
-	 * This returns the textual content with all surrounding whitespace
-	 * removed.  If only whitespace exists, the empty string is returned.
-	 *
-	 * @return trimmed text content or empty string
-	 */
-	public String getTextTrim() {
-		return Format.trimBoth(getText());
-	}
+    /**
+     * This returns the textual content with all surrounding whitespace
+     * removed.  If only whitespace exists, the empty string is returned.
+     *
+     * @return trimmed text content or empty string
+     */
+    val textTrim: String
+        get() = Format.trimBoth(text)
 
-	/**
-	 * This returns the textual content with all surrounding whitespace
-	 * removed and internal whitespace normalized to a single space.  If
-	 * only whitespace exists, the empty string is returned.
-	 *
-	 * @return normalized text content or empty string
-	 */
-	public String getTextNormalize() {
-		return normalizeString(getText());
-	}
+    /**
+     * This returns the textual content with all surrounding whitespace
+     * removed and internal whitespace normalized to a single space.  If
+     * only whitespace exists, the empty string is returned.
+     *
+     * @return normalized text content or empty string
+     */
+    val textNormalize: String
+        get() = normalizeString(text)
 
-	/**
-	 * This returns a new string with all surrounding whitespace
-	 * removed and internal whitespace normalized to a single space.  If
-	 * only whitespace exists, the empty string is returned.
-	 * <p>
-	 * Per XML 1.0 Production 3 whitespace includes: #x20, #x9, #xD, #xA
-	 * </p>
-	 *
-	 * @param str string to be normalized.
-	 * @return normalized string or empty string
-	 */
-	public static String normalizeString(String str) {
-		if (str == null)
-			return EMPTY_STRING;
+    /**
+     * This will set the value of this `Text` node.
+     *
+     * @param str value for node's content.
+     * @return the object on which the method was invoked
+     * @throws IllegalDataException if `str` contains an
+     *         illegal character such as a vertical tab (as determined
+     *         by [fi.sykero.kdom.Verifier.checkCharacterData])
+     */
+    open fun setText(str: String?): Text {
+        val reason: String?
 
-		return Format.compact(str);
-	}
+        if (str == null) {
+            value = EMPTY_STRING
+            return this
+        }
 
-	/**
-	 * This will set the value of this <code>Text</code> node.
-	 *
-	 * @param str value for node's content.
-	 * @return the object on which the method was invoked
-	 * @throws IllegalDataException if <code>str</code> contains an
-	 *         illegal character such as a vertical tab (as determined
-	 *         by {@link fi.sykero.kdom.Verifier#checkCharacterData})
-	 */
-	public Text setText(String str) {
-		String reason;
+        reason = Verifier.checkCharacterData(str)
+        if (reason != null) {
+            throw IllegalDataException(str, "character content", reason)
+        }
+        value = str
+        return this
+    }
 
-		if (str == null) {
-			value = EMPTY_STRING;
-			return this;
-		}
+    /**
+     * This will append character content to whatever content already
+     * exists within this `Text` node.
+     *
+     * @param str character content to append.
+     * @throws IllegalDataException if `str` contains an
+     *         illegal character such as a vertical tab (as determined
+     *         by [fi.sykero.kdom.Verifier.checkCharacterData])
+     */
+    open fun append(str: String?) {
+        val reason: String?
 
-		if ((reason = Verifier.checkCharacterData(str)) != null) {
-			throw new IllegalDataException(str, "character content", reason);
-		}
-		value = str;
-		return this;
-	}
+        if (str == null) {
+            return
+        }
+        reason = Verifier.checkCharacterData(str)
+        if (reason != null) {
+            throw IllegalDataException(str, "character content", reason)
+        }
 
-	/**
-	 * This will append character content to whatever content already
-	 * exists within this <code>Text</code> node.
-	 *
-	 * @param str character content to append.
-	 * @throws IllegalDataException if <code>str</code> contains an
-	 *         illegal character such as a vertical tab (as determined
-	 *         by {@link fi.sykero.kdom.Verifier#checkCharacterData})
-	 */
-	public void append(String str) {
-		String reason;
+        if (str.length > 0) {
+            value += str
+        }
+    }
 
-		if (str == null) {
-			return;
-		}
-		if ((reason = Verifier.checkCharacterData(str)) != null) {
-			throw new IllegalDataException(str, "character content", reason);
-		}
+    /**
+     * This will append the content of another `Text` node
+     * to this node.
+     *
+     * @param text Text node to append.
+     */
+    open fun append(text: Text?) {
+        if (text == null) {
+            return
+        }
+        value += text.text
+    }
 
-		if (str.length() > 0) {
-			value += str;
-		}
-	}
+    /**
+     * This returns a `String` representation of the
+     * `Text` node, suitable for debugging. If the XML
+     * representation of the `Text` node is desired,
+     * either `[getText]` or
+     * [fi.sykero.kdom.output.XMLOutputter.outputString]`
+     * should be used.
+     *
+     * @return `String` - information about this node.
+     */
+    override fun toString(): String {
+        return StringBuilder(64)
+            .append("[Text: ")
+            .append(text)
+            .append("]")
+            .toString()
+    }
 
-	/**
-	 * This will append the content of another <code>Text</code> node
-	 * to this node.
-	 *
-	 * @param text Text node to append.
-	 */
-	public void append(Text text) {
-		if (text == null) {
-			return;
-		}
-		value += text.getText();
-	}
+    override fun clone(): Text {
+        val text = super.clone() as Text
+        text.value = value
+        return text
+    }
 
-	/**
-	 * Returns the XPath 1.0 string value of this element, which is the
-	 * text itself.
-	 *
-	 * @return the text
-	 */
-	@Override
-	public String getValue() {
-		return value;
-	}
+    override fun detach(): Text {
+        return super.detach() as Text
+    }
 
-	/**
-	 * This returns a <code>String</code> representation of the
-	 * <code>Text</code> node, suitable for debugging. If the XML
-	 * representation of the <code>Text</code> node is desired,
-	 * either <code>{@link #getText}</code> or
-	 * {@link fi.sykero.kdom.output.XMLOutputter#outputString(Text)}</code>
-	 * should be used.
-	 *
-	 * @return <code>String</code> - information about this node.
-	 */
-	@Override
-	public String toString() {
-		return new StringBuilder(64)
-		.append("[Text: ")
-		.append(getText())
-		.append("]")
-		.toString();
-	}
+    override fun setParent(parent: Parent?): Text {
+        return super.setParent(parent) as Text
+    }
 
-	@Override
-	public Text clone() {
-		Text text = (Text)super.clone();
-		text.value = value;
-		return text;
-	}
+    override val parent: Element?
+        get() =
+            // because DocType can only be attached to a Document.
+            super.parent as Element?
 
-	@Override
-	public Text detach() {
-		return (Text)super.detach();
-	}
+    companion object {
+        /**
+         * JDOM2 Serialization. In this case, Text is simple.
+         */
+        private const val serialVersionUID = 200L
 
-	@Override
-	protected Text setParent(Parent parent) {
-		return (Text)super.setParent(parent);
-	}
-	
-	@Override
-	public Element getParent() {
-		// because DocType can only be attached to a Document.
-		return (Element)super.getParent();
-	}
+        internal const val EMPTY_STRING = ""
+
+        /**
+         * This returns a new string with all surrounding whitespace
+         * removed and internal whitespace normalized to a single space.  If
+         * only whitespace exists, the empty string is returned.
+         *
+         * Per XML 1.0 Production 3 whitespace includes: #x20, #x9, #xD, #xA
+         *
+         * @param str string to be normalized.
+         * @return normalized string or empty string
+         */
+        @JvmStatic
+        fun normalizeString(str: String?): String {
+            if (str == null)
+                return EMPTY_STRING
+
+            return Format.compact(str)
+        }
+    }
 
 }

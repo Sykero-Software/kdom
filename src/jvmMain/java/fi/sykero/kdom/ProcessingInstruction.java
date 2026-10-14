@@ -480,7 +480,7 @@ public class ProcessingInstruction extends Content {
 	}
 
 	@Override
-	protected ProcessingInstruction setParent(Parent parent) {
+	public ProcessingInstruction setParent(Parent parent) {
 		return (ProcessingInstruction)super.setParent(parent);
 	}
 	

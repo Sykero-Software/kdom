@@ -250,7 +250,7 @@ public class EntityRef extends Content {
 	}
 
 	@Override
-	protected EntityRef setParent(Parent parent) {
+	public EntityRef setParent(Parent parent) {
 		return (EntityRef)super.setParent(parent);
 	}
 	

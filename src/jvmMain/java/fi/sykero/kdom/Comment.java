@@ -141,7 +141,7 @@ public class Comment extends Content {
 	}
 
 	@Override
-	protected Comment setParent(Parent parent) {
+	public Comment setParent(Parent parent) {
 		return (Comment)super.setParent(parent);
 	}
 

@@ -342,8 +342,8 @@ public class Element extends Content implements Parent {
 		}
 
 		// If we still don't have a match, ask the parent
-		if (parent instanceof Element) {
-			return ((Element)parent).getNamespace(prefix);
+		if (parentRef instanceof Element) {
+			return ((Element)parentRef).getNamespace(prefix);
 		}
 
 		return null;
@@ -474,7 +474,7 @@ public class Element extends Content implements Parent {
 	 * @return                     whether this is a root element
 	 */
 	public boolean isRootElement() {
-		return parent instanceof Document;
+		return parentRef instanceof Document;
 	}
 
 	@Override
