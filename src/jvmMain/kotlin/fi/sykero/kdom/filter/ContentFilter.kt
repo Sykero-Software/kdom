@@ -1,4 +1,4 @@
-/*--
+/*-- 
 
  Copyright (C) 2000-2012 Jason Hunter & Brett McLaughlin.
  All rights reserved.
@@ -11,8 +11,8 @@
     notice, this list of conditions, and the following disclaimer.
 
  2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions, and the disclaimer that follows
-    these conditions in the documentation and/or other materials
+    notice, this list of conditions, and the disclaimer that follows 
+    these conditions in the documentation and/or other materials 
     provided with the distribution.
 
  3. The name "JDOM" must not be used to endorse or promote products
@@ -23,12 +23,12 @@
     may "JDOM" appear in their name, without prior written permission
     from the JDOM Project Management <request_AT_jdom_DOT_org>.
 
- In addition, we request (but do not require) that you include in the
- end-user documentation provided with the redistribution and/or in the
+ In addition, we request (but do not require) that you include in the 
+ end-user documentation provided with the redistribution and/or in the 
  software itself an acknowledgement equivalent to the following:
      "This product includes software developed by the
       JDOM Project (http://www.jdom.org/)."
- Alternatively, the acknowledgment may be graphical using the logos
+ Alternatively, the acknowledgment may be graphical using the logos 
  available at http://www.jdom.org/images/logos.
 
  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
@@ -44,8 +44,8 @@
  OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  SUCH DAMAGE.
 
- This software consists of voluntary contributions made by many
- individuals on behalf of the JDOM Project and was originally
+ This software consists of voluntary contributions made by many 
+ individuals on behalf of the JDOM Project and was originally 
  created by Jason Hunter <jhunter_AT_jdom_DOT_org> and
  Brett McLaughlin <brett_AT_jdom_DOT_org>.  For more information
  on the JDOM Project, please see <http://www.jdom.org/>.
@@ -54,313 +54,299 @@
 
  */
 
-package fi.sykero.kdom.filter;
+package fi.sykero.kdom.filter
 
-import fi.sykero.kdom.*;
+import fi.sykero.kdom.CDATA
+import fi.sykero.kdom.Comment
+import fi.sykero.kdom.Content
+import fi.sykero.kdom.DocType
+import fi.sykero.kdom.Element
+import fi.sykero.kdom.EntityRef
+import fi.sykero.kdom.ProcessingInstruction
+import fi.sykero.kdom.Text
 
 /**
  * A general purpose Filter able to represent all legal JDOM objects or a
  * specific subset. Filtering is accomplished by way of a filtering mask in
  * which each bit represents whether a JDOM object is visible or not.
  * For example to view all Text and CDATA nodes in the content of element x.
- * <pre><code>
+ * ```
  *      Filter filter = new ContentFilter(ContentFilter.TEXT |
  *                                        ContentFilter.CDATA);
  *      List content = x.getContent(filter);
- * </code></pre>
- * <p>
+ * ```
+ *
  * For those who don't like bit-masking, set methods are provided as an
  * alternative.  For example to allow everything except Comment nodes.
- * <pre><code>
+ * ```
  *      Filter filter =  new ContentFilter();
  *      filter.setCommentVisible(false);
  *      List content = x.getContent(filter);
- * </code></pre>
- * <p>
+ * ```
+ *
  * The default is to allow all valid JDOM objects.
  *
  * @author Bradley S. Huffman
  */
-public class ContentFilter extends AbstractFilter<Content> {
+open class ContentFilter : AbstractFilter<Content> {
 
-	/**
-	 * JDOM2 Serialization: Default mechanism
-	 */
-	private static final long serialVersionUID = 200L;
+    /** The JDOM object mask  */
+    private var mask: Int = 0
 
-	/** Mask for JDOM {@link Element} objects */
-	public static final int ELEMENT   = 1;
+    /**
+     * Default constructor that allows any legal JDOM objects.
+     */
+    constructor() : super() {
+        setDefaultMask()
+    }
 
-	/** Mask for JDOM {@link CDATA} objects */
-	public static final int CDATA     = 2;
+    /**
+     * Set whether all JDOM objects are visible or not.
+     *
+     * @param allVisible `true` all JDOM objects are visible,
+     *                   `false` all JDOM objects are hidden.
+     */
+    constructor(allVisible: Boolean) : super() {
+        if (allVisible) {
+            setDefaultMask()
+        } else {
+            mask = mask and mask.inv()
+        }
+    }
 
-	/** Mask for JDOM {@link Text} objects */
-	public static final int TEXT      = 4;
+    /**
+     * Filter out JDOM objects according to a filtering mask.
+     *
+     * @param mask Mask of JDOM objects to allow.
+     */
+    constructor(mask: Int) : super() {
+        filterMask = mask
+    }
 
-	/** Mask for JDOM {@link Comment} objects */
-	public static final int COMMENT   = 8;
+    /**
+     * Return current filtering mask.
+     * Set filtering mask: the new filtering mask is applied to the default mask.
+     * (The mask is stored in the private field `mask`; jdom2 called it `filterMask`.)
+     */
+    var filterMask: Int
+        get() = mask
+        set(mask) {
+            setDefaultMask()
+            this.mask = this.mask and mask
+        }
 
-	/** Mask for JDOM {@link ProcessingInstruction} objects */
-	public static final int PI        = 16;
+    /**
+     * Set this filter to allow all legal JDOM objects.
+     */
+    fun setDefaultMask() {
+        mask = ELEMENT or CDATA or TEXT or COMMENT or
+                PI or ENTITYREF or DOCUMENT or DOCTYPE
+    }
 
-	/** Mask for JDOM {@link EntityRef} objects */
-	public static final int ENTITYREF = 32;
+    /**
+     * Set filter to match only JDOM objects that are legal
+     * document content.
+     */
+    fun setDocumentContent() {
+        mask = ELEMENT or COMMENT or PI or DOCTYPE
+    }
 
-	/** Mask for JDOM {@link Document} object */
-	public static final int DOCUMENT  = 64;
+    /**
+     * Set filter to match only JDOM objects that are legal
+     * element content.
+     */
+    fun setElementContent() {
+        mask = ELEMENT or CDATA or TEXT or
+                COMMENT or PI or ENTITYREF
+    }
 
-	/** Mask for JDOM {@link DocType} object */
-	public static final int DOCTYPE = 128;
+    /**
+     * Set visibility of `Element` objects.
+     *
+     * @param visible whether Elements are visible, `true`
+     *        if yes, `false` if not
+     */
+    fun setElementVisible(visible: Boolean) {
+        if (visible) {
+            mask = mask or ELEMENT
+        } else {
+            mask = mask and ELEMENT.inv()
+        }
+    }
 
-	/** The JDOM object mask */
-	private int filterMask;
+    /**
+     * Set visibility of `CDATA` objects.
+     *
+     * @param visible whether CDATA nodes are visible, `true`
+     *        if yes, `false` if not
+     */
+    fun setCDATAVisible(visible: Boolean) {
+        if (visible) {
+            mask = mask or CDATA
+        } else {
+            mask = mask and CDATA.inv()
+        }
+    }
 
-	/**
-	 * Default constructor that allows any legal JDOM objects.
-	 */
-	public ContentFilter() {
-		setDefaultMask();
-	}
+    /**
+     * Set visibility of `Text` objects.
+     *
+     * @param visible whether Text nodes are visible, `true`
+     *        if yes, `false` if not
+     */
+    fun setTextVisible(visible: Boolean) {
+        if (visible) {
+            mask = mask or TEXT
+        } else {
+            mask = mask and TEXT.inv()
+        }
+    }
 
-	/**
-	 * Set whether all JDOM objects are visible or not.
-	 *
-	 * @param allVisible <code>true</code> all JDOM objects are visible,
-	 *                   <code>false</code> all JDOM objects are hidden.
-	 */
-	public ContentFilter(boolean allVisible) {
-		if (allVisible) {
-			setDefaultMask();
-		}
-		else {
-			filterMask &= ~filterMask;
-		}
-	}
+    /**
+     * Set visibility of `Comment` objects.
+     *
+     * @param visible whether Comments are visible, `true`
+     *        if yes, `false` if not
+     */
+    fun setCommentVisible(visible: Boolean) {
+        if (visible) {
+            mask = mask or COMMENT
+        } else {
+            mask = mask and COMMENT.inv()
+        }
+    }
 
-	/**
-	 * Filter out JDOM objects according to a filtering mask.
-	 *
-	 * @param mask Mask of JDOM objects to allow.
-	 */
-	public ContentFilter(int mask) {
-		setFilterMask(mask);
-	}
+    /**
+     * Set visibility of `ProcessingInstruction` objects.
+     *
+     * @param visible whether ProcessingInstructions are visible,
+     *        `true` if yes, `false` if not
+     */
+    fun setPIVisible(visible: Boolean) {
+        if (visible) {
+            mask = mask or PI
+        } else {
+            mask = mask and PI.inv()
+        }
+    }
 
-	/**
-	 * Return current filtering mask.
-	 *
-	 * @return the current filtering mask
-	 */
-	public int getFilterMask() {
-		return filterMask;
-	}
+    /**
+     * Set visibility of `EntityRef` objects.
+     *
+     * @param visible whether EntityRefs are visible, `true`
+     *        if yes, `false` if not
+     */
+    fun setEntityRefVisible(visible: Boolean) {
+        if (visible) {
+            mask = mask or ENTITYREF
+        } else {
+            mask = mask and ENTITYREF.inv()
+        }
+    }
 
-	/**
-	 * Set filtering mask.
-	 *
-	 * @param mask the new filtering mask
-	 */
-	public void setFilterMask(int mask) {
-		setDefaultMask();
-		filterMask &= mask;
-	}
+    /**
+     * Set visibility of `DocType` objects.
+     *
+     * @param visible whether the DocType is visible, `true`
+     *        if yes, `false` if not
+     */
+    fun setDocTypeVisible(visible: Boolean) {
+        if (visible) {
+            mask = mask or DOCTYPE
+        } else {
+            mask = mask and DOCTYPE.inv()
+        }
+    }
 
-	/**
-	 * Set this filter to allow all legal JDOM objects.
-	 */
-	public void setDefaultMask() {
-		filterMask = ELEMENT | CDATA | TEXT | COMMENT |
-				PI | ENTITYREF | DOCUMENT | DOCTYPE;
-	}
+    /**
+     * Check to see if the object matches according to the filter mask.
+     *
+     * @param content The object to verify.
+     * @return `true` if the objected matched a predfined
+     *           set of rules.
+     */
+    override fun filter(content: Any?): Content? {
+        if (content == null || !Content::class.java.isInstance(content)) {
+            return null
+        }
 
-	/**
-	 * Set filter to match only JDOM objects that are legal
-	 * document content.
-	 */
-	public void setDocumentContent() {
-		filterMask = ELEMENT | COMMENT | PI | DOCTYPE;
-	}
+        val c = content as Content
 
-	/**
-	 * Set filter to match only JDOM objects that are legal
-	 * element content.
-	 */
-	public void setElementContent() {
-		filterMask = ELEMENT | CDATA | TEXT |
-				COMMENT | PI | ENTITYREF;
-	}
+        if (c is Element) {
+            return if ((mask and ELEMENT) != 0) c else null
+        } else if (c is CDATA) { // must come before Text check
+            return if ((mask and CDATA) != 0) c else null
+        } else if (c is Text) {
+            return if ((mask and TEXT) != 0) c else null
+        } else if (c is Comment) {
+            return if ((mask and COMMENT) != 0) c else null
+        } else if (c is ProcessingInstruction) {
+            return if ((mask and PI) != 0) c else null
+        } else if (c is EntityRef) {
+            return if ((mask and ENTITYREF) != 0) c else null
+        }
+        //        else if (obj instanceof Document) {
+        //            return (filterMask & DOCUMENT) != 0 ? obj : null;
+        //        }
+        else if (c is DocType) {
+            return if ((mask and DOCTYPE) != 0) c else null
+        }
 
-	/**
-	 * Set visibility of <code>Element</code> objects.
-	 *
-	 * @param visible whether Elements are visible, <code>true</code>
-	 *        if yes, <code>false</code> if not
-	 */
-	public void setElementVisible(boolean visible) {
-		if (visible) {
-			filterMask |= ELEMENT;
-		}
-		else {
-			filterMask &= ~ELEMENT;
-		}
-	}
+        return null
+    }
 
-	/**
-	 * Set visibility of <code>CDATA</code> objects.
-	 *
-	 * @param visible whether CDATA nodes are visible, <code>true</code>
-	 *        if yes, <code>false</code> if not
-	 */
-	public void setCDATAVisible(boolean visible) {
-		if (visible) {
-			filterMask |= CDATA;
-		}
-		else {
-			filterMask &= ~CDATA;
-		}
-	}
+    /**
+     * Returns whether the two filters are equivalent (i&#46;e&#46; the
+     * matching mask values are identical).
+     *
+     * @param  other                 the object to compare against
+     * @return                     whether the two filters are equal
+     */
+    override fun equals(other: Any?): Boolean {
+        // Generated by IntelliJ
+        if (this === other) return true
+        if (other !is ContentFilter) return false
 
-	/**
-	 * Set visibility of <code>Text</code> objects.
-	 *
-	 * @param visible whether Text nodes are visible, <code>true</code>
-	 *        if yes, <code>false</code> if not
-	 */
-	public void setTextVisible(boolean visible) {
-		if (visible) {
-			filterMask |= TEXT;
-		}
-		else {
-			filterMask &= ~TEXT;
-		}
-	}
+        val filter: ContentFilter = other
 
-	/**
-	 * Set visibility of <code>Comment</code> objects.
-	 *
-	 * @param visible whether Comments are visible, <code>true</code>
-	 *        if yes, <code>false</code> if not
-	 */
-	public void setCommentVisible(boolean visible) {
-		if (visible) {
-			filterMask |= COMMENT;
-		}
-		else {
-			filterMask &= ~COMMENT;
-		}
-	}
+        if (mask != filter.mask) return false
 
-	/**
-	 * Set visibility of <code>ProcessingInstruction</code> objects.
-	 *
-	 * @param visible whether ProcessingInstructions are visible,
-	 *        <code>true</code> if yes, <code>false</code> if not
-	 */
-	public void setPIVisible(boolean visible) {
-		if (visible) {
-			filterMask |= PI;
-		}
-		else {
-			filterMask &= ~PI;
-		}
-	}
+        return true
+    }
 
-	/**
-	 * Set visibility of <code>EntityRef</code> objects.
-	 *
-	 * @param visible whether EntityRefs are visible, <code>true</code>
-	 *        if yes, <code>false</code> if not
-	 */
-	public void setEntityRefVisible(boolean visible) {
-		if (visible) {
-			filterMask |= ENTITYREF;
-		}
-		else {
-			filterMask &= ~ENTITYREF;
-		}
-	}
+    override fun hashCode(): Int {
+        // Generated by IntelliJ
+        return mask
+    }
 
-	/**
-	 * Set visibility of <code>DocType</code> objects.
-	 *
-	 * @param visible whether the DocType is visible, <code>true</code>
-	 *        if yes, <code>false</code> if not
-	 */
-	public void setDocTypeVisible(boolean visible) {
-		if (visible) {
-			filterMask |= DOCTYPE;
-		}
-		else {
-			filterMask &= ~DOCTYPE;
-		}
-	}
+    companion object {
+        /**
+         * JDOM2 Serialization: Default mechanism
+         */
+        private const val serialVersionUID = 200L
 
-	/**
-	 * Check to see if the object matches according to the filter mask.
-	 *
-	 * @param obj The object to verify.
-	 * @return <code>true</code> if the objected matched a predfined
-	 *           set of rules.
-	 */
-	@Override
-	public Content filter(Object obj) {
-		if (obj == null || !Content.class.isInstance(obj)) {
-			return null;
-		}
+        /** Mask for JDOM [Element] objects  */
+        const val ELEMENT: Int = 1
 
-		Content content = (Content)obj;
+        /** Mask for JDOM [CDATA] objects  */
+        const val CDATA: Int = 2
 
-		if (content instanceof Element) {
-			return (filterMask & ELEMENT) != 0 ? content : null;
-		}
-		else if (content instanceof CDATA) {  // must come before Text check
-			return (filterMask & CDATA) != 0 ? content : null;
-		}
-		else if (content instanceof Text) {
-			return (filterMask & TEXT) != 0 ? content : null;
-		}
-		else if (content instanceof Comment) {
-			return (filterMask & COMMENT) != 0 ? content : null;
-		}
-		else if (content instanceof ProcessingInstruction) {
-			return (filterMask & PI) != 0 ? content : null;
-		}
-		else if (content instanceof EntityRef) {
-			return (filterMask & ENTITYREF) != 0 ? content : null;
-		}
-		//        else if (obj instanceof Document) {
-		//            return (filterMask & DOCUMENT) != 0 ? obj : null;
-		//        }
-		else if (content instanceof DocType) {
-			return (filterMask & DOCTYPE) != 0 ? content : null;
-		}
+        /** Mask for JDOM [Text] objects  */
+        const val TEXT: Int = 4
 
-		return null;
-	}
+        /** Mask for JDOM [Comment] objects  */
+        const val COMMENT: Int = 8
 
-	/**
-	 * Returns whether the two filters are equivalent (i&#46;e&#46; the
-	 * matching mask values are identical).
-	 *
-	 * @param  obj                 the object to compare against
-	 * @return                     whether the two filters are equal
-	 */
-	@Override
-	public boolean equals(Object obj) {
-		// Generated by IntelliJ
-		if (this == obj) return true;
-		if (!(obj instanceof ContentFilter)) return false;
+        /** Mask for JDOM [ProcessingInstruction] objects  */
+        const val PI: Int = 16
 
-		final ContentFilter filter = (ContentFilter) obj;
+        /** Mask for JDOM [EntityRef] objects  */
+        const val ENTITYREF: Int = 32
 
-		if (filterMask != filter.filterMask) return false;
+        /** Mask for JDOM [fi.sykero.kdom.Document] object  */
+        const val DOCUMENT: Int = 64
 
-		return true;
-	}
-
-	@Override
-	public int hashCode() {
-		// Generated by IntelliJ
-		return filterMask;
-	}
+        /** Mask for JDOM [DocType] object  */
+        const val DOCTYPE: Int = 128
+    }
 }

@@ -63,7 +63,7 @@ package fi.sykero.kdom.filter
  *
  * @param <T> The generic type of the filtered data.
  */
-internal class ClassFilter<T : Any>
+internal class ClassFilter<T>
 /**
  * Construct the new ClassFilter.
  * @param tclass the class instance for the generic type.

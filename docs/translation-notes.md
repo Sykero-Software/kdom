@@ -13,6 +13,30 @@ and a line here.
 - Not a property: `NamespaceStack.getNamespaceForPrefix(prefix)`, `getFirstNamespaceForURI(uri)`,
   `getAllNamespacesForURI(uri)`, `getRebound(prefix)` take a parameter and stay functions.
 
+- Task 5 (tree core): **fluent setters stay functions.** jdom2's `setX(..)` that returns the receiver (`Text.setText`,
+  `Comment.setText`, `EntityRef.setName/setPublicID/setSystemID`, `DocType.setElementName/setPublicID/setSystemID`,
+  `ProcessingInstruction.setTarget/setData(String|Map)/setPseudoAttribute`, `Attribute.setName/setNamespace/setValue/
+  setAttributeType`, `Element.setName/setNamespace/setText/setAttributes/setContent(..)`, `Document.setRootElement/
+  setDocType/setContent(..)`) are kept as `open fun setX(v: T?): Self` next to a `val x` getter (no setter, so no JVM
+  clash). Reason: jdom2's own tests (the contract) assert the returned identity (`assertTrue(er == er.setName("n"))`,
+  `doc == doc.setDocType(null)`, `new Element("a").setText("1")` chains) and pass `null` where the Java code validates or
+  maps it (`Text.setText(null)` -> empty, `setDocType(null)` removes, `Verifier.check*(null)` -> `Illegal*Exception`); a Kotlin
+  property setter returns `Unit` and its type would have to equal the getter's (non-null). Kotlin callers write `x.setText(s)`,
+  not `x.text = s`. Void jdom2 setters with a getter (`DocType.setInternalSubset`, `Attribute.setSpecified`,
+  `Document.setBaseURI`) are real `var` properties (`internalSubset`, `isSpecified`, `baseURI`).
+- `Element.getAttributes()` stays a function: it lazily creates the attribute list (javadoc: "may be inefficient if there are no
+  Attributes"); `NamespaceStack` and `Verifier` (Task 4 files) now call `element.getAttributes()`.
+- `Element.getXMLBaseURI()` stays a function: it walks the ancestry, resolves URIs and throws the checked
+  `URISyntaxException` (`@Throws`). (A property would also have the JVM name `getXmlBaseURI`.)
+- `Attribute.getIntValue/getLongValue/getFloatValue/getDoubleValue/getBooleanValue` are properties with
+  `@get:Throws(DataConversionException::class)` (the Java tests catch the checked exception).
+- `ProcessingInstruction.getPseudoAttributeNames()` -> `val pseudoAttributeNames` (copying getter, as `NamespaceStack.scope` in Task 4).
+- `ContentFilter.get/setFilterMask` -> `var filterMask` with a custom setter (`setDefaultMask(); mask &= newMask`); the private field is
+  `mask` (jdom2: `filterMask`), see Traps.
+- Not a property: `Element.getNamespace(prefix)`, `getAttribute*(..)`, `getChild*(..)`, `getChildren(name[, ns])`, `getContent(index|filter)`,
+  `getDescendants(filter)`, `Document.getProperty(id)`, `ProcessingInstruction.getPseudoAttributeValue(name)`, `Attribute`/`Element`
+  `get/removeAttribute*`, `AttributeList.get(name, ns)` take parameters.
+
 ## API shape
 
 Task 4 (leaf classes translated to Kotlin, JVM only; sources under `src/jvmMain/kotlin`). All translated files keep the
@@ -64,10 +88,94 @@ secondary `(message)`, `(message, cause)`, `(message, cause, partialDocument)` (
 `lineNumber = columnNumber = -1`, so the jdom2 constructors give the values jdom2 gave for a non-SAX cause. A parser that
 wraps a position-carrying exception must now pass the position explicitly (Task 9). No Java test used these accessors.
 
+Task 5 (tree core and filters translated to Kotlin, JVM only; 28 classes: `CloneBase`, `Content`, `Parent`, `Text`, `CDATA`, `Comment`,
+`ProcessingInstruction`, `EntityRef`, `DocType`, `Attribute`, `AttributeList`, `ContentList`, `DescendantIterator`, `FilterIterator`,
+`Element`, `Document`, `filter/*` x12). A javap diff of the public/protected JVM API against the Java originals shows only the
+differences listed here.
+
+Property rule applications: `Content`: `cType`, `parent` (open; `Text`/`EntityRef` narrow it to `Element?`, `DocType` to
+`Document?`), `parentElement`, `document`, `value` (abstract, `String?`); `Parent`: `contentSize`, `content`, `descendants`,
+`parent`, `document`; `Element`: `name`, `namespace`, `namespacePrefix`, `namespaceURI`, `qualifiedName`, `additionalNamespaces`,
+`value`, `isRootElement`, `text`, `textTrim`, `textNormalize`, `attributesSize`, `children` (live `MutableList<Element>` filtered view),
+`content`, `descendants`, `contentSize`; `Document`: `rootElement` (throws `IllegalStateException` as jdom2), `docType`, `baseURI`, `content`,
+`parent`, `document`; `Text`: `text`, `textTrim`, `textNormalize`, `value`; `Comment.text`; `EntityRef.name/publicID/systemID`;
+`DocType.elementName/publicID/systemID/internalSubset`; `ProcessingInstruction.target/data`; `Attribute.name/namespace/value/
+attributeType/isSpecified/parent/document/qualifiedName/namespacePrefix/namespaceURI`; `NegateFilter.baseFilter`. Exceptions: see
+"Property rule exceptions".
+
+Shape decisions (no behaviour change intended):
+- Nullability follows the Java tests, not just the javadoc: a raw instance made by a protected no-args constructor has `null`
+  text/name (`TestText`, `TestComment`, `TestEntityRef`, `TestDocType`, `TestProcessingInstruction`, `TestAttribute`, `TestElement`
+  assert it), so `Text.value/text`, `Comment.text`, `EntityRef.name/publicID/systemID`, `DocType.elementName/publicID/systemID`,
+  `ProcessingInstruction.target/data/value`, `Attribute.name/value/qualifiedName`, `Element.name/qualifiedName` are `String?`.
+  `Attribute.namespace` and `Element.namespace` are `lateinit` (no test sees the raw state; reading it on a raw instance throws
+  `UninitializedPropertyAccessException` instead of returning null / NPE). Parameters of every setter/constructor are nullable
+  where jdom2 handed `null` to a null-tolerant check (`Verifier.check*`), mirroring the K1 conservative-nullability rule.
+- The protected fields of the content classes became properties with a private setter (`Text.value` has a protected setter, written by
+  `CDATA`): `name`, `text`, `publicID`, `systemID`, ... keep their JVM field names (serialization by default `defaultWriteObject`
+  is unchanged) but are no longer visible to Java subclasses (none exist in kdom). Renamed fields: `Content.parent` -> `parentRef`
+  (`@JvmField @Transient internal`: `ContentList`/`AttributeList` set it, as package access did in Java), `Attribute.parent` -> `parentRef`
+  likewise, `Element.content/attributes/additionalNamespaces` -> private `contentList`/`attributes`/`additionalNamespaceList`,
+  `Document.content` -> `contentList`, `ContentFilter.filterMask` -> `mask`. `Content.ctype` is still the protected final field
+  (`@JvmField`), with `cType` the property.
+- `Content.setParent`, `Attribute.setParent` are public (were protected = package access in Java): `ContentList`, `AttributeList` and
+  `Element` call them on `Content`/`Attribute` receivers, which Kotlin's `protected` does not allow. `CloneBase`, `DescendantIterator`,
+  `FilterIterator`, `AndFilter`, `OrFilter`, `NegateFilter`, `PassThroughFilter`, `TextOnlyFilter`, `ClassFilter` (package-private
+  in Java): `CloneBase` is public (a public class cannot have an internal supertype), the others and `AttributeList`/`ContentList` are
+  `internal` classes with public members (no name mangling; the JVM classes are public).
+- `clone()` overrides are explicitly `public override fun clone()` in all tree classes (Kotlin keeps `protected` from `Cloneable.clone`
+  otherwise); `CloneBase.clone()` is public (was protected). Cloning is still `Object.clone()` via `super<Cloneable>.clone()`
+  (`Attribute` has two supertypes with it: `super<CloneBase>.clone()`). `Serializable`, `readObject/writeObject`, `transient`,
+  `serialVersionUID` (`private const val` in a private companion, a static field of the outer class) are kept (Task 7).
+- `AttributeList`/`ContentList` extend `AbstractMutableList` with the Java algorithms and the exact `modCount` /
+  `ConcurrentModificationException` checks (`AttributeList` uses the inherited `modCount`; `ContentList` keeps its own
+  `sizeModCount`/`dataModiCount`). `remove(int)` is `removeAt`, `size()` is the `size` property. The JDK `List.sort(Comparator)`
+  override exists (`override fun sort`) but cannot be called from Kotlin (the `MutableList.sort` extension wins), so `sortContent` /
+  `sortAttributes` carry the body and `Element` calls them. `FilterList`/`FilterListIterator` are `inner` classes of `ContentList`.
+- `Parent.clone(): Any` is `public override fun clone()` in the interface (widens `Cloneable.clone`). `Parent.getContent()` etc. return
+  `MutableList` (live views), `removeContent(int)` returns `Content?`.
+- `Filter<T>`: `filter(List<*>?)` / `filter(Any?): T?` overloads, `negate(): Filter<*>`, `or(..): Filter<*>` (`AbstractFilter` narrows to
+  `Filter<out Content>`). `Filters` is a class with a private constructor and a companion with `@JvmStatic` functions (same static
+  JVM methods); `Filters.fboolean/fdouble` use `java.lang.Boolean::class.java` / `java.lang.Double::class.java` (`Boolean::class.java`
+  is the primitive class). `ContentFilter` mask constants are `const val` in a companion (JVM static fields).
+- Kotlin artefacts not in the Java classes: `Companion` fields/classes; `Text.EMPTY_STRING` is `internal const` (a public static
+  field); `Text` has a protected `setValue(String)` (the protected setter of `value`); `Content$CType.getEntries()`;
+  `KMutableIterator`/`KMutableListIterator` markers on the iterators; synthetic `access$` methods on the list classes.
+- The `Element(String, Namespace)`/`Element(String, String)` constructors etc. take nullable parameters; `Element(name)` delegates to
+  `this(name, null as Namespace?)` to pick the overload.
+
 ## Behaviour differences
 
 - `JDOMParseException` (R3): a SAX-carrying cause no longer supplies line/column/publicId/systemId; callers pass them
   explicitly. The jdom2-style constructors always give -1 / -1 / null / null. Pinned by `JDOMParseExceptionTest`.
+- Task 5: `Attribute.getNamespace()`/`Element.getNamespace()` on a raw (protected no-args) instance throw
+  `UninitializedPropertyAccessException` instead of returning null (untested; see API shape).
+
+## Task 5 traps (met while translating)
+
+- **Kotlin `protected` is stricter than Java `protected`.** Java `protected` is also package access, which `ContentList`,
+  `AttributeList`, `Element`, `Document` relied on (`child.setParent(parent)`, `c.parent = parent`, `a.clone()` on `Content`
+  receivers). Kotlin allows protected access only on a receiver of the subclass type, so these members became public (`setParent`,
+  `clone()` overrides) or `@JvmField internal` (`parentRef`).
+- **A property named like a field.** `Content.parent`, `Element.content/attributes/additionalNamespaces`, `Document.content` were fields
+  *and* getter names; the property rule needs the name, so the fields were renamed (above). Keep the JVM field names of the
+  serialized fields (`name`, `namespace`, `value`, `type`, `specified`, `ctype`, `elementName`, ...) so default serialization is
+  unchanged: that is why `Attribute.type/specified` are private fields with `attributeType`/`isSpecified` accessors.
+- **`size` inside an inner class.** In `ContentList`, `FilterList` (an inner class that is itself a list) and the iterators referred to the
+  outer field `size`. In Kotlin the `FilterList.size` property would shadow it, so the outer field is `count`.
+- **`AbstractMutableList.modCount`** exists on the JVM (inherited from `java.util.AbstractList`) and is accessible from the subclass and
+  its inner classes. It must be re-declared on Native in Task 7 (spec M0.4); `ContentList` does not use it (own counters).
+- **`sort` override is invisible to Kotlin callers**, see API shape; calling `contentList.sort(cmp)` resolves to the stdlib extension.
+- **Overloaded `filter(List)` vs `filter(Object)`** are chosen by static type, as in Java; call sites that hold `Any?` pick the right one
+  (`AbstractFilter.matches`, `ContentList.FilterList.resync`, `FilterIterator`).
+- **`Boolean::class.java` is the primitive `boolean` class** (`isInstance` is always false): `Filters.fboolean()` must wrap
+  `java.lang.Boolean::class.java`.
+- **Identity comparisons**: `Text.value === EMPTY_STRING` (`CDATA.append`), `ns === Namespace.NO_NAMESPACE`, `tfirst.parent !== text.parent`
+  (`Element.coalesceText`), `(left + right) ushr 1`, `~x` -> `.inv()`; `String.trim()` -> `trim { it <= ' ' }` (`Element.getTextTrim`,
+  `Attribute.get*Value`, `ProcessingInstruction.parseData`).
+- **`Map.get/remove(null)`**: `ProcessingInstruction.getPseudoAttributeValue(null)` / `removePseudoAttribute(null)` pass a nullable key to a
+  `LinkedHashMap`; they cast to `Map<String?, String>` (unchecked) to keep the Java call.
+- **Static init order.** `Filters` keeps the Java field order in its companion; `Attribute` keeps the `*_TYPE` constants in the companion.
 
 ## Task 3: jdom2 subset import (Java)
 
@@ -133,7 +241,7 @@ Each parse goes through a private placeholder `parseWithKdomBuilder(String)` in 
 ## Baseline
 
 `:kdom:jvmTest` on the JVM after Task 3: 40 test classes, 704 tests, 10 skipped (8 K5 `@Ignore` + 2 upstream), 0 failures,
-0 errors. After Task 4 fix round 1: 41 test classes, 708 tests (+4 `JDOMParseExceptionTest`), 10 skipped, 0 failures. This number may only grow; the 8 K5 ignores return in Task 9.
+0 errors. After Task 4 fix round 1: 41 test classes, 708 tests (+4 `JDOMParseExceptionTest`), 10 skipped, 0 failures. After Task 5 (tree core and filters in Kotlin): unchanged, 41 classes / 708 tests / 10 skipped / 0 failures. This number may only grow; the 8 K5 ignores return in Task 9.
 
 ### Import notes (fix round 1)
 

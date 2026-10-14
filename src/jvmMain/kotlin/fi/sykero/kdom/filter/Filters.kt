@@ -1,6 +1,6 @@
 /*-- 
 
- Copyright (C) 2011-2012 Jason Hunter & Brett McLaughlin.
+ Copyright (C) 2000-2012 Jason Hunter & Brett McLaughlin.
  All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -54,310 +54,332 @@
 
  */
 
-package fi.sykero.kdom.filter;
+package fi.sykero.kdom.filter
 
-import fi.sykero.kdom.Attribute;
-import fi.sykero.kdom.CDATA;
-import fi.sykero.kdom.Comment;
-import fi.sykero.kdom.Content;
-import fi.sykero.kdom.DocType;
-import fi.sykero.kdom.Document;
-import fi.sykero.kdom.Element;
-import fi.sykero.kdom.EntityRef;
-import fi.sykero.kdom.Namespace;
-import fi.sykero.kdom.ProcessingInstruction;
-import fi.sykero.kdom.Text;
+import fi.sykero.kdom.Attribute
+import fi.sykero.kdom.CDATA
+import fi.sykero.kdom.Comment
+import fi.sykero.kdom.Content
+import fi.sykero.kdom.DocType
+import fi.sykero.kdom.Document
+import fi.sykero.kdom.Element
+import fi.sykero.kdom.EntityRef
+import fi.sykero.kdom.Namespace
+import fi.sykero.kdom.ProcessingInstruction
+import fi.sykero.kdom.Text
 
 /**
  * Factory class of convenience methods to create Filter instances of common
  * types. Methods that return Filters that act on core JDOM classes (Element,
  * Text, etc.) are simply named after the content they return.
- * <p>
+ *
  * Filters that
  * match non-core classes (Boolean, Object, etc.) are all prefixed with the
- * letter 'f' (for <strong>f</strong>ilter).
- * <p>
- * The Filter returned by {@link #fpassthrough()} is not really a filter in the
+ * letter 'f' (for **f**ilter).
+ *
+ * The Filter returned by [fpassthrough] is not really a filter in the
  * sense that it will never filter anything out - everything matches. This can
  * be useful to accomplish some tasks, for example the JDOM XPath API uses it
  * extensively.
- * 
+ *
  * @author Rolf Lear
  *
  */
-public final class Filters {
+class Filters private constructor() {
 
-	private static final Filter<Content> fcontent = 
-			new ClassFilter<Content>(Content.class);
+    companion object {
+        private val fcontent: Filter<Content> =
+            ClassFilter<Content>(Content::class.java)
 
-	private static final Filter<Attribute> fattribute = 
-			new AttributeFilter();
-	
-	private static final Filter<Comment> fcomment = 
-			new ClassFilter<Comment>(Comment.class);
-	
-	private static final Filter<CDATA> fcdata = 
-			new ClassFilter<CDATA>(CDATA.class);
-	
-	private static final Filter<DocType> fdoctype = 
-			new ClassFilter<DocType>(DocType.class);
-	
-	private static final Filter<EntityRef> fentityref = 
-			new ClassFilter<EntityRef>(EntityRef.class);
-	
-	private static final Filter<ProcessingInstruction> fpi = 
-			new ClassFilter<ProcessingInstruction>(ProcessingInstruction.class);
-	
-	private static final Filter<Text> ftext = 
-			new ClassFilter<Text>(Text.class);
-	
-	private static final Filter<Text> ftextonly = new TextOnlyFilter();
-	
-	private static final Filter<Element> felement = 
-			new ClassFilter<Element>(Element.class);
-	
-	private static final Filter<Document> fdocument = 
-			new ClassFilter<Document>(Document.class);
+        private val fattribute: Filter<Attribute> =
+            AttributeFilter()
 
-	private static final Filter<Double> fdouble = 
-			new ClassFilter<Double>(Double.class);
+        private val fcomment: Filter<Comment> =
+            ClassFilter<Comment>(Comment::class.java)
 
-	private static final Filter<Boolean> fboolean = 
-			new ClassFilter<Boolean>(Boolean.class);
+        private val fcdata: Filter<CDATA> =
+            ClassFilter<CDATA>(CDATA::class.java)
 
-	private static final Filter<String> fstring = 
-			new ClassFilter<String>(String.class);
-	
-	private static final Filter<Object> fpassthrough =
-			new PassThroughFilter();
+        private val fdoctype: Filter<DocType> =
+            ClassFilter<DocType>(DocType::class.java)
 
+        private val fentityref: Filter<EntityRef> =
+            ClassFilter<EntityRef>(EntityRef::class.java)
 
-	private Filters() {
-		// do nothing... make instances impossible.
-	}
+        private val fpi: Filter<ProcessingInstruction> =
+            ClassFilter<ProcessingInstruction>(ProcessingInstruction::class.java)
 
-	/**
-	 * Return a Filter that matches any {@link Content} data.
-	 * 
-	 * @return a Filter that matches any {@link Content} data.
-	 */
-	public static final Filter<Content> content() {
-		return fcontent;
-	}
+        private val ftext: Filter<Text> =
+            ClassFilter<Text>(Text::class.java)
 
-	/**
-	 * Return a Filter that matches any {@link Attribute} data.
-	 * 
-	 * @return a Filter that matches any {@link Attribute} data.
-	 */
-	public static final Filter<Attribute> attribute() {
-		return fattribute;
-	}
+        private val ftextonly: Filter<Text> = TextOnlyFilter()
 
-	/**
-	 * Return a Filter that matches any {@link Attribute} data with the 
-	 * specified name.
-	 * 
-	 * @param name The name for all the Attributes to have (these can be in any
-	 * Namespace).
-	 * @return a Filter that matches any {@link Attribute} data with the 
-	 * specified name.
-	 */
-	public static final Filter<Attribute> attribute(String name) {
-		return new AttributeFilter(name);
-	}
+        private val felement: Filter<Element> =
+            ClassFilter<Element>(Element::class.java)
 
-	/**
-	 * Return a Filter that matches any {@link Attribute} data with the
-	 * specified name and namespace.
-	 * 
-	 * @param name The name for all the Attributes to have.
-	 * @param ns The Namespace for all the Attributes to have.
-	 * @return a Filter that matches any {@link Attribute} data with the
-	 * specified name and namespace.
-	 */
-	public static final Filter<Attribute> attribute(String name, Namespace ns) {
-		return new AttributeFilter(name, ns);
-	}
+        private val fdocument: Filter<Document> =
+            ClassFilter<Document>(Document::class.java)
 
-	/**
-	 * Return a Filter that matches any {@link Attribute} data with the
-	 * specified namespace.
-	 * 
-	 * @param ns The Namespace for all the Attributes to have.
-	 * @return a Filter that matches any {@link Attribute} data with the
-	 * specified namespace.
-	 */
-	public static final Filter<Attribute> attribute(Namespace ns) {
-		return new AttributeFilter(ns);
-	}
+        // The boxed java.lang classes: Boolean::class.java would be the primitive class, which no object is an instance of.
+        @Suppress("UNCHECKED_CAST", "PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+        private val fdouble: Filter<Double> =
+            ClassFilter<Double>(java.lang.Double::class.java as Class<Double>)
 
-	/**
-	 * Return a Filter that matches any {@link Comment} data.
-	 * 
-	 * @return a Filter that matches any {@link Comment} data.
-	 */
-	public static final Filter<Comment> comment() {
-		return fcomment;
-	}
+        @Suppress("UNCHECKED_CAST", "PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+        private val fboolean: Filter<Boolean> =
+            ClassFilter<Boolean>(java.lang.Boolean::class.java as Class<Boolean>)
 
-	/**
-	 * Return a Filter that matches any {@link CDATA} data.
-	 * 
-	 * @return a Filter that matches any {@link CDATA} data.
-	 */
-	public static final Filter<CDATA> cdata() {
-		return fcdata;
-	}
+        private val fstring: Filter<String> =
+            ClassFilter<String>(String::class.java)
 
-	/**
-	 * Return a Filter that matches any {@link DocType} data.
-	 * 
-	 * @return a Filter that matches any {@link DocType} data.
-	 */
-	public static final Filter<DocType> doctype() {
-		return fdoctype;
-	}
+        private val fpassthrough: Filter<Any> =
+            PassThroughFilter()
 
-	/**
-	 * Return a Filter that matches any {@link EntityRef} data.
-	 * 
-	 * @return a Filter that matches any {@link EntityRef} data.
-	 */
-	public static final Filter<EntityRef> entityref() {
-		return fentityref;
-	}
+        /**
+         * Return a Filter that matches any [Content] data.
+         *
+         * @return a Filter that matches any [Content] data.
+         */
+        @JvmStatic
+        fun content(): Filter<Content> {
+            return fcontent
+        }
 
-	/**
-	 * Return a Filter that matches any {@link Element} data.
-	 * 
-	 * @return a Filter that matches any {@link Element} data.
-	 */
-	public static final Filter<Element> element() {
-		return felement;
-	}
+        /**
+         * Return a Filter that matches any [Attribute] data.
+         *
+         * @return a Filter that matches any [Attribute] data.
+         */
+        @JvmStatic
+        fun attribute(): Filter<Attribute> {
+            return fattribute
+        }
 
-	/**
-	 * Return a Filter that matches any {@link Document} data.
-	 * 
-	 * @return a Filter that matches any {@link Document} data.
-	 */
-	public static final Filter<Document> document() {
-		return fdocument;
-	}
+        /**
+         * Return a Filter that matches any [Attribute] data with the
+         * specified name.
+         *
+         * @param name The name for all the Attributes to have (these can be in any
+         * Namespace).
+         * @return a Filter that matches any [Attribute] data with the
+         * specified name.
+         */
+        @JvmStatic
+        fun attribute(name: String?): Filter<Attribute> {
+            return AttributeFilter(name)
+        }
 
-	/**
-	 * Return a Filter that matches any {@link Element} data with the specified
-	 * name.
-	 * 
-	 * @param name The name of Elements to match.
-	 * @return a Filter that matches any {@link Element} data with the specified
-	 * name.
-	 */
-	public static final Filter<Element> element(String name) {
-		return new ElementFilter(name, Namespace.NO_NAMESPACE);
-	}
+        /**
+         * Return a Filter that matches any [Attribute] data with the
+         * specified name and namespace.
+         *
+         * @param name The name for all the Attributes to have.
+         * @param ns The Namespace for all the Attributes to have.
+         * @return a Filter that matches any [Attribute] data with the
+         * specified name and namespace.
+         */
+        @JvmStatic
+        fun attribute(name: String?, ns: Namespace?): Filter<Attribute> {
+            return AttributeFilter(name, ns)
+        }
 
-	/**
-	 * Return a Filter that matches any {@link Element} data with the specified
-	 * name and Namespace.
-	 * 
-	 * @param name The name of Elements to match.
-	 * @param ns The Namespace to match
-	 * @return a Filter that matches any {@link Element} data with the specified
-	 * name and Namespace.
-	 */
-	public static final Filter<Element> element(String name, Namespace ns) {
-		return new ElementFilter(name, ns);
-	}
+        /**
+         * Return a Filter that matches any [Attribute] data with the
+         * specified namespace.
+         *
+         * @param ns The Namespace for all the Attributes to have.
+         * @return a Filter that matches any [Attribute] data with the
+         * specified namespace.
+         */
+        @JvmStatic
+        fun attribute(ns: Namespace?): Filter<Attribute> {
+            return AttributeFilter(ns)
+        }
 
-	/**
-	 * Return a Filter that matches any {@link Element} data with the specified
-	 * Namespace.
-	 * 
-	 * @param ns The Namespace to match
-	 * @return a Filter that matches any {@link Element} data with the specified
-	 * Namespace.
-	 */
-	public static final Filter<Element> element(Namespace ns) {
-		return new ElementFilter(null, ns);
-	}
+        /**
+         * Return a Filter that matches any [Comment] data.
+         *
+         * @return a Filter that matches any [Comment] data.
+         */
+        @JvmStatic
+        fun comment(): Filter<Comment> {
+            return fcomment
+        }
 
-	/**
-	 * Return a Filter that matches any {@link ProcessingInstruction} data.
-	 * 
-	 * @return a Filter that matches any {@link ProcessingInstruction} data.
-	 */
-	public static final Filter<ProcessingInstruction> processinginstruction() {
-		return fpi;
-	}
+        /**
+         * Return a Filter that matches any [CDATA] data.
+         *
+         * @return a Filter that matches any [CDATA] data.
+         */
+        @JvmStatic
+        fun cdata(): Filter<CDATA> {
+            return fcdata
+        }
 
-	/**
-	 * Return a Filter that matches any {@link Text} data (which includes 
-	 * {@link CDATA} since that is a subclass of Text).
-	 * 
-	 * @return a Filter that matches any {@link Text} data (which includes 
-	 * {@link CDATA} since that is a subclass of Text).
-	 */
-	public static final Filter<Text> text() {
-		return ftext;
-	}
+        /**
+         * Return a Filter that matches any [DocType] data.
+         *
+         * @return a Filter that matches any [DocType] data.
+         */
+        @JvmStatic
+        fun doctype(): Filter<DocType> {
+            return fdoctype
+        }
 
-	/**
-	 * Return a Filter that matches any {@link Text} data (excludes 
-	 * {@link CDATA} instances).
-	 * 
-	 * @return a Filter that matches any {@link Text} data (which excludes 
-	 * {@link CDATA} instances).
-	 */
-	public static final Filter<Text> textOnly() {
-		return ftextonly;
-	}
+        /**
+         * Return a Filter that matches any [EntityRef] data.
+         *
+         * @return a Filter that matches any [EntityRef] data.
+         */
+        @JvmStatic
+        fun entityref(): Filter<EntityRef> {
+            return fentityref
+        }
 
-	/**
-	 * Return a Filter that matches any Boolean data.
-	 * 
-	 * @return a Filter that matches any Boolean data.
-	 */
-	public static final Filter<Boolean> fboolean() {
-		return fboolean;
-	}
+        /**
+         * Return a Filter that matches any [Element] data.
+         *
+         * @return a Filter that matches any [Element] data.
+         */
+        @JvmStatic
+        fun element(): Filter<Element> {
+            return felement
+        }
 
-	/**
-	 * Return a Filter that matches any String data.
-	 * 
-	 * @return a Filter that matches any String data.
-	 */
-	public static final Filter<String> fstring() {
-		return fstring;
-	}
+        /**
+         * Return a Filter that matches any [Document] data.
+         *
+         * @return a Filter that matches any [Document] data.
+         */
+        @JvmStatic
+        fun document(): Filter<Document> {
+            return fdocument
+        }
 
-	/**
-	 * Return a Filter that matches any Double data.
-	 * 
-	 * @return a Filter that matches any Double data.
-	 */
-	public static final Filter<Double> fdouble() {
-		return fdouble;
-	}
-	
-	/**
-	 * Return a Filter that matches any data of the specified Class.
-	 * 
-	 * @param <F> The generic type of the content returned by this Filter
-	 * @param clazz the Class type to match in the filter
-	 * @return a Filter that matches any data of the specified Class.
-	 */
-	public static final <F> Filter<F> fclass(Class<F> clazz) {
-		return new ClassFilter<F>(clazz);
-	}
+        /**
+         * Return a Filter that matches any [Element] data with the specified
+         * name.
+         *
+         * @param name The name of Elements to match.
+         * @return a Filter that matches any [Element] data with the specified
+         * name.
+         */
+        @JvmStatic
+        fun element(name: String?): Filter<Element> {
+            return ElementFilter(name, Namespace.NO_NAMESPACE)
+        }
 
-	/**
-	 * Return a filter that does no filtering at all - everything matches.
-	 * @return A Pass-Through Filter.
-	 */
-	public static final Filter<Object> fpassthrough() {
-		return fpassthrough;
-	}
+        /**
+         * Return a Filter that matches any [Element] data with the specified
+         * name and Namespace.
+         *
+         * @param name The name of Elements to match.
+         * @param ns The Namespace to match
+         * @return a Filter that matches any [Element] data with the specified
+         * name and Namespace.
+         */
+        @JvmStatic
+        fun element(name: String?, ns: Namespace?): Filter<Element> {
+            return ElementFilter(name, ns)
+        }
+
+        /**
+         * Return a Filter that matches any [Element] data with the specified
+         * Namespace.
+         *
+         * @param ns The Namespace to match
+         * @return a Filter that matches any [Element] data with the specified
+         * Namespace.
+         */
+        @JvmStatic
+        fun element(ns: Namespace?): Filter<Element> {
+            return ElementFilter(null, ns)
+        }
+
+        /**
+         * Return a Filter that matches any [ProcessingInstruction] data.
+         *
+         * @return a Filter that matches any [ProcessingInstruction] data.
+         */
+        @JvmStatic
+        fun processinginstruction(): Filter<ProcessingInstruction> {
+            return fpi
+        }
+
+        /**
+         * Return a Filter that matches any [Text] data (which includes
+         * [CDATA] since that is a subclass of Text).
+         *
+         * @return a Filter that matches any [Text] data (which includes
+         * [CDATA] since that is a subclass of Text).
+         */
+        @JvmStatic
+        fun text(): Filter<Text> {
+            return ftext
+        }
+
+        /**
+         * Return a Filter that matches any [Text] data (excludes
+         * [CDATA] instances).
+         *
+         * @return a Filter that matches any [Text] data (which excludes
+         * [CDATA] instances).
+         */
+        @JvmStatic
+        fun textOnly(): Filter<Text> {
+            return ftextonly
+        }
+
+        /**
+         * Return a Filter that matches any Boolean data.
+         *
+         * @return a Filter that matches any Boolean data.
+         */
+        @JvmStatic
+        fun fboolean(): Filter<Boolean> {
+            return fboolean
+        }
+
+        /**
+         * Return a Filter that matches any String data.
+         *
+         * @return a Filter that matches any String data.
+         */
+        @JvmStatic
+        fun fstring(): Filter<String> {
+            return fstring
+        }
+
+        /**
+         * Return a Filter that matches any Double data.
+         *
+         * @return a Filter that matches any Double data.
+         */
+        @JvmStatic
+        fun fdouble(): Filter<Double> {
+            return fdouble
+        }
+
+        /**
+         * Return a Filter that matches any data of the specified Class.
+         *
+         * @param <F> The generic type of the content returned by this Filter
+         * @param clazz the Class type to match in the filter
+         * @return a Filter that matches any data of the specified Class.
+         */
+        @JvmStatic
+        fun <F> fclass(clazz: Class<F>): Filter<F> {
+            return ClassFilter<F>(clazz)
+        }
+
+        /**
+         * Return a filter that does no filtering at all - everything matches.
+         * @return A Pass-Through Filter.
+         */
+        @JvmStatic
+        fun fpassthrough(): Filter<Any> {
+            return fpassthrough
+        }
+    }
 
 }
