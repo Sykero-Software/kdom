@@ -1,0 +1,7 @@
+kdom — Kotlin Multiplatform XML tree library (fi.sykero.kdom)
+Copyright (C) 2026 Sykerö Software.
+
+kdom is a Kotlin Multiplatform translation of a subset of JDOM 2.0.6.1
+(http://www.jdom.org/), plus new parsing, event and query code.
+This product includes software developed by the JDOM Project (http://www.jdom.org/).
+The whole library is distributed under the JDOM licence in LICENSE.
