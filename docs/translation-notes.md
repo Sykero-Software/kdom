@@ -317,11 +317,16 @@ Remaining differences from a JAXP SAX parser / jdom2 `SAXBuilder` (all deliberat
 - **Messages and positions** are kdom's/xmlutil's, not Xerces's. Pre-scan errors give the line/column of the offending
   character (Xerces usually reports the column after it); reader errors give where xmlutil stopped.
 - **XML 1.1** documents (`version="1.1"`) are accepted but read with the XML 1.0 character and line-end rules.
-- **Byte input** supports UTF-8, UTF-16 (BOM or `<?xml` pattern), ISO-8859-1 and US-ASCII (with common aliases); any other
-  declared encoding (e.g. `windows-1252`) and a `UTF-16` declaration without UTF-16 bytes are rejected. As in the JDK parser,
+- **Byte input** supports UTF-8, UTF-16 (BOM or `<?xml` pattern), ISO-8859-1, US-ASCII and windows-1252 (M0 gate fix I3,
+  R12: EPUB files in the wild occasionally declare windows-1252), with the aliases the JDK parser accepts, matched
+  case-insensitively: `UTF-8` (strict), `UTF8`/`utf8` (lenient: malformed bytes become U+FFFD, the lead byte plus the valid
+  continuation bytes so far, an encoded surrogate as one U+FFFD, as the JDK's charset decoder), `ISO-8859-1`/`ISO8859-1`/
+  `ISO_8859-1`/`ISO8859_1`/`ISO_8859_1`/`latin1`/`l1`/`cp819`/`ibm819`, `US-ASCII`/`ascii`/`us`/`ISO646-US`, `windows-1252`/
+  `cp1252` (full table; the undefined bytes 0x81, 0x8D, 0x8F, 0x90, 0x9D become U+FFFD as in the JDK). Any other name (e.g.
+  `iso-latin-1`, which the JDK rejects too, or `Shift_JIS`, which it accepts) and a `UTF-16` declaration without UTF-16 bytes
+  are rejected. Pinned by `XmlByteDecoderDifferentialTest` (24 names x 9 bodies against the JDK). As in the JDK parser,
   the declaration wins over a UTF-8 BOM (`EF BB BF` + `encoding="ISO-8859-1"` reads ISO-8859-1), and a UTF-16 BOM (or BOM-less
-  UTF-16) with a declaration naming another encoding or the other byte order is rejected. The JDK decodes the non-IANA alias
-  `utf8` leniently (malformed bytes become U+FFFD); kdom decodes every UTF-8 alias strictly. AndBible parses strings; byte
+  UTF-16) with a declaration naming another encoding or the other byte order is rejected. AndBible parses strings; byte
   input serves EPUB and other file callers.
 - **Encoding name in a string's XML declaration**: the JDK ignores the `encoding` value when it reads characters, even a
   malformed one (`encoding="U&F-8"`); xmlutil reads the declaration and rejects it. Malformed bytes

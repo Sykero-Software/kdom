@@ -291,9 +291,20 @@ class KdomBuilderTest {
         assertNull(b.build("<a/>").docType)
     }
 
+    @Test fun windows1252AndJdkEncodingAliases() {
+        val head = "<?xml version=\"1.0\" encoding=\"windows-1252\"?><a>".encodeToByteArray()
+        val bytes = head + byteArrayOf(0x80.toByte(), 0x93.toByte(), 0xE9.toByte(), 0x81.toByte()) + "</a>".encodeToByteArray()
+        assertEquals("\u20AC\u201C\u00E9\uFFFD", KdomBuilder().build(bytes).rootElement.text)
+        // the Java alias "utf8" decodes leniently (U+FFFD), "UTF-8" strictly, as the JDK parser
+        val bad = byteArrayOf(0xE9.toByte())
+        assertEquals("\uFFFD", KdomBuilder().build("<?xml version='1.0' encoding='utf8'?><a>".encodeToByteArray() + bad + "</a>".encodeToByteArray()).rootElement.text)
+        assertFailsWith<JDOMParseException> { KdomBuilder().build("<?xml version='1.0' encoding='utf-8'?><a>".encodeToByteArray() + bad + "</a>".encodeToByteArray()) }
+        assertEquals("\u00E9", KdomBuilder().build("<?xml version='1.0' encoding='iso_8859_1'?><a>".encodeToByteArray() + bad + "</a>".encodeToByteArray()).rootElement.text)
+    }
+
     @Test fun unsupportedEncodingIsRejected() {
         assertFailsWith<JDOMParseException> {
-            KdomBuilder().build("<?xml version=\"1.0\" encoding=\"windows-1252\"?><a/>".encodeToByteArray())
+            KdomBuilder().build("<?xml version=\"1.0\" encoding=\"x-unknown\"?><a/>".encodeToByteArray())
         }
     }
 }
