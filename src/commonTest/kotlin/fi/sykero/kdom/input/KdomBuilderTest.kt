@@ -275,6 +275,18 @@ class KdomBuilderTest {
         assertFailsWith<JDOMParseException> { buildEpub("<!DOCTYPE a [<!ENTITY e \"<b/>\">]><a>&e;</a>") }
     }
 
+    @Test fun elementDeclarationsAreValidatedAndCdataEndInEntityTextIsRejected() {
+        // round 2 (d): content-model syntax as SAX; the model is kept with white space removed (as SAX reports it)
+        assertEquals("  <!ELEMENT a (b,c)*>\n  <!ELEMENT b EMPTY>\n",
+            buildEpub("<!DOCTYPE a [<!ELEMENT a ( b , c )*><!ELEMENT b EMPTY>]><a/>").docType!!.internalSubset)
+        for (bad in listOf("(b", "EMPTY ANY", "(#PCDATA|b)", "(b|c,d)", "()")) {
+            assertFailsWith<JDOMParseException>(bad) { buildEpub("<!DOCTYPE a [<!ELEMENT a $bad>]><a/>") }
+        }
+        // round 2 (e): "]]>" from an internal entity is an error in content, not in an attribute value
+        assertFailsWith<JDOMParseException> { buildEpub("<!DOCTYPE a [<!ENTITY e \"x]]>y\">]><a>&e;</a>") }
+        assertEquals("x]]>y", buildEpub("<!DOCTYPE a [<!ENTITY e \"x]]>y\">]><a b=\"&e;\"/>").rootElement.getAttributeValue("b"))
+    }
+
     @Test fun positionsAfterADocTypeAreUnchanged() {
         val e = assertFailsWith<JDOMParseException> { buildEpub("<!DOCTYPE a\n PUBLIC \"p\"\n \"s\" [\n]\n>\n<a>\n</b>") }
         assertEquals(7, e.lineNumber)

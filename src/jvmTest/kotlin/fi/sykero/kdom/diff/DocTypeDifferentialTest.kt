@@ -214,6 +214,20 @@ class DocTypeDifferentialTest {
             "<!DOCTYPE a [<!-- a -- b -->]><a/>",
             "<!DOCTYPE a [<!ENTITY e \"x\">] junk><a/>",
             "<!DOCTYPE a SYSTEM \"unterminated><a/>",
+            // round 2 (d): element declaration syntax (content models are reported with white space removed)
+            "<!DOCTYPE a [<!ELEMENT a (#PCDATA)><!ELEMENT b ( #PCDATA | a | c )* ><!ELEMENT c ((a , b)|d?)+><!ELEMENT d (a?, b*, c+)><!ELEMENT e ANY>]><a/>",
+            "<!DOCTYPE a [<!ELEMENT a (b>]><a/>",
+            "<!DOCTYPE a [<!ELEMENT a EMPTY ANY>]><a/>",
+            "<!DOCTYPE a [<!ELEMENT a (#PCDATA|b)>]><a/>",
+            "<!DOCTYPE a [<!ELEMENT a (b|c,d)>]><a/>",
+            "<!DOCTYPE a [<!ELEMENT a(b)>]><a/>",
+            "<!DOCTYPE a [<!ELEMENT a EMPTY]><a/>",
+            "<!DOCTYPE a [<!ELEMENT a ()>]><a/>",
+            "<!DOCTYPE a [<!ELEMENT a (b)(c)>]><a/>",
+            "<!DOCTYPE a [<!ELEMENT a empty>]><a/>",
+            // round 2 (e): "]]>" in an internal entity's replacement text: an error in content, fine in an attribute value
+            "<!DOCTYPE a [<!ENTITY e \"x]]>y\">]><a b=\"&e;\"/>",
+            "<!DOCTYPE a [<!ENTITY e \"x]]>y\">]><a>&e;</a>",
         )
 
         /**

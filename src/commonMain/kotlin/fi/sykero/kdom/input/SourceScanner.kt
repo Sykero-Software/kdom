@@ -436,13 +436,13 @@ internal class SourceScanner(
                     if (p == nStart) fail(p, "The element type is required in the element type declaration.")
                     checkName(nStart, p, "The element type is required in the element type declaration.")
                     val name = s.substring(nStart, p)
-                    val end = s.indexOf('>', p)
-                    if (end < 0) fail(n, "XML document structures must start and end within the same entity.")
-                    val model = s.substring(p, end).filterNot { isXmlSpace(it) }
-                    if (model.isEmpty() || model.contains('%') || model.contains('<') || model.contains('"') || model.contains('\'')) {
-                        fail(p, "The content model of element type \"$name\" is not supported or malformed.")
-                    }
-                    items.add(DtdItem.ElementDecl(name, model))
+                    if (p >= n || !isXmlSpace(s[p])) fail(p, "White space is required after the element type \"$name\" in the element type declaration.")
+                    val specStart = skipSpace(p)
+                    val specEnd = contentSpec(specStart, name)
+                    val end = skipSpace(specEnd)
+                    if (end >= n || s[end] != '>') fail(end, "The declaration for element type \"$name\" must end with '>'.")
+                    // SAX's DeclHandler reports the content model with its white space removed
+                    items.add(DtdItem.ElementDecl(name, s.substring(specStart, specEnd).filterNot { isXmlSpace(it) }))
                     k = end + 1
                 }
                 s.startsWith("<!NOTATION", k) -> {
@@ -470,6 +470,63 @@ internal class SourceScanner(
                 else -> fail(k, "The markup declarations contained or pointed to by the document type declaration must be well-formed.")
             }
         }
+    }
+
+    /**
+     * `contentspec ::= 'EMPTY' | 'ANY' | Mixed | children` at [k] (XML 1.0 [46]-[51]); returns the offset after it. A
+     * parameter-entity reference in it is rejected as unsupported.
+     */
+    private fun contentSpec(k: Int, element: String): Int {
+        fun bad(at: Int): Nothing = fail(at, "The content model of element type \"$element\" is malformed.")
+        fun nameEnd(from: Int): Int {
+            var e = from
+            while (e < n && !isXmlSpace(s[e]) && s[e] !in "()|,?*+>%") e++
+            if (e == from) bad(from)
+            checkName(from, e, "The content model of element type \"$element\" is malformed.")
+            return e
+        }
+        fun quantifier(at: Int) = if (at < n && s[at] in "?*+") at + 1 else at
+        // cp ::= (Name | choice | seq) ('?' | '*' | '+')?
+        fun cp(from: Int, group: (Int) -> Int): Int = quantifier(if (from < n && s[from] == '(') group(from) else nameEnd(from))
+        // choice | seq: '(' S? cp ( S? ('|' | ',') S? cp )* S? ')' with one separator kind
+        fun group(from: Int): Int {
+            var p = skipSpace(from + 1)
+            p = cp(p, ::group)
+            var sep = '\u0000'
+            while (true) {
+                p = skipSpace(p)
+                if (p >= n) bad(p)
+                val c = s[p]
+                if (c == ')') return p + 1
+                if (c != '|' && c != ',') bad(p)
+                if (sep != '\u0000' && c != sep) bad(p)
+                sep = c
+                p = cp(skipSpace(p + 1), ::group)
+            }
+        }
+        if (k < n && s[k] == '%') fail(k, "kdom does not support parameter-entity references in a DOCTYPE internal subset.")
+        if (s.startsWith("EMPTY", k)) return k + 5
+        if (s.startsWith("ANY", k)) return k + 3
+        if (k >= n || s[k] != '(') bad(k)
+        val first = skipSpace(k + 1)
+        if (s.startsWith("#PCDATA", first)) {
+            // Mixed ::= '(' S? '#PCDATA' (S? '|' S? Name)* S? ')*' | '(' S? '#PCDATA' S? ')'
+            var p = first + 7
+            var names = 0
+            while (true) {
+                p = skipSpace(p)
+                if (p >= n) bad(p)
+                if (s[p] == ')') break
+                if (s[p] != '|') bad(p)
+                p = nameEnd(skipSpace(p + 1))
+                names++
+            }
+            p++
+            if (p < n && s[p] == '*') return p + 1
+            if (names > 0) bad(p)
+            return p
+        }
+        return quantifier(group(k))
     }
 
     private fun entityDeclaration(
@@ -598,7 +655,7 @@ internal class SourceScanner(
                 EntityUse.Skip(name)
             }
             else -> {
-                val text = expandReplacementText(decl.value, at, name)
+                val text = expandReplacementText(decl.value, at, name, inAttribute)
                 EntityUse.Expand(if (inAttribute) text.map { if (it == '\t' || it == '\n' || it == '\r') ' ' else it }.joinToString("") else text)
             }
         }
@@ -608,7 +665,11 @@ internal class SourceScanner(
     }
 
     /** Replacement text of an internal entity as character data; markup or nested entity references are not supported. */
-    private fun expandReplacementText(value: String, at: Int, name: String): String {
+    private fun expandReplacementText(value: String, at: Int, name: String, inAttribute: Boolean): String {
+        // In content the replacement text is parsed as content: "]]>" there is an error, as in SAX.
+        if (!inAttribute && value.contains("]]>")) {
+            fail(at, "The character sequence \"]]>\" must not appear in content unless used to mark the end of a CDATA section.")
+        }
         if (!value.contains('&') && !value.contains('<')) return value
         if (value.contains('<')) fail(at, "kdom does not support entity \"$name\": its replacement text contains markup.")
         val sb = StringBuilder()
