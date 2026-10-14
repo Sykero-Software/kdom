@@ -27,6 +27,19 @@ class KdomBuilderDifferentialTest {
         if (mismatches.isNotEmpty()) fail(mismatches.size.toString() + " mismatches:\n" + mismatches.joinToString("\n"))
     }
 
+    /**
+     * Inputs the JDK parser accepts but jdom2's tree layer rejects with an unchecked exception: kdom throws a
+     * JDOMParseException whose cause is the same kind of exception (fix round 1: never bypass `catch (JDOMException)`).
+     */
+    @Test fun treeLayerRejectionsAreWrapped() {
+        for (xml in SaxEventDifferentialTest.ACCEPTED_SAX_ONLY) {
+            val jdom = runCatching { SAXBuilder().build(StringReader(xml)) }.exceptionOrNull()
+            val kdom = runCatching { KdomBuilder().build(xml) }.exceptionOrNull()
+            assertEquals("kdom for $xml", fi.sykero.kdom.input.JDOMParseException::class.java, kdom?.javaClass)
+            assertEquals("cause for $xml", jdom?.javaClass?.simpleName, kdom?.cause?.javaClass?.simpleName)
+        }
+    }
+
     @Test fun rejectionsMatchSaxBuilder() {
         for (xml in SaxEventDifferentialTest.REJECTED) {
             val jdom = runCatching { SAXBuilder().build(StringReader(xml)) }.exceptionOrNull()

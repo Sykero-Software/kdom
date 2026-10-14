@@ -16,7 +16,8 @@ import org.junit.Test
  * 8 threads each build 500 distinct documents, once with their own [KdomBuilder]s and once through a shared
  * `ArrayBlockingQueue<KdomBuilder>(32)` pool used exactly like JSword's `OSISFilter.parse` (`poll() ?: KdomBuilder()`,
  * build, `offer`). Every tree must serialize (raw format) to what jdom2's `SAXBuilder` + `XMLOutputter` give for the
- * same input, computed single-threaded beforehand.
+ * same input, computed single-threaded beforehand. Every 7th document a malformed input is built first with the same
+ * builder (it must throw [JDOMParseException]), to show that a failed parse leaves no state behind.
  */
 class KdomBuilderConcurrencyTest {
     private val threads = 8
@@ -30,6 +31,19 @@ class KdomBuilderConcurrencyTest {
         List(docsPerThread) { i ->
             org.jdom2.output.XMLOutputter(org.jdom2.output.Format.getRawFormat())
                 .outputString(SAXBuilder().build(StringReader(xml(t, i))).rootElement)
+        }
+    }
+
+    private val malformed = listOf("<a><b></a>", "<a x=\"<\"/>", "<a>&nbsp;</a>", "<!DOCTYPE a><a/>", "<a xmlns:p=\" u\"/>", "<a>\r\r", "")
+
+    /** Builds a malformed document with [builder] on every 7th index (expects a JDOMParseException). */
+    private fun maybeFail(builder: KdomBuilder, t: Int, i: Int) {
+        if (i % 7 != 0) return
+        try {
+            builder.build(malformed[(t + i) % malformed.size])
+            throw AssertionError("malformed input accepted")
+        } catch (e: JDOMParseException) {
+            // expected
         }
     }
 
@@ -48,14 +62,14 @@ class KdomBuilderConcurrencyTest {
     }
 
     @Test fun ownBuildersPerThread() {
-        val results = runThreads { t -> List(docsPerThread) { i -> raw(KdomBuilder().build(xml(t, i))) } }
+        val results = runThreads { t -> List(docsPerThread) { i -> KdomBuilder().let { b -> maybeFail(b, t, i); raw(b.build(xml(t, i))) } } }
         assertEquals(expected, results)
     }
 
     @Test fun oneBuilderPerThreadReused() {
         val results = runThreads { t ->
             val builder = KdomBuilder()
-            List(docsPerThread) { i -> raw(builder.build(xml(t, i))) }
+            List(docsPerThread) { i -> maybeFail(builder, t, i); raw(builder.build(xml(t, i))) }
         }
         assertEquals(expected, results)
     }
@@ -65,6 +79,7 @@ class KdomBuilderConcurrencyTest {
         val results = runThreads { t ->
             List(docsPerThread) { i ->
                 val builder = builders.poll() ?: KdomBuilder()
+                maybeFail(builder, t, i)
                 val doc = builder.build(xml(t, i))
                 builders.offer(builder)
                 raw(doc)

@@ -46,7 +46,7 @@ class SaxEventDifferentialTest {
 
     private fun compareAccepted(nsAware: Boolean) {
         val mismatches = ArrayList<String>()
-        for (xml in ACCEPTED) {
+        for (xml in ACCEPTED + ACCEPTED_SAX_ONLY) {
             val expected = try { sax(xml, nsAware) } catch (e: Exception) { fail("oracle rejected ${show(xml)}: $e"); return }
             val actual = try { kdom(xml, nsAware) } catch (e: Exception) { listOf("threw $e") }
             if (expected != actual) mismatches += "${show(xml)}\n  SAX : $expected\n  kdom: $actual"
@@ -180,12 +180,12 @@ class SaxEventDifferentialTest {
             "<a\n  x=\"1\"\n  y = '2'\n/>",
             "<a  x = \"1\"  ></a >",
             // XML 1.0 keeps U+0085 / U+2028 (xmlutil would apply XML 1.1 line ends)
-            "<a b=\"\u0085 \">\u0085 \r\u0085<![CDATA[\u0085]]><!-- --><?p \u0085?></a>",
+            "<a b=\"\u0085\u2028\">\u0085\u2028\r\u0085<![CDATA[\u0085]]><!--\u2028--><?p \u0085?></a>",
             // mask characters present in the input
-            "<a b=\"Ⰰ\">Ⰰ \u0085 &#xE002;</a>",
+            "<a b=\"\uE000\u2C00\">\uE000\uE001\u2C00 \u0085 &#xE002;</a>",
             // references
             "<a>&lt;&#x41;&apos;&quot;&gt;&amp;&#65;</a>",
-            "<a x=\"&#60;&gt;>\" y=\"&#x10000; &#65536;\">&#x10000; &#65536;𐀀</a>",
+            "<a x=\"&#60;&gt;>\" y=\"&#x10000; &#65536;\">&#x10000; &#65536;\uD800\uDC00</a>",
             "<a>]] ]&gt; ]]</a>",
             // processing instructions, comments, CDATA
             "<?pi   d e ?><a/>",
@@ -204,7 +204,32 @@ class SaxEventDifferentialTest {
             "<a xmlns:p=\"u\" p:x=\"1\" x=\"2\" xmlns:q=\"v\" q:y=\"3\"/>",
             "<a xmlns=\"\"/>",
             // text characters at the edges of the legal ranges
-            "<a>�퟿ 😀</a>",
+            "<a>\uFFFD\uD7FF\uE000 \uD83D\uDE00</a>",
+            // fix round 1: lone CRs (xmlutil folded "\r\r" into one line end), everywhere a line end can occur
+            "<a b='x\r\ry' c='\r\r\r' d='\r\n\r' e='\n\r'>x\r\ry|\r\r\r|\r\n\r|\n\r|\r\r\n" +
+                "<![CDATA[\r\r\r\n\r]]><!--\r\r\r\n--><?p \r\r x\r\r?>\u0085\r\r\u2028\r\u0085\r\n\u2028</a>\r\r<!--\r-->\r",
+            "<a\rb='1'\r\rc='2'\r/>",
+            // fix round 1: U+0085 / U+2028 / CR in namespace URIs
+            "<a xmlns:p=\"urn:\u0085x\" xmlns=\"u\u2028\" p:b=\"1\"><p:c/></a>",
+            "<a xmlns:p=\"urn:\rx\" p:b=\"\u2028\"/>",
+            // fix round 1: processing instruction targets and the XML declaration
+            "<a>a<?\u00E9?>d<?xml-stylesheet?>Who?<?really?><?p\u00B7 x?></a>",
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><a/>",
+            "<?xml version='1.0'\n\tencoding='UTF-8'\r\nstandalone='no'?><a/>",
+            // fix round 1: name characters at the 4th-edition table edges that the JDK accepts
+            "<\u00C0\u0101 \u0E01\u0E31=\"1\" _-.\u00B7=\"2\"/>",
+        )
+
+        /**
+         * Accepted by the JDK SAX parser in both modes, but jdom2's tree layer rejects them with an unchecked exception
+         * (a leading `:` in a name, a `:` in a PI target, a namespace URI starting with white space); kdom's
+         * `KdomBuilder` wraps that into a `JDOMParseException` (KdomBuilderDifferentialTest).
+         */
+        val ACCEPTED_SAX_ONLY: List<String> = listOf(
+            "<:a/>",
+            "<a :b='1'/>",
+            "<?p:i d?><a/>",
+            "<a xmlns:p=\" urn:p\"/>",
         )
 
         /** Malformed in both modes (SAX rejects in both; kdom must reject too). */
@@ -221,13 +246,13 @@ class SaxEventDifferentialTest {
             "<?xml version=\"2.0\"?><a/>",
             "<?xml encoding=\"UTF-8\"?><a/>",
             "<?xml version=\"1.0\" standalone=\"maybe\"?><a/>",
-            "﻿<a/>",
+            "\uFEFF<a/>",
             "x<a/>",
             "<a>\uD83D</a>",
             "<a>\uDE00x</a>",
             "<a x=\"\uD83D\"/>",
-            "<a>￾</a>",
-            "<a>￿</a>",
+            "<a>\uFFFE</a>",
+            "<a>\uFFFF</a>",
             "<a x=\"\u0001\"/>",
             "<a><![CDATA[\u0001]]></a>",
             "<a><!--\u0001--></a>",
@@ -265,6 +290,30 @@ class SaxEventDifferentialTest {
             "<a>\u0000</a>",
             "",
             "   ",
+            // fix round 1: processing instruction targets (JDK: white space required after the target / name expected)
+            "<a><?p!x?></a>",
+            "<a><?p=?></a>",
+            "<?b,c?><a/>",
+            "<?p\"d?><a/>",
+            "<a><??></a>",
+            "<a><? x?></a>",
+            "<a><?1?></a>",
+            "<a><?-x?></a>",
+            "<a>what<?</a>",
+            // fix round 1: white space inside the XML declaration
+            "<?xml version=\"1.0\"encoding=\"UTF-8\"?><a/>",
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"standalone=\"yes\"?><a/>",
+            "<?xml version='1.0'standalone='yes'?><a/>",
+            // fix round 1: name characters outside the XML 1.0 4th-edition tables (xmlutil uses the 5th edition)
+            "<\u037E/>",
+            "<a\u037E/>",
+            "<\u2C01/>",
+            "<a\u2C01/>",
+            "<\u0E00/>",
+            "<a\u0F00/>",
+            "<a \u037E=\"1\"/>",
+            "<a\uD800\uDC00/>",
+            "<a>x</a\u037E>",
         )
 
         /** Input to SAX verdict in namespace-aware mode (namespace-unaware SAX accepts all of these). */
@@ -279,6 +328,17 @@ class SaxEventDifferentialTest {
             "<a p:x=\"1\"/>" to false,
             "<a><b:c xmlns:b=\"u\" b:d=\"1\"/><b:e/></a>" to false,
             "<a xmlns:p=\"u\"><p:b x:y=\"1\" xmlns:x=\"v\" xmlns=\"w\"/></a>" to true,
+            // fix round 1: QName rules of the JDK parser
+            "<a p::b=\"1\" xmlns:p=\"u\"/>" to false,
+            "<a xml::ang=\"1\"/>" to false,
+            "<a b:=\"1\"/>" to false,
+            "<a: />" to false,
+            "<a xmlns::p=\"u\"/>" to false,
+            "<xmlns:a/>" to false,
+            "<xmlns:a xmlns:xmln=\"u\"/>" to false,
+            "<a xmlns:a=\"u\"><xmlns:b/></a>" to false,
+            "<p:xmlns xmlns:p=\"u\"/>" to true,
+            "<a xml:xmlns=\"1\"/>" to true,
             "<a:b xmlns:a=\"u\" a:c=\"1\" xmlns=\"d\" xmlns:x=\"y\" x:z=\"2\" plain=\"3\"/>" to true,
         )
     }

@@ -33,6 +33,25 @@ class XmlEventParserProbeTest {
         assertEquals(expected(nsAware = true), ProbeInputs.probes.mapValues { verdict(it.value.encodeToByteArray(), true) })
     }
 
+    /**
+     * Fix round 1 regressions (verdicts checked against the JDK parser by SaxEventDifferentialTest): processing
+     * instruction targets, white space in the XML declaration, XML 1.0 4th-edition name characters, QName rules.
+     */
+    @Test fun fixRound1Verdicts() {
+        val both = linkedMapOf(
+            "<a><?p!x?></a>" to REJECTED, "<?b,c?><a/>" to REJECTED, "<a><??></a>" to REJECTED, "<a><?1?></a>" to REJECTED,
+            "<?xml version=\"1.0\"encoding=\"UTF-8\"?><a/>" to REJECTED, "<?xml version='1.0' encoding='UTF-8'standalone='no'?><a/>" to REJECTED,
+            "<\u037E/>" to REJECTED, "<a\u2C01/>" to REJECTED, "<a \u037E=\"1\"/>" to REJECTED,
+            "<a>a<?\u00E9?>d<?p\u00B7 x?></a>" to ACCEPTED, "<?xml version='1.0' encoding='UTF-8' standalone='no' ?><a/>" to ACCEPTED,
+            "<a\rb='x\r\ry'>\r\r</a>" to ACCEPTED, "<:a/>" to ACCEPTED, "<?p:i d?><a/>" to ACCEPTED,
+        )
+        assertEquals(both, both.mapValues { verdict(it.key, true) })
+        assertEquals(both, both.mapValues { verdict(it.key, false) })
+        val nsOnly = listOf("<a p::b=\"1\" xmlns:p=\"u\"/>", "<a b:=\"1\"/>", "<xmlns:a/>", "<a xmlns::p=\"u\"/>")
+        assertEquals(nsOnly.associateWith { REJECTED }, nsOnly.associateWith { verdict(it, true) })
+        assertEquals(nsOnly.associateWith { ACCEPTED }, nsOnly.associateWith { verdict(it, false) })
+    }
+
     private fun expected(nsAware: Boolean): Map<String, String> = ProbeInputs.probes.mapValues { (name, _) ->
         when (name) {
             "valid control" -> ACCEPTED

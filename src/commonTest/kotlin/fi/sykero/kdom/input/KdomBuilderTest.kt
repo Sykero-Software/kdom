@@ -100,9 +100,9 @@ class KdomBuilderTest {
     }
 
     @Test fun surrogatePairsFromReferencesAndRawCharacters() {
-        val root = build("<a x=\"&#x10000;\">&#65536;😀</a>").rootElement
-        assertEquals("𐀀", root.getAttributeValue("x"))
-        assertEquals("𐀀😀", root.text)
+        val root = build("<a x=\"&#x10000;\">&#65536;\uD83D\uDE00</a>").rootElement
+        assertEquals("\uD800\uDC00", root.getAttributeValue("x"))
+        assertEquals("\uD800\uDC00\uD83D\uDE00", root.text)
     }
 
     @Test fun malformedInputThrowsJdomParseExceptionWithPosition() {
@@ -137,39 +137,39 @@ class KdomBuilderTest {
     }
 
     @Test fun bytesWithUtf8Bom() {
-        val bytes = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()) + "<a>é€😀</a>".encodeToByteArray()
-        assertEquals("é€😀", KdomBuilder().build(bytes).rootElement.text)
+        val bytes = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()) + "<a>\u00E9\u20AC\uD83D\uDE00</a>".encodeToByteArray()
+        assertEquals("\u00E9\u20AC\uD83D\uDE00", KdomBuilder().build(bytes).rootElement.text)
     }
 
     @Test fun bytesWithoutBomAreUtf8() {
-        assertEquals("é", KdomBuilder().build("<?xml version=\"1.0\"?><a>é</a>".encodeToByteArray()).rootElement.text)
+        assertEquals("\u00E9", KdomBuilder().build("<?xml version=\"1.0\"?><a>\u00E9</a>".encodeToByteArray()).rootElement.text)
     }
 
     @Test fun bytesWithUtf16LeBom() {
-        val s = "<?xml version=\"1.0\" encoding=\"UTF-16\"?><a>é😀</a>"
+        val s = "<?xml version=\"1.0\" encoding=\"UTF-16\"?><a>\u00E9\uD83D\uDE00</a>"
         val bytes = ArrayList<Byte>()
         bytes += 0xFF.toByte(); bytes += 0xFE.toByte()
         for (c in s) { bytes += (c.code and 0xFF).toByte(); bytes += (c.code shr 8).toByte() }
-        assertEquals("é😀", KdomBuilder().build(bytes.toByteArray()).rootElement.text)
+        assertEquals("\u00E9\uD83D\uDE00", KdomBuilder().build(bytes.toByteArray()).rootElement.text)
     }
 
     @Test fun bytesWithUtf16BeBom() {
-        val s = "<a>é</a>"
+        val s = "<a>\u00E9</a>"
         val bytes = ArrayList<Byte>()
         bytes += 0xFE.toByte(); bytes += 0xFF.toByte()
         for (c in s) { bytes += (c.code shr 8).toByte(); bytes += (c.code and 0xFF).toByte() }
-        assertEquals("é", KdomBuilder().build(bytes.toByteArray()).rootElement.text)
+        assertEquals("\u00E9", KdomBuilder().build(bytes.toByteArray()).rootElement.text)
     }
 
     @Test fun bytesWithIso88591Declaration() {
         val head = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><a>".encodeToByteArray()
         val bytes = head + byteArrayOf(0xE9.toByte()) + "</a>".encodeToByteArray()
-        assertEquals("é", KdomBuilder().build(bytes).rootElement.text)
+        assertEquals("\u00E9", KdomBuilder().build(bytes).rootElement.text)
     }
 
     @Test fun bytesWithUsAsciiDeclaration() {
         val ok = "<?xml version='1.0' encoding='US-ASCII'?><a>x&#233;</a>".encodeToByteArray()
-        assertEquals("xé", KdomBuilder().build(ok).rootElement.text)
+        assertEquals("x\u00E9", KdomBuilder().build(ok).rootElement.text)
         val bad = "<?xml version='1.0' encoding='US-ASCII'?><a>".encodeToByteArray() + byteArrayOf(0xE9.toByte()) + "</a>".encodeToByteArray()
         assertFailsWith<JDOMParseException> { KdomBuilder().build(bad) }
     }
@@ -187,6 +187,50 @@ class KdomBuilderTest {
             val e = assertFailsWith<JDOMParseException> { KdomBuilder().build(bytes) }
             assertEquals(2, e.lineNumber)
         }
+    }
+
+    @Test fun loneCarriageReturnsAreEachALineEnd() {
+        // fix round 1: xmlutil folded "\r\r" into one line end; SAX normalizes each lone CR to LF (a space in attributes).
+        val root = build("<a b='x\r\ry' c='\r\n\r'>x\r\ry\r\r\r<![CDATA[\r\r]]><!--\r\r--></a>").rootElement
+        assertEquals("x  y", root.getAttributeValue("b"))
+        assertEquals("  ", root.getAttributeValue("c"))
+        assertEquals(listOf("Text:x\n\ny\n\n\n", "CDATA:\n\n", "Comment:\n\n"), root.content.map { it::class.simpleName + ":" + it.value })
+        assertEquals(3, assertFailsWith<JDOMParseException> { build("<a>\r\r</b>") }.lineNumber)
+    }
+
+    @Test fun namespaceUrisKeepNelAndLineSeparator() {
+        val root = build("<a xmlns=\"u\u2028\" xmlns:p=\"urn:\u0085x\" p:b=\"1\"/>").rootElement
+        assertEquals("u\u2028", root.namespaceURI)
+        assertEquals("urn:\u0085x", root.attributes[0].namespaceURI)
+    }
+
+    @Test fun treeLayerFailuresAreWrappedInJdomParseException() {
+        // fix round 1: accepted by the parser (as by SAX), rejected by kdom's Namespace/Element/ProcessingInstruction
+        // checks; never an unchecked exception (JSword's fallback chain catches JDOMException).
+        val ns = assertFailsWith<JDOMParseException> { build("<a>\n<b xmlns:p=\" urn:p\"/></a>") }
+        assertIs<fi.sykero.kdom.IllegalNameException>(ns.cause)
+        assertEquals(2, ns.lineNumber)
+        assertEquals("a", assertNotNull(ns.partialDocument).rootElement.name)
+        assertIs<fi.sykero.kdom.IllegalTargetException>(assertFailsWith<JDOMParseException> { build("<?p:i d?><a/>") }.cause)
+        assertIs<fi.sykero.kdom.IllegalNameException>(assertFailsWith<JDOMParseException> { build("<:a/>") }.cause)
+    }
+
+    @Test fun declarationWinsOverUtf8Bom() {
+        val bytes = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()) +
+            "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><a>".encodeToByteArray() + byteArrayOf(0xE9.toByte()) + "</a>".encodeToByteArray()
+        assertEquals("\u00E9", KdomBuilder().build(bytes).rootElement.text)
+    }
+
+    @Test fun utf16BomWithAConflictingDeclarationIsRejected() {
+        fun le(s: String): ByteArray {
+            val out = ArrayList<Byte>()
+            out += 0xFF.toByte(); out += 0xFE.toByte()
+            for (c in s) { out += (c.code and 0xFF).toByte(); out += (c.code shr 8).toByte() }
+            return out.toByteArray()
+        }
+        assertEquals("x", KdomBuilder().build(le("<?xml version=\"1.0\" encoding=\"UTF-16LE\"?><a>x</a>")).rootElement.text)
+        assertFailsWith<JDOMParseException> { KdomBuilder().build(le("<?xml version=\"1.0\" encoding=\"UTF-8\"?><a/>")) }
+        assertFailsWith<JDOMParseException> { KdomBuilder().build(le("<?xml version=\"1.0\" encoding=\"UTF-16BE\"?><a/>")) }
     }
 
     @Test fun unsupportedEncodingIsRejected() {
