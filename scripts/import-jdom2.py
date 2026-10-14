@@ -28,7 +28,8 @@ util/IteratorIterable util/NamespaceStack""".split()
 TESTS = []
 for n in """TestAttribute TestAttributeList TestCDATA TestComment TestContentList TestDocType TestDocument TestElement
 TestElementFilterList TestEntityRef TestFilterList TestFilterListElement TestFilterListText TestNamespace
-TestNamespaceAware TestProcessingInstruction TestText TestVerifier TestVerifierCharacters""".split():
+TestNamespaceAware TestProcessingInstruction TestText TestVerifier TestVerifierCharacters
+TestDescendantIterator TestDescendantFilterIterator TestJDOMExceptn""".split():
     TESTS.append("test/cases/" + n)
 TESTS.append("test/cases/filter/*")
 for n in "AbstractTestOutputter TestFormat TestXMLOutputProcessor TestXMLOutputter".split():

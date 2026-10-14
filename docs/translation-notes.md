@@ -14,7 +14,7 @@ and a line here.
 ## Task 3: jdom2 subset import (Java)
 
 Source: hunterhacker/jdom tag `JDOM-2.0.6.1` (commit c6065f684bdff5cebf5f23b2859c5e4c89fd89db), imported by
-`scripts/import-jdom2.py` (58 main classes, 37 test classes). The script is the provenance record; the three
+`scripts/import-jdom2.py` (58 main classes, 40 test classes). The script is the provenance record; the three
 test files listed under "Removed test methods" / "Ignored tests" were hand-edited afterwards, so re-running the
 script overwrites those edits.
 
@@ -53,7 +53,7 @@ script overwrites those edits.
 - `TestIllegalAddExceptn`: not removed; `DefaultJDOMFactory` calls (`fac.element(..)` etc.) replaced by the equivalent
   public constructors (`new Element(..)` etc.).
 - Not imported at all (excluded-class tests): all of `cases/{input,located,adapters,transform,xpath,jaxb,serialize}`,
-  `*JDOMFactory*` tests, `TestBridgeMethods`, `TestDescendant*Iterator`, `TestJDOMExceptn`, and in `cases/output` the
+  `*JDOMFactory*` tests, `TestBridgeMethods`, and in `cases/output` the
   DOM/SAX/StAX outputter and round-trip tests; `test/util/FidoFetch`; `special/TestIssue008*`; `util/TestReflectionConstructor`.
 
 ### Ignored tests (`// K5: needs KdomBuilder (Task 9)` + `@Ignore("needs KdomBuilder, Task 9")`)
@@ -74,5 +74,15 @@ Each parse goes through a private placeholder `parseWithKdomBuilder(String)` in 
 
 ## Baseline
 
-`:kdom:jvmTest` on the JVM after Task 3: 37 test classes, 687 tests, 10 skipped (8 K5 `@Ignore` + 2 upstream), 0 failures,
+`:kdom:jvmTest` on the JVM after Task 3: 40 test classes, 687 tests, 10 skipped (8 K5 `@Ignore` + 2 upstream), 0 failures,
 0 errors. This number may only grow; the 8 K5 ignores return in Task 9.
+
+### Import notes (fix round 1)
+
+- `TestDescendantIterator`, `TestDescendantFilterIterator` and `TestJDOMExceptn` (17 tests) use only imported classes and are
+  imported unchanged under `test/cases/`; all run green (none ignored).
+- Line endings: the CRLF originals of `UnitTestUtil.java` and `complex.xml` were normalised to LF by git.
+- `xmlchars.xml` and `complex.xml` are copied to `src/jvmTest/resources` but are currently unused by the kept tests
+  (Task 8 embeds xmlchars).
+- Known stale string: `output/LineSeparator.java` javadoc/comment (lines ~109, ~171) still says
+  `-Dorg.jdom2.output.LineSeparator`; left as imported, Task 7 removes it together with `SystemProperty`.
