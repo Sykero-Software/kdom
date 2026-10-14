@@ -38,13 +38,19 @@ Void jdom2 setters are plain `var` properties. Exceptions and details are listed
 ## Parsing and DOCTYPE policy
 
 `KdomBuilder` (jdom2 `SAXBuilder` replacement) and `XmlEventParser` (SAX-shaped events) read XML with
-xmlutil and reject every input a JAXP SAX parser rejects. By default they are **strict**: any DOCTYPE
-is a parse error, which is what JSword's OSIS/ThML/GBF parsing relies on (a malformed verse keeps
+xmlutil. In the default **strict** mode they reject every input the JDK's JAXP SAX parser rejects
+(pinned by differential tests and a mutation fuzz; the only known accept/reject differences are that a
+DOCTYPE is always rejected and that a malformed `encoding` name in the XML declaration of a *string*
+input is rejected, while the JDK ignores it). In strict mode any DOCTYPE is a parse error, which is what JSword's OSIS/ThML/GBF parsing relies on (a malformed verse keeps
 taking its fallback chain). For EPUB XHTML/OPF/NCX and other non-Sword XML, `KdomBuilder(allowDocType =
 true)` / `XmlEventParser(namespaceAware, allowDocType = true)` accept a DOCTYPE and build a `DocType`
 node as jdom2 does; the external subset is never loaded (no network, no files), internal-subset
 entities are expanded, and an undeclared entity under an unread external subset becomes an
-`EntityRef`. Details: `docs/xmlutil-probes.md` ("DOCTYPE policy") and `docs/translation-notes.md`.
+`EntityRef`. Known permissive-mode gaps: `ATTLIST` declarations, parameter-entity references and
+entities whose replacement text holds markup or non-predefined references are rejected (the JDK accepts
+them); internal-subset processing instructions are dropped; relative system ids of internal-subset
+declarations are kept as written. Details: `docs/xmlutil-probes.md` ("DOCTYPE policy") and
+`docs/translation-notes.md`.
 
 ## Build
 
