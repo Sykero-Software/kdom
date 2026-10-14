@@ -1,4 +1,4 @@
-/*--
+/*-- 
 
  Copyright (C) 2000-2012 Jason Hunter & Brett McLaughlin.
  All rights reserved.
@@ -11,8 +11,8 @@
     notice, this list of conditions, and the following disclaimer.
 
  2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions, and the disclaimer that follows
-    these conditions in the documentation and/or other materials
+    notice, this list of conditions, and the disclaimer that follows 
+    these conditions in the documentation and/or other materials 
     provided with the distribution.
 
  3. The name "JDOM" must not be used to endorse or promote products
@@ -23,12 +23,12 @@
     may "JDOM" appear in their name, without prior written permission
     from the JDOM Project Management <request_AT_jdom_DOT_org>.
 
- In addition, we request (but do not require) that you include in the
- end-user documentation provided with the redistribution and/or in the
+ In addition, we request (but do not require) that you include in the 
+ end-user documentation provided with the redistribution and/or in the 
  software itself an acknowledgement equivalent to the following:
      "This product includes software developed by the
       JDOM Project (http://www.jdom.org/)."
- Alternatively, the acknowledgment may be graphical using the logos
+ Alternatively, the acknowledgment may be graphical using the logos 
  available at http://www.jdom.org/images/logos.
 
  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
@@ -44,8 +44,8 @@
  OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  SUCH DAMAGE.
 
- This software consists of voluntary contributions made by many
- individuals on behalf of the JDOM Project and was originally
+ This software consists of voluntary contributions made by many 
+ individuals on behalf of the JDOM Project and was originally 
  created by Jason Hunter <jhunter_AT_jdom_DOT_org> and
  Brett McLaughlin <brett_AT_jdom_DOT_org>.  For more information
  on the JDOM Project, please see <http://www.jdom.org/>.
@@ -54,69 +54,63 @@
 
  */
 
-package fi.sykero.kdom.filter;
-
+package fi.sykero.kdom.filter
 
 /**
- * Filter that is the logical <b>negation</b> operation of another filter.
+ * Filter that is the logical **negation** operation of another filter.
  *
  *
  * @author Bradley S. Huffman
  */
-final class NegateFilter extends AbstractFilter<Object> {
+internal class NegateFilter
+/**
+ * Match if the supplied filter **does not** match.
+ *
+ * @param filter filter to use.
+ */
+(
+    // Underlying filter.
+    private val filter: Filter<*>
+) : AbstractFilter<Any>() {
 
-	/**
-	 * JDOM2 Serialization: Default mechanism
-	 */
-	private static final long serialVersionUID = 200L;
+    override fun filter(content: Any?): Any? {
+        if (filter.matches(content)) {
+            return null
+        }
+        return content
+    }
 
-	// Underlying filter.
-	private final Filter<?> filter;
+    /** Was the package-private `getBaseFilter()`. */
+    val baseFilter: Filter<*>
+        get() = filter
 
-	/**
-	 * Match if the supplied filter <b>does not</b> match.
-	 *
-	 * @param filter filter to use.
-	 */
-	public NegateFilter(Filter<?> filter) {
-		this.filter = filter;
-	}
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
 
-	@Override
-	public Object filter(Object content) {
-		if (filter.matches(content)) {
-			return null;
-		}
-		return content;
-	}
+        if (other is NegateFilter) {
+            return filter == other.filter
+        }
+        return false
+    }
 
-	Filter<?> getBaseFilter() {
-		return filter;
-	}
+    override fun hashCode(): Int {
+        return filter.hashCode().inv()
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj) {
-			return true;
-		}
+    override fun toString(): String {
+        return StringBuilder(64)
+            .append("[NegateFilter: ")
+            .append(filter.toString())
+            .append("]")
+            .toString()
+    }
 
-		if (obj instanceof NegateFilter) {
-			return filter.equals(((NegateFilter) obj).filter);
-		}
-		return false;
-	}
-
-	@Override
-	public int hashCode() {
-		return ~filter.hashCode();
-	}
-
-	@Override
-	public String toString() {
-		return new StringBuilder(64)
-		.append("[NegateFilter: ")
-		.append(filter.toString())
-		.append("]")
-		.toString();
-	}
+    private companion object {
+        /**
+         * JDOM2 Serialization: Default mechanism
+         */
+        private const val serialVersionUID = 200L
+    }
 }

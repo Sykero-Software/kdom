@@ -1,4 +1,4 @@
-/*--
+/*-- 
 
  Copyright (C) 2000-2012 Jason Hunter & Brett McLaughlin.
  All rights reserved.
@@ -11,8 +11,8 @@
     notice, this list of conditions, and the following disclaimer.
 
  2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions, and the disclaimer that follows
-    these conditions in the documentation and/or other materials
+    notice, this list of conditions, and the disclaimer that follows 
+    these conditions in the documentation and/or other materials 
     provided with the distribution.
 
  3. The name "JDOM" must not be used to endorse or promote products
@@ -23,12 +23,12 @@
     may "JDOM" appear in their name, without prior written permission
     from the JDOM Project Management <request_AT_jdom_DOT_org>.
 
- In addition, we request (but do not require) that you include in the
- end-user documentation provided with the redistribution and/or in the
+ In addition, we request (but do not require) that you include in the 
+ end-user documentation provided with the redistribution and/or in the 
  software itself an acknowledgement equivalent to the following:
      "This product includes software developed by the
       JDOM Project (http://www.jdom.org/)."
- Alternatively, the acknowledgment may be graphical using the logos
+ Alternatively, the acknowledgment may be graphical using the logos 
  available at http://www.jdom.org/images/logos.
 
  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
@@ -44,8 +44,8 @@
  OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  SUCH DAMAGE.
 
- This software consists of voluntary contributions made by many
- individuals on behalf of the JDOM Project and was originally
+ This software consists of voluntary contributions made by many 
+ individuals on behalf of the JDOM Project and was originally 
  created by Jason Hunter <jhunter_AT_jdom_DOT_org> and
  Brett McLaughlin <brett_AT_jdom_DOT_org>.  For more information
  on the JDOM Project, please see <http://www.jdom.org/>.
@@ -54,87 +54,81 @@
 
  */
 
-package fi.sykero.kdom.filter;
+package fi.sykero.kdom.filter
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.RandomAccess;
-
-import fi.sykero.kdom.Content;
+import fi.sykero.kdom.Content
+import java.util.ArrayList
+import java.util.Collections
+import java.util.RandomAccess
 
 /**
- * Partial implementation of {@link Filter}.
+ * Partial implementation of [Filter].
  *
  * @author Bradley S. Huffman
  * @author Rolf Lear
  * @param <T> The Generic type of content returned by this Filter
  */
-public abstract class AbstractFilter<T> implements Filter<T> {
+abstract class AbstractFilter<T> : Filter<T> {
 
-	/**
-	 * JDOM2 Serialization: Default mechanism
-	 */
-	private static final long serialVersionUID = 200L;
+    final override fun matches(content: Any?): Boolean {
+        return filter(content) != null
+    }
 
-	@Override
-	public final boolean matches(Object content) {
-		return filter(content) != null;
-	}
+    override fun filter(content: List<*>?): List<T> {
+        if (content == null) {
+            return Collections.emptyList()
+        }
+        if (content is RandomAccess) {
+            val sz = content.size
+            val ret = ArrayList<T>(sz)
+            for (i in 0 until sz) {
+                val c = filter(content[i])
+                if (c != null) {
+                    ret.add(c)
+                }
+            }
+            if (ret.isEmpty()) {
+                return Collections.emptyList()
+            }
+            return Collections.unmodifiableList(ret)
+        }
+        val ret = ArrayList<T>(10)
+        val it = content.iterator()
+        while (it.hasNext()) {
+            val c = filter(it.next())
+            if (c != null) {
+                ret.add(c)
+            }
+        }
+        if (ret.isEmpty()) {
+            return Collections.emptyList()
+        }
+        return Collections.unmodifiableList(ret)
+    }
 
-	@Override
-	public List<T> filter(List<?> content) {
-		if (content == null) {
-			return Collections.emptyList();
-		}
-		if (content instanceof RandomAccess) {
-			final int sz = content.size();
-			final ArrayList<T> ret = new ArrayList<T>(sz);
-			for (int i = 0; i < sz; i++) {
-				final T c = filter(content.get(i));
-				if (c != null) {
-					ret.add(c);
-				}
-			}
-			if (ret.isEmpty()) {
-				return Collections.emptyList();
-			}
-			return Collections.unmodifiableList(ret);
-		}
-		final ArrayList<T> ret = new ArrayList<T>(10);
-		for (Iterator<?> it = content.iterator(); it.hasNext(); ) {
-			final T c = filter(it.next());
-			if (c != null) {
-				ret.add(c);
-			}
-		}
-		if (ret.isEmpty()) {
-			return Collections.emptyList();
-		}
-		return Collections.unmodifiableList(ret);
-	}
+    final override fun negate(): Filter<*> {
+        if (this is NegateFilter) {
+            return this.baseFilter
+        }
+        return NegateFilter(this)
+    }
 
-	@Override
-	public final Filter<?> negate() {
-		if (this instanceof NegateFilter) {
-			return ((NegateFilter)this).getBaseFilter();
-		}
-		return new NegateFilter(this);
-	}
+    final override fun or(filter: Filter<*>?): Filter<out Content> {
+        return OrFilter(this, filter)
+    }
 
-	@Override
-	public final Filter<? extends Content> or(Filter<?> filter) {
-		return new OrFilter(this, filter);
-	}
+    final override fun and(filter: Filter<*>?): Filter<T> {
+        return AndFilter<T>(filter, this)
+    }
 
-	@Override
-	public final Filter<T> and(Filter<?> filter) {
-		return new AndFilter<T>(filter, this);
-	}
+    override fun <R> refine(filter: Filter<R>?): Filter<R> {
+        return AndFilter<R>(this, filter)
+    }
 
-	@Override
-	public <R> Filter<R> refine(Filter<R> filter) {
-		return new AndFilter<R>(this, filter);
-	}
+    private companion object {
+        /**
+         * JDOM2 Serialization: Default mechanism
+         */
+        private const val serialVersionUID = 200L
+    }
 }

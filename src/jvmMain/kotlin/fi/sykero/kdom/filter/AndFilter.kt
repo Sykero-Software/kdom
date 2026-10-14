@@ -1,4 +1,4 @@
-/*--
+/*-- 
 
  Copyright (C) 2000-2012 Jason Hunter & Brett McLaughlin.
  All rights reserved.
@@ -11,8 +11,8 @@
     notice, this list of conditions, and the following disclaimer.
 
  2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions, and the disclaimer that follows
-    these conditions in the documentation and/or other materials
+    notice, this list of conditions, and the disclaimer that follows 
+    these conditions in the documentation and/or other materials 
     provided with the distribution.
 
  3. The name "JDOM" must not be used to endorse or promote products
@@ -23,12 +23,12 @@
     may "JDOM" appear in their name, without prior written permission
     from the JDOM Project Management <request_AT_jdom_DOT_org>.
 
- In addition, we request (but do not require) that you include in the
- end-user documentation provided with the redistribution and/or in the
+ In addition, we request (but do not require) that you include in the 
+ end-user documentation provided with the redistribution and/or in the 
  software itself an acknowledgement equivalent to the following:
      "This product includes software developed by the
       JDOM Project (http://www.jdom.org/)."
- Alternatively, the acknowledgment may be graphical using the logos
+ Alternatively, the acknowledgment may be graphical using the logos 
  available at http://www.jdom.org/images/logos.
 
  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
@@ -44,8 +44,8 @@
  OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  SUCH DAMAGE.
 
- This software consists of voluntary contributions made by many
- individuals on behalf of the JDOM Project and was originally
+ This software consists of voluntary contributions made by many 
+ individuals on behalf of the JDOM Project and was originally 
  created by Jason Hunter <jhunter_AT_jdom_DOT_org> and
  Brett McLaughlin <brett_AT_jdom_DOT_org>.  For more information
  on the JDOM Project, please see <http://www.jdom.org/>.
@@ -54,72 +54,69 @@
 
  */
 
-package fi.sykero.kdom.filter;
-
+package fi.sykero.kdom.filter
 
 /**
  * Allow two filters to be chained together with a logical
- * <b>and</b> operation.
+ * **and** operation.
  *
  * @author Bradley S. Huffman
  * @author Rolf Lear
  * @param <T> The Generic type of content returned by this Filter
-*/
-final class AndFilter<T> extends AbstractFilter<T> {
+ */
+internal class AndFilter<T>(base: Filter<*>?, refiner: Filter<T>?) : AbstractFilter<T>() {
 
-	/**
-	 * JDOM2 Serialization: Default mechanism
-	 */
-	private static final long serialVersionUID = 200L;
+    private val base: Filter<*>
+    private val refiner: Filter<T>
 
-	private final Filter<?> base;
-	private final Filter<T> refiner;
+    init {
+        if (base == null || refiner == null) {
+            throw NullPointerException("Cannot have a null base or refiner filter")
+        }
+        this.base = base
+        this.refiner = refiner
+    }
 
-	public AndFilter(Filter<?> base, Filter<T> refiner) {
-		if (base == null || refiner == null) {
-			throw new NullPointerException("Cannot have a null base or refiner filter");
-		}
-		this.base = base;
-		this.refiner = refiner;
-	}
+    override fun filter(content: Any?): T? {
+        val o: Any? = base.filter(content)
+        if (o != null) {
+            return refiner.filter(content)
+        }
+        return null
+    }
 
-	@Override
-	public T filter(Object content) {
-		Object o = base.filter(content);
-		if (o != null) {
-			return refiner.filter(content);
-		}
-		return null;
-	}
-	
-	@Override
-	public int hashCode() {
-		return base.hashCode() ^ refiner.hashCode();
-	}
-	
-	@Override
-	public boolean equals(Object obj) {
-		if (obj == this) {
-			return true;
-		}
-		if (obj instanceof AndFilter<?>) {
-			AndFilter<?> them = (AndFilter<?>)obj;
-			return (base.equals(them.base) && refiner.equals(them.refiner)) ||
-					(refiner.equals(them.base) && base.equals(them.refiner));
-		}
-		
-		return false;
-	}
+    override fun hashCode(): Int {
+        return base.hashCode() xor refiner.hashCode()
+    }
 
-	@Override
-	public String toString() {
-		return new StringBuilder(64)
-		.append("[AndFilter: ")
-		.append(base.toString())
-		.append(",\n")
-		.append("            ")
-		.append(refiner.toString())
-		.append("]")
-		.toString();
-	}
+    override fun equals(other: Any?): Boolean {
+        if (other === this) {
+            return true
+        }
+        if (other is AndFilter<*>) {
+            val them: AndFilter<*> = other
+            return (base == them.base && refiner == them.refiner) ||
+                    (refiner == them.base && base == them.refiner)
+        }
+
+        return false
+    }
+
+    override fun toString(): String {
+        return StringBuilder(64)
+            .append("[AndFilter: ")
+            .append(base.toString())
+            .append(",\n")
+            .append("            ")
+            .append(refiner.toString())
+            .append("]")
+            .toString()
+    }
+
+    private companion object {
+        /**
+         * JDOM2 Serialization: Default mechanism
+         */
+        private const val serialVersionUID = 200L
+    }
 }

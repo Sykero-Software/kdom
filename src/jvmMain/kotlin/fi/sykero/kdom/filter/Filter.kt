@@ -54,10 +54,7 @@
 
  */
 
-package fi.sykero.kdom.filter;
-
-import java.util.List;
-
+package fi.sykero.kdom.filter
 
 /**
  * A generalized filter to restrict visibility or mutability on a list.
@@ -67,70 +64,69 @@ import java.util.List;
  * @author  Rolf Lear
  * @param <T> The Generic type of content returned by this Filter
  */
-public interface Filter <T> extends java.io.Serializable {
+interface Filter<T> : java.io.Serializable {
+
+    /**
+     * Filter the input list keeping only the items that match the Filter.
+     *
+     * @param content The content to filter.
+     * @return a new read-only RandomAccess list of the filtered input content.
+     */
+    fun filter(content: List<*>?): List<T>
+
+    /**
+     * Check to see if the content matches this Filter.
+     * If it does, return the content cast as this filter's return type,
+     * otherwise return null.
+     * @param content The content to test.
+     * @return The content if it matches the filter, cast as this Filter's type.
+     */
+    fun filter(content: Any?): T?
+
+    /**
+     * Check to see if the object matches a predefined set of rules.
+     *
+     * @param content The object to verify.
+     * @return `true` if the object matches a predfined
+     *           set of rules.
+     */
+    fun matches(content: Any?): Boolean
 
 
-	/**
-	 * Filter the input list keeping only the items that match the Filter.
-	 * 
-	 * @param content The content to filter.
-	 * @return a new read-only RandomAccess list of the filtered input content.
-	 */
-	public List<T> filter(List<?> content);
+    /**
+     * Creates an 'inverse' filter
+     * @return a Filter that returns all content except what this Filter
+     * 		instance would.
+     */
+    fun negate(): Filter<*>
 
-	/**
-	 * Check to see if the content matches this Filter.
-	 * If it does, return the content cast as this filter's return type,
-	 * otherwise return null.
-	 * @param content The content to test.
-	 * @return The content if it matches the filter, cast as this Filter's type.
-	 */
-	public T filter(Object content);
+    /**
+     * Creates an ORing filter
+     * @param filter a second Filter to OR with.
+     * @return a new Filter instance that returns the 'union' of this filter and
+     *      the specified filter.
+     */
+    fun or(filter: Filter<*>?): Filter<*>
 
-	/**
-	 * Check to see if the object matches a predefined set of rules.
-	 *
-	 * @param content The object to verify.
-	 * @return <code>true</code> if the object matches a predfined 
-	 *           set of rules.
-	 */
-	public boolean matches(Object content);
+    /**
+     * Creates an ANDing filter. The generic type of the result is the same as
+     * this Filter.
+     *
+     * @param filter a second Filter to AND with.
+     * @return a new Filter instance that returns the 'intersection' of this
+     *     filter and the specified filter.
+     */
+    fun and(filter: Filter<*>?): Filter<T>
 
-
-	/**
-	 * Creates an 'inverse' filter
-	 * @return a Filter that returns all content except what this Filter
-	 * 		instance would.
-	 */
-	public Filter<? extends Object> negate();
-
-	/**
-	 * Creates an ORing filter
-	 * @param filter a second Filter to OR with.
-	 * @return a new Filter instance that returns the 'union' of this filter and
-	 *      the specified filter.
-	 */
-	public Filter<? extends Object> or(Filter<?> filter);
-
-	/**
-	 * Creates an ANDing filter. The generic type of the result is the same as
-	 * this Filter.
-	 * 
-	 * @param filter a second Filter to AND with.
-	 * @return a new Filter instance that returns the 'intersection' of this
-	 *     filter and the specified filter.
-	 */
-	public Filter<T> and(Filter<?> filter);
-
-	/**
-	 * This is similar to the and(Filter) method except the generic type is
-	 * different.
-	 * @param <R> The Generic type of the returned data is taken from the input
-	 * instance. 
-	 * @param filter The filter to refine our results with.
-	 * @return A Filter that requires content to both match our instance and the
-	 *     refining instance, but the generic type of the returned data is based
-	 *     on the refining instance, not this instance.
-	 */
-	public <R> Filter<R> refine(Filter<R> filter);
+    /**
+     * This is similar to the and(Filter) method except the generic type is
+     * different.
+     * @param <R> The Generic type of the returned data is taken from the input
+     * instance.
+     * @param filter The filter to refine our results with.
+     * @return A Filter that requires content to both match our instance and the
+     *     refining instance, but the generic type of the returned data is based
+     *     on the refining instance, not this instance.
+     */
+    fun <R> refine(filter: Filter<R>?): Filter<R>
 }
