@@ -56,6 +56,9 @@
 
 package fi.sykero.kdom
 
+import fi.sykero.kdom.internal.GetterThrows
+import kotlin.jvm.JvmField
+import kotlin.jvm.JvmSynthetic
 import fi.sykero.kdom.internal.unmodifiableList
 import fi.sykero.kdom.internal.unsafeNull
 
@@ -584,7 +587,7 @@ open class Attribute : CloneBase, NamespaceAware {
      * @return `int` value of attribute.
      * @throws DataConversionException when conversion fails.
      */
-    @get:Throws(DataConversionException::class)
+    @get:GetterThrows(DataConversionException::class)
     val intValue: Int
         get() {
             try {
@@ -603,7 +606,7 @@ open class Attribute : CloneBase, NamespaceAware {
      * @return `long` value of attribute.
      * @throws DataConversionException when conversion fails.
      */
-    @get:Throws(DataConversionException::class)
+    @get:GetterThrows(DataConversionException::class)
     val longValue: Long
         get() {
             try {
@@ -622,7 +625,7 @@ open class Attribute : CloneBase, NamespaceAware {
      * @return `float` value of attribute.
      * @throws DataConversionException when conversion fails.
      */
-    @get:Throws(DataConversionException::class)
+    @get:GetterThrows(DataConversionException::class)
     val floatValue: Float
         get() {
             try {
@@ -643,7 +646,7 @@ open class Attribute : CloneBase, NamespaceAware {
      * @return `double` value of attribute.
      * @throws DataConversionException when conversion fails.
      */
-    @get:Throws(DataConversionException::class)
+    @get:GetterThrows(DataConversionException::class)
     val doubleValue: Double
         get() {
             try {
@@ -673,7 +676,7 @@ open class Attribute : CloneBase, NamespaceAware {
      * @return `boolean` value of attribute.
      * @throws DataConversionException when conversion fails.
      */
-    @get:Throws(DataConversionException::class)
+    @get:GetterThrows(DataConversionException::class)
     val booleanValue: Boolean
         get() {
             val valueTrim = value.trim { it <= ' ' }

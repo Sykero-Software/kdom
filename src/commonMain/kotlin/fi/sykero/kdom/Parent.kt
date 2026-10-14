@@ -292,6 +292,7 @@ interface Parent : NamespaceAware {
      * 				the index.
      * @throws IllegalAddException if there is a problem with the content
      */
+    @Throws(IllegalAddException::class)
     fun canContainContent(content: Content, index: Int, replace: Boolean)
 
     /**

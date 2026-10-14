@@ -56,6 +56,7 @@
 
 package fi.sykero.kdom
 
+import kotlin.jvm.JvmField
 import fi.sykero.kdom.internal.className
 import fi.sykero.kdom.internal.KdomMutableList
 import fi.sykero.kdom.filter.Filter
@@ -423,7 +424,7 @@ internal class ContentList
     fun ensureCapacity(minCapacity: Int) {
         val data = elementData
         if (data == null) {
-            elementData = arrayOfNulls<Content>(Math.max(minCapacity, INITIAL_ARRAY_SIZE))
+            elementData = arrayOfNulls<Content>(maxOf(minCapacity, INITIAL_ARRAY_SIZE))
             return
         } else if (minCapacity < data.size) {
             return
@@ -615,13 +616,13 @@ internal class ContentList
         var mid = 0
         var right = len - 1
         var cmp = 0
-        val base = elementData!![`val`]
+        val base = elementData!![`val`]!!
         while (left <= right) {
             mid = (left + right) ushr 1
-            cmp = comp.compare(base, elementData!![indexes[mid]])
+            cmp = comp.compare(base, elementData!![indexes[mid]]!!)
             if (cmp == 0) {
                 while (cmp == 0 && mid < right && comp.compare(
-                        base, elementData!![indexes[mid + 1]]
+                        base, elementData!![indexes[mid + 1]]!!
                     ) == 0
                 ) {
                     mid++

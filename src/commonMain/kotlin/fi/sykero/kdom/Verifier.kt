@@ -56,6 +56,7 @@
 
 package fi.sykero.kdom
 
+import kotlin.jvm.JvmStatic
 import fi.sykero.kdom.internal.hex
 /**
  * A utility class to handle well-formedness checks on names, data, and other
@@ -1061,7 +1062,7 @@ class Verifier private constructor() {
                             return "Percent signs in URIs must be followed by " +
                                     "exactly two hexadecimal digits."
                         }
-                    } catch (e: StringIndexOutOfBoundsException) {
+                    } catch (e: IndexOutOfBoundsException) { // jdom2: StringIndexOutOfBoundsException (a subclass on the JVM)
                         return "Percent signs in URIs must be followed by " +
                                 "exactly two hexadecimal digits."
                     }

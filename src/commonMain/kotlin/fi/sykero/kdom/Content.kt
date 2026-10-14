@@ -56,6 +56,7 @@
 
 package fi.sykero.kdom
 
+import kotlin.jvm.JvmField
 
 /**
  * Superclass for JDOM objects which can be legal child content

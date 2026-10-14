@@ -56,6 +56,9 @@
 
 package fi.sykero.kdom
 
+import kotlin.jvm.JvmField
+import kotlin.jvm.JvmStatic
+import kotlin.jvm.JvmName
 import fi.sykero.kdom.JDOMConstants.Companion.NS_PREFIX_DEFAULT
 import fi.sykero.kdom.JDOMConstants.Companion.NS_PREFIX_XML
 import fi.sykero.kdom.JDOMConstants.Companion.NS_PREFIX_XMLNS

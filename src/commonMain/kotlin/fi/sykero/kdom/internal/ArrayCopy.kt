@@ -56,6 +56,7 @@
 
 package fi.sykero.kdom.internal
 
+import kotlin.jvm.JvmStatic
 /**
  * The copyOf methods on java.util.Arrays are introduced in Java6. Need an
  * alternative to support Java5.

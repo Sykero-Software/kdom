@@ -56,6 +56,8 @@
 
 package fi.sykero.kdom
 
+import kotlin.jvm.JvmField
+import kotlin.jvm.JvmSynthetic
 import fi.sykero.kdom.internal.isJavaWhitespace
 import fi.sykero.kdom.internal.EmptyUnmodifiableMap
 import fi.sykero.kdom.internal.unsafeNull

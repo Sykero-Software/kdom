@@ -56,6 +56,7 @@
 
 package fi.sykero.kdom
 
+import kotlin.jvm.JvmStatic
 /**
  * Use a simple enumeration for the Attribute Types
  * 

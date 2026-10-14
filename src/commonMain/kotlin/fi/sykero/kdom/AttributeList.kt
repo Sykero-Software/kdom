@@ -348,7 +348,7 @@ internal class AttributeList
     private fun ensureCapacity(minCapacity: Int) {
         val data = attributeData
         if (data == null) {
-            attributeData = arrayOfNulls<Attribute>(Math.max(minCapacity, INITIAL_ARRAY_SIZE))
+            attributeData = arrayOfNulls<Attribute>(maxOf(minCapacity, INITIAL_ARRAY_SIZE))
             return
         } else if (minCapacity < data.size) {
             return
@@ -560,13 +560,13 @@ internal class AttributeList
         var mid = 0
         var right = len - 1
         var cmp = 0
-        val base = attributeData!![`val`]
+        val base = attributeData!![`val`]!!
         while (left <= right) {
             mid = (left + right) ushr 1
-            cmp = comp.compare(base, attributeData!![indexes[mid]])
+            cmp = comp.compare(base, attributeData!![indexes[mid]]!!)
             if (cmp == 0) {
                 while (cmp == 0 && mid < right && comp.compare(
-                        base, attributeData!![indexes[mid + 1]]
+                        base, attributeData!![indexes[mid + 1]]!!
                     ) == 0
                 ) {
                     mid++

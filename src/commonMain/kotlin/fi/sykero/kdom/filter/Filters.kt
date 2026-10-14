@@ -56,6 +56,7 @@
 
 package fi.sykero.kdom.filter
 
+import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 import fi.sykero.kdom.Attribute
 import fi.sykero.kdom.CDATA

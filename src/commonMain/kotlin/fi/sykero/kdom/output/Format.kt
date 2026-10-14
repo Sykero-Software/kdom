@@ -55,6 +55,8 @@
  */
 package fi.sykero.kdom.output
 
+import kotlin.jvm.JvmStatic
+import kotlin.jvm.JvmSynthetic
 import fi.sykero.kdom.IllegalDataException
 import fi.sykero.kdom.Verifier
 

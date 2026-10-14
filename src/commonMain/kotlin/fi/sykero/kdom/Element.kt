@@ -56,6 +56,7 @@
 
 package fi.sykero.kdom
 
+import kotlin.jvm.JvmSynthetic
 import fi.sykero.kdom.internal.unmodifiableList
 import fi.sykero.kdom.internal.unsafeNull
 

@@ -56,6 +56,7 @@
 
 package fi.sykero.kdom
 
+import kotlin.jvm.JvmSynthetic
 import fi.sykero.kdom.internal.unmodifiableList
 import fi.sykero.kdom.filter.Filter
 import fi.sykero.kdom.filter.Filters
@@ -765,6 +766,7 @@ open class Document : CloneBase, Parent {
         return propertyMap!![id]
     }
 
+    @Throws(IllegalAddException::class)
     override fun canContainContent(content: Content, index: Int, replace: Boolean) {
         if (content is Element) {
             val cre = contentList.indexOfFirstElement()

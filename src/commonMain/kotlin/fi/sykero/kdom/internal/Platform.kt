@@ -40,3 +40,13 @@ internal expect fun className(obj: Any): String
 
 /** The name `ClassFilter.toString()` shows (JVM: the boxed Java class name, as jdom2's `Class.getName()`). */
 internal expect fun className(kclass: kotlin.reflect.KClass<*>): String
+
+/**
+ * `@Throws` for a property getter. Common `kotlin.Throws` targets only functions and constructors; on the JVM this is
+ * `kotlin.jvm.Throws`, so the getters keep jdom2's checked `throws DataConversionException` clause (Java callers
+ * catch it). Other platforms drop it (`@OptionalExpectation`).
+ */
+@OptIn(ExperimentalMultiplatform::class)
+@OptionalExpectation
+@Target(AnnotationTarget.PROPERTY_GETTER)
+internal expect annotation class GetterThrows(vararg val exceptionClasses: kotlin.reflect.KClass<out Throwable>)

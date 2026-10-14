@@ -55,6 +55,7 @@
  */
 package fi.sykero.kdom.output
 
+import kotlin.jvm.JvmName
 import fi.sykero.kdom.Attribute
 import fi.sykero.kdom.CDATA
 import fi.sykero.kdom.Comment
