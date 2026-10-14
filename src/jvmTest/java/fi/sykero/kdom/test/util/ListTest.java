@@ -1,6 +1,7 @@
 /* Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software. */
 package fi.sykero.kdom.test.util;
 
+import kotlin.jvm.JvmClassMappingKt;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,7 +9,7 @@ import java.util.List;
 public final class ListTest extends AbstractTestList<Integer> {
 
 	public ListTest() {
-		super(Integer.class, true);
+		super(JvmClassMappingKt.getKotlinClass(Integer.class), true);
 	}
 
 	@Override

@@ -1,6 +1,7 @@
 /* Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software. */
 package fi.sykero.kdom.test.cases;
 
+import kotlin.jvm.JvmClassMappingKt;
 import java.util.List;
 
 import fi.sykero.kdom.Content;
@@ -17,7 +18,7 @@ public class TestElementFilterList extends AbstractTestList<Element> {
 
 
 	public TestElementFilterList() {
-		super(Element.class, false);
+		super(JvmClassMappingKt.getKotlinClass(Element.class), false);
 	}
 	
 	@Override
