@@ -56,6 +56,8 @@
 
 package fi.sykero.kdom
 
+import fi.sykero.kdom.internal.unsafeNull
+
 import java.io.Serializable
 import java.util.ArrayList
 import java.util.Collections
@@ -103,8 +105,14 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
      * @return `String` - name of this attribute,
      *                               without any namespace prefix.
      */
-    var name: String? = null
-        private set
+    var name: String
+        get() = unsafeNull(nameField)
+        @JvmSynthetic
+        set(v) {
+            setName(v)
+        }
+
+    private var nameField: String? = null
 
     /**
      * This will return this `Attribute`'s
@@ -114,8 +122,14 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
      *
      * @return `Namespace` - Namespace object for this `Attribute`
      */
-    lateinit var namespace: Namespace
-        private set
+    var namespace: Namespace
+        get() = unsafeNull(namespaceField)
+        @JvmSynthetic
+        set(v) {
+            setNamespace(v)
+        }
+
+    private var namespaceField: Namespace? = null
 
     /**
      * This will return the actual textual value of this
@@ -125,8 +139,14 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
      *
      * @return `String` - value for this attribute.
      */
-    var value: String? = null
-        private set
+    var value: String
+        get() = unsafeNull(valueField)
+        @JvmSynthetic
+        set(v) {
+            setValue(v)
+        }
+
+    private var valueField: String? = null
 
     /**
      * This will return the declared type of this `Attribute`.
@@ -134,8 +154,12 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
      *
      * @return `AttributeType` - type for this attribute.
      */
-    val attributeType: AttributeType
+    var attributeType: AttributeType
         get() = type
+        @JvmSynthetic
+        set(v) {
+            setAttributeType(v)
+        }
 
     /** The type of the `Attribute` (kept as `type`, a serialized field in jdom2) */
     private var type: AttributeType = AttributeType.UNDECLARED
@@ -344,7 +368,7 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
         if (reason != null) {
             throw IllegalNameException(name, "attribute", reason)
         }
-        this.name = name
+        this.nameField = name
         specified = true
         return this
     }
@@ -368,7 +392,7 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
      *
      * @return `String` - full name for this element.
      */
-    val qualifiedName: String?
+    val qualifiedName: String
         get() {
             // Note: Any changes here should be reflected in
             // XMLOutputter.printQualifiedName()
@@ -436,7 +460,7 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
                         "NO_NAMESPACE namespace"
             )
         }
-        this.namespace = namespace
+        this.namespaceField = namespace
         specified = true
         return this
     }
@@ -460,7 +484,7 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
         if (reason != null) {
             throw IllegalDataException(value, "attribute", reason)
         }
-        this.value = value
+        this.valueField = value
         specified = true
         return this
     }
@@ -557,7 +581,7 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
     val intValue: Int
         get() {
             try {
-                return value!!.trim { it <= ' ' }.toInt()
+                return value.trim { it <= ' ' }.toInt()
             } catch (e: NumberFormatException) {
                 throw DataConversionException(name, "int")
             }
@@ -576,7 +600,7 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
     val longValue: Long
         get() {
             try {
-                return value!!.trim { it <= ' ' }.toLong()
+                return value.trim { it <= ' ' }.toLong()
             } catch (e: NumberFormatException) {
                 throw DataConversionException(name, "long")
             }
@@ -596,7 +620,7 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
         get() {
             try {
                 // Avoid Float.parseFloat() to support JDK 1.1
-                return java.lang.Float.valueOf(value!!.trim { it <= ' ' }).toFloat()
+                return java.lang.Float.valueOf(value.trim { it <= ' ' }).toFloat()
             } catch (e: NumberFormatException) {
                 throw DataConversionException(name, "float")
             }
@@ -616,10 +640,10 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
         get() {
             try {
                 // Avoid Double.parseDouble() to support JDK 1.1
-                return java.lang.Double.valueOf(value!!.trim { it <= ' ' }).toDouble()
+                return java.lang.Double.valueOf(value.trim { it <= ' ' }).toDouble()
             } catch (e: NumberFormatException) {
                 // Specially handle INF and -INF that Double.valueOf doesn't do
-                val v = value!!.trim { it <= ' ' }
+                val v = value.trim { it <= ' ' }
                 if ("INF" == v) {
                     return Double.POSITIVE_INFINITY
                 }
@@ -643,7 +667,7 @@ open class Attribute : CloneBase, NamespaceAware, Serializable, Cloneable {
     @get:Throws(DataConversionException::class)
     val booleanValue: Boolean
         get() {
-            val valueTrim = value!!.trim { it <= ' ' }
+            val valueTrim = value.trim { it <= ' ' }
             if (
                 (valueTrim.equals("true", ignoreCase = true)) ||
                 (valueTrim.equals("on", ignoreCase = true)) ||

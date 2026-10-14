@@ -56,6 +56,8 @@
 
 package fi.sykero.kdom
 
+import fi.sykero.kdom.internal.unsafeNull
+
 /**
  * An XML DOCTYPE declaration.  Method allow the user to get and set the
  * root element name, public id, system id and internal subset.
@@ -73,8 +75,14 @@ open class DocType : Content {
      *
      * @return `String` - element name for DOCTYPE
      */
-    var elementName: String? = null
-        private set
+    var elementName: String
+        get() = unsafeNull(elementNameField)
+        @JvmSynthetic
+        set(v) {
+            setElementName(v)
+        }
+
+    private var elementNameField: String? = null
 
     /**
      * The public ID of the DOCTYPE
@@ -85,8 +93,14 @@ open class DocType : Content {
      *
      * @return `String` - public ID of referenced DTD.
      */
-    var publicID: String? = null
-        private set
+    var publicID: String?
+        get() = publicIDField
+        @JvmSynthetic
+        set(v) {
+            setPublicID(v)
+        }
+
+    private var publicIDField: String? = null
 
     /**
      * The system ID of the DOCTYPE
@@ -97,8 +111,14 @@ open class DocType : Content {
      *
      * @return `String` - system ID of referenced DTD.
      */
-    var systemID: String? = null
-        private set
+    var systemID: String?
+        get() = systemIDField
+        @JvmSynthetic
+        set(v) {
+            setSystemID(v)
+        }
+
+    private var systemIDField: String? = null
 
     /**
      * The internal subset of the DOCTYPE.
@@ -184,7 +204,7 @@ open class DocType : Content {
         if (reason != null) {
             throw IllegalNameException(elementName, "DocType", reason)
         }
-        this.elementName = elementName
+        this.elementNameField = elementName
         return this
     }
 
@@ -202,7 +222,7 @@ open class DocType : Content {
         if (reason != null) {
             throw IllegalDataException(publicID, "DocType", reason)
         }
-        this.publicID = publicID
+        this.publicIDField = publicID
 
         return this
     }
@@ -222,7 +242,7 @@ open class DocType : Content {
         if (reason != null) {
             throw IllegalDataException(systemID, "DocType", reason)
         }
-        this.systemID = systemID
+        this.systemIDField = systemID
 
         return this
     }

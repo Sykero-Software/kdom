@@ -103,7 +103,7 @@ open class Document : CloneBase, Parent {
 
     // Supports the setProperty/getProperty calls
     @Transient
-    private var propertyMap: HashMap<String, Any?>? = null
+    private var propertyMap: HashMap<String?, Any?>? = null
 
     /**
      * Creates a new empty document.  A document must have a root element,
@@ -222,7 +222,11 @@ open class Document : CloneBase, Parent {
      * @return `Element` - the document's root element
      * @throws IllegalStateException if the root element hasn't been set
      */
-    val rootElement: Element
+    var rootElement: Element
+        @JvmSynthetic
+        set(v) {
+            setRootElement(v)
+        }
         get() {
             val index = contentList.indexOfFirstElement()
             if (index < 0) {
@@ -270,7 +274,11 @@ open class Document : CloneBase, Parent {
      *
      * @return `DocType` - the DOCTYPE declaration.
      */
-    val docType: DocType?
+    var docType: DocType?
+        @JvmSynthetic
+        set(v) {
+            setDocType(v)
+        }
         get() {
             val index = contentList.indexOfDocType()
             if (index < 0) {
@@ -413,7 +421,11 @@ open class Document : CloneBase, Parent {
      * @return `List` - all Document content
      * @throws IllegalStateException if the root element hasn't been set
      */
-    override val content: MutableList<Content>
+    override var content: MutableList<Content>
+        @JvmSynthetic
+        set(v) {
+            setContent(v)
+        }
         get() {
             if (!hasRootElement())
                 throw IllegalStateException("Root element not set")
@@ -733,9 +745,9 @@ open class Document : CloneBase, Parent {
      */
     fun setProperty(id: String?, value: Any?) {
         if (propertyMap == null) {
-            propertyMap = HashMap<String, Any?>()
+            propertyMap = HashMap<String?, Any?>()
         }
-        propertyMap!!.put(id!!, value)
+        propertyMap!!.put(id, value)
     }
 
     /**
@@ -794,7 +806,7 @@ open class Document : CloneBase, Parent {
         }
 
         if (content is Text) {
-            if (Verifier.isAllXMLWhitespace(content.text!!)) {
+            if (Verifier.isAllXMLWhitespace(content.text)) {
                 // only whitespace, not a problem.
                 return
             }

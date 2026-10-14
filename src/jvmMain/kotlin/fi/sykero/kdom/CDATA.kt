@@ -109,7 +109,7 @@ open class CDATA : Text {
         // beyond Text and call that alone before super.setText().
 
         if (str == null || "" == str) {
-            value = EMPTY_STRING
+            textValue = EMPTY_STRING
             return this
         }
 
@@ -118,7 +118,7 @@ open class CDATA : Text {
             throw IllegalDataException(str, "CDATA section", reason)
         }
 
-        value = str
+        textValue = str
 
         return this
     }
@@ -145,10 +145,10 @@ open class CDATA : Text {
         // we need a temp value to ensure that the value is changed _after_
         // validation
         val tmpValue: String
-        if (value === EMPTY_STRING) {
+        if (textValue === EMPTY_STRING) {
             tmpValue = str
         } else {
-            tmpValue = value + str
+            tmpValue = textValue + str
         }
 
         // we have to do late checking since the end of a CDATA section could
@@ -162,7 +162,7 @@ open class CDATA : Text {
             throw IllegalDataException(str, "CDATA section", reason)
         }
 
-        value = tmpValue
+        textValue = tmpValue
     }
 
     /**

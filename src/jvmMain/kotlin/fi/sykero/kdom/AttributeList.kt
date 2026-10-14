@@ -714,7 +714,7 @@ internal class AttributeList
                 if (pcomp != 0) {
                     return pcomp
                 }
-                return a1.name!!.compareTo(a2.name!!)
+                return a1.name.compareTo(a2.name)
             }
 
         }

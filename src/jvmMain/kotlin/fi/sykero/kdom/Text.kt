@@ -56,6 +56,8 @@
 
 package fi.sykero.kdom
 
+import fi.sykero.kdom.internal.unsafeNull
+
 import fi.sykero.kdom.output.Format
 
 /**
@@ -74,15 +76,19 @@ open class Text : Content {
      * This is also the XPath 1.0 string value of this element, which is the
      * text itself.
      *
-     * (Was the protected field `value`; the field is now the backing field of the
-     * `value` property, writable by subclasses via the protected setter. `null` for a raw instance
-     * made by the protected no-args constructor, as in jdom2.)
+     * (Was the protected field `value`, which is now the `value` property; the nullable storage is
+     * [textValue]. `null` for a raw instance made by the protected no-args constructor, as in jdom2:
+     * the non-null property types return it unchecked, see `unsafeNull`.)
      */
     // XXX See http://www.servlets.com/archive/servlet/ReadMsg?msgId=8612
     // from elharo for a description of why Java characters may not suffice
     // long term
-    override var value: String? = null
-        protected set
+    override val value: String
+        get() = unsafeNull(textValue)
+
+    /** Storage of [value]; `null` for a raw instance. Written by `CDATA`. */
+    @JvmField
+    protected var textValue: String? = null
 
     /**
      * CData type extends Text, and it needs to be able to change the Content
@@ -117,8 +123,12 @@ open class Text : Content {
      *
      * @return `String` - character content of this node.
      */
-    val text: String?
-        get() = value
+    var text: String
+        get() = unsafeNull(textValue)
+        @JvmSynthetic
+        set(str) {
+            setText(str)
+        }
 
     /**
      * This returns the textual content with all surrounding whitespace
@@ -152,7 +162,7 @@ open class Text : Content {
         val reason: String?
 
         if (str == null) {
-            value = EMPTY_STRING
+            textValue = EMPTY_STRING
             return this
         }
 
@@ -160,7 +170,7 @@ open class Text : Content {
         if (reason != null) {
             throw IllegalDataException(str, "character content", reason)
         }
-        value = str
+        textValue = str
         return this
     }
 
@@ -185,7 +195,7 @@ open class Text : Content {
         }
 
         if (str.length > 0) {
-            value += str
+            textValue += str
         }
     }
 
@@ -199,7 +209,7 @@ open class Text : Content {
         if (text == null) {
             return
         }
-        value += text.text
+        textValue += text.text
     }
 
     /**
@@ -222,7 +232,7 @@ open class Text : Content {
 
     public override fun clone(): Text {
         val text = super.clone() as Text
-        text.value = value
+        text.textValue = textValue
         return text
     }
 

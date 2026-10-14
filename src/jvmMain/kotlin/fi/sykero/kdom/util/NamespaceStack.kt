@@ -247,7 +247,7 @@ class NamespaceStack(seed: Array<Namespace>) : Iterable<Namespace> {
             }
         }
         if (element.hasAttributes()) {
-            for (a in element.getAttributes()) {
+            for (a in element.attributes) {
                 val ns = a.namespace
                 if (ns === Namespace.NO_NAMESPACE) {
                     // Attributes are allowed to be in the NO_NAMESPACE without

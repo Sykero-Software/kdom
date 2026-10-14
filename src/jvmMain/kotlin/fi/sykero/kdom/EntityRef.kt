@@ -56,6 +56,8 @@
 
 package fi.sykero.kdom
 
+import fi.sykero.kdom.internal.unsafeNull
+
 /**
  * An XML entity reference. Methods allow the user to manage its name, public
  * id, and system id.
@@ -74,8 +76,14 @@ open class EntityRef : Content {
      *
      * @return `String` - entity name.
      */
-    var name: String? = null
-        private set
+    var name: String
+        get() = unsafeNull(nameField)
+        @JvmSynthetic
+        set(v) {
+            setName(v)
+        }
+
+    private var nameField: String? = null
 
     /**
      * This will return the publid ID of this `EntityRef`.
@@ -84,8 +92,14 @@ open class EntityRef : Content {
      *
      * @return public ID of this `EntityRef`
      */
-    var publicID: String? = null
-        private set
+    var publicID: String?
+        get() = publicIDField
+        @JvmSynthetic
+        set(v) {
+            setPublicID(v)
+        }
+
+    private var publicIDField: String? = null
 
     /**
      * This will return the system ID of this `EntityRef`.
@@ -94,8 +108,14 @@ open class EntityRef : Content {
      *
      * @return system ID of this `EntityRef`
      */
-    var systemID: String? = null
-        private set
+    var systemID: String?
+        get() = systemIDField
+        @JvmSynthetic
+        set(v) {
+            setSystemID(v)
+        }
+
+    private var systemIDField: String? = null
 
     /**
      * Default, no-args constructor for implementations to use if needed.
@@ -166,7 +186,7 @@ open class EntityRef : Content {
         if (reason != null) {
             throw IllegalNameException(name, "EntityRef", reason)
         }
-        this.name = name
+        this.nameField = name
         return this
     }
 
@@ -183,7 +203,7 @@ open class EntityRef : Content {
         if (reason != null) {
             throw IllegalDataException(publicID, "EntityRef", reason)
         }
-        this.publicID = publicID
+        this.publicIDField = publicID
         return this
     }
 
@@ -200,7 +220,7 @@ open class EntityRef : Content {
         if (reason != null) {
             throw IllegalDataException(systemID, "EntityRef", reason)
         }
-        this.systemID = systemID
+        this.systemIDField = systemID
         return this
     }
 

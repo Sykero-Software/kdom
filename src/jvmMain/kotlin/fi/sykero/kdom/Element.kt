@@ -56,6 +56,8 @@
 
 package fi.sykero.kdom
 
+import fi.sykero.kdom.internal.unsafeNull
+
 import fi.sykero.kdom.ContentList.FilterList
 import fi.sykero.kdom.JDOMConstants.Companion.NS_PREFIX_DEFAULT
 import fi.sykero.kdom.JDOMConstants.Companion.NS_PREFIX_XML
@@ -109,8 +111,14 @@ open class Element : Content, Parent {
      *
      * @return                     local element name
      */
-    var name: String? = null
-        private set
+    var name: String
+        get() = unsafeNull(nameField)
+        @JvmSynthetic
+        set(v) {
+            setName(v)
+        }
+
+    private var nameField: String? = null
 
     /**
      * Returns the element's [Namespace].
@@ -119,8 +127,14 @@ open class Element : Content, Parent {
      *
      * @return                     the element's namespace
      */
-    lateinit var namespace: Namespace
-        private set
+    var namespace: Namespace
+        get() = unsafeNull(namespaceField)
+        @JvmSynthetic
+        set(v) {
+            setNamespace(v)
+        }
+
+    private var namespaceField: Namespace? = null
 
     /** Additional namespace declarations to store on this element; useful
      * during output
@@ -134,7 +148,7 @@ open class Element : Content, Parent {
      * track attributes using their own mechanism.
      */
     @Transient
-    private var attributes: AttributeList? = null // = new AttributeList(this);
+    private var attributeListField: AttributeList? = null // = new AttributeList(this);
 
     /**
      * The content of the element.  Subclassers have to
@@ -224,7 +238,7 @@ open class Element : Content, Parent {
         if (reason != null) {
             throw IllegalNameException(name, "element", reason)
         }
-        this.name = name
+        this.nameField = name
         return this
     }
 
@@ -252,7 +266,7 @@ open class Element : Content, Parent {
             }
         }
         if (hasAttributes()) {
-            for (a in getAttributes()) {
+            for (a in attributes) {
                 val reason =
                     Verifier.checkNamespaceCollision(namespace, a)
                 if (reason != null) {
@@ -261,7 +275,7 @@ open class Element : Content, Parent {
             }
         }
 
-        this.namespace = namespace
+        this.namespaceField = namespace
         return this
     }
 
@@ -320,8 +334,8 @@ open class Element : Content, Parent {
             }
         }
 
-        if (attributes != null) {
-            for (a in attributes!!) {
+        if (attributeListField != null) {
+            for (a in attributeListField!!) {
                 if (prefix == a.namespacePrefix) {
                     return a.namespace
                 }
@@ -344,7 +358,7 @@ open class Element : Content, Parent {
      * @return                     qualified name of the element (including
      *                             namespace prefix)
      */
-    val qualifiedName: String?
+    val qualifiedName: String
         get() {
             // Note: Any changes here should be reflected in
             // XMLOutputter.printQualifiedName()
@@ -495,7 +509,11 @@ open class Element : Content, Parent {
      * @return                     text content for this element, or empty
      *                             string if none
      */
-    val text: String
+    var text: String
+        @JvmSynthetic
+        set(v) {
+            setText(v)
+        }
         get() {
             if (contentList.size == 0) {
                 return ""
@@ -505,7 +523,7 @@ open class Element : Content, Parent {
             if (contentList.size == 1) {
                 val obj: Any = contentList[0]
                 if (obj is Text) {
-                    return obj.text!!
+                    return obj.text
                 }
                 return ""
             }
@@ -727,8 +745,12 @@ open class Element : Content, Parent {
      *         `[CDATA]`, and
      *         `[EntityRef]` objects.
      */
-    override val content: MutableList<Content>
+    override var content: MutableList<Content>
         get() = contentList
+        @JvmSynthetic
+        set(v) {
+            setContent(v)
+        }
 
     /**
      * Return a filter view of this `Element`'s content.
@@ -1016,20 +1038,20 @@ open class Element : Content, Parent {
 
     /**
      * Indicate whether this Element has any attributes.
-     * Where possible you should call this method before calling getAttributes()
-     * because calling getAttributes() will create the necessary Attribute List
+     * Where possible you should call this method before calling attributes
+     * because calling attributes will create the necessary Attribute List
      * memory structures, even if there are no Attributes attached to the
      * Element. Calling hasAttributes() first can save memory.
      * @return true if this Element has attributes.
      */
     fun hasAttributes(): Boolean {
-        return attributes != null && !attributes!!.isEmpty()
+        return attributeListField != null && !attributeListField!!.isEmpty()
     }
 
     /**
      * Indicate whether this Element has any additional Namespace declarations.
      * Where possible you should call this method before calling
-     * [additionalNamespaces] because calling getAttributes() will
+     * [additionalNamespaces] because calling attributes will
      * create an unnecessary List even if there are no Additional Namespaces
      * attached to the Element. Calling this method first can save memory and
      * time.
@@ -1044,10 +1066,10 @@ open class Element : Content, Parent {
      * @return this Element's Attribute List (creating it if necessary).
      */
     private fun getAttributeList(): AttributeList {
-        if (attributes == null) {
-            attributes = AttributeList(this)
+        if (attributeListField == null) {
+            attributeListField = AttributeList(this)
         }
-        return attributes!!
+        return attributeListField!!
     }
 
     /**
@@ -1063,13 +1085,14 @@ open class Element : Content, Parent {
      * if you just want to see whether there are attributes. Calling this method
      * may be inefficient if there are no Attributes.
      *
-     * (Stays a function, a property rule exception: it creates the attribute list as a side effect.)
-     *
      * @return attributes for the element
      */
-    fun getAttributes(): MutableList<Attribute> {
-        return getAttributeList()
-    }
+    var attributes: MutableList<Attribute>
+        get() = getAttributeList()
+        @JvmSynthetic
+        set(v) {
+            setAttributes(v)
+        }
 
 
     /**
@@ -1077,7 +1100,7 @@ open class Element : Content, Parent {
      * @return the number of Attributes attached.
      */
     val attributesSize: Int
-        get() = if (attributes == null) 0 else attributes!!.size
+        get() = if (attributeListField == null) 0 else attributeListField!!.size
 
     /**
      *
@@ -1103,7 +1126,7 @@ open class Element : Content, Parent {
      * @return attribute for the element
      */
     fun getAttribute(attname: String?, ns: Namespace?): Attribute? {
-        if (attributes == null) {
+        if (attributeListField == null) {
             return null
         }
         return getAttributeList().get(attname, ns)
@@ -1120,7 +1143,7 @@ open class Element : Content, Parent {
      * @return the named attribute's value, or null if no such attribute
      */
     fun getAttributeValue(attname: String?): String? {
-        if (attributes == null) {
+        if (attributeListField == null) {
             return null
         }
         return getAttributeValue(attname, Namespace.NO_NAMESPACE)
@@ -1138,7 +1161,7 @@ open class Element : Content, Parent {
      * @return the named attribute's value, or the default if no such attribute
      */
     fun getAttributeValue(attname: String?, def: String?): String? {
-        if (attributes == null) {
+        if (attributeListField == null) {
             return def
         }
         return getAttributeValue(attname, Namespace.NO_NAMESPACE, def)
@@ -1156,7 +1179,7 @@ open class Element : Content, Parent {
      * @return the named attribute's value, or null if no such attribute
      */
     fun getAttributeValue(attname: String?, ns: Namespace?): String? {
-        if (attributes == null) {
+        if (attributeListField == null) {
             return null
         }
         return getAttributeValue(attname, ns, null)
@@ -1175,7 +1198,7 @@ open class Element : Content, Parent {
      * @return the named attribute's value, or the default if no such attribute
      */
     fun getAttributeValue(attname: String?, ns: Namespace?, def: String?): String? {
-        if (attributes == null) {
+        if (attributeListField == null) {
             return def
         }
         val attribute = getAttributeList().get(attname, ns)
@@ -1197,13 +1220,13 @@ open class Element : Content, Parent {
      * attributes are added, all old attributes will have their
      * parentage set to null (no parent) and the old attribute list will be
      * cleared. This has the effect that any active attribute list (previously
-     * obtained with a call to [getAttributes]) will also change to
+     * obtained with a call to [attributes]) will also change to
      * reflect the new attributes.  In addition, all attributes in the supplied
      * List will have their parentage set to this element, but the List itself
      * will not be "live" and further removals and additions will have no
      * effect on this elements attributes. If the user wants to continue
      * working with a "live" attribute list, then a call to setAttributes
-     * should be followed by a call to [getAttributes] to obtain a
+     * should be followed by a call to [attributes] to obtain a
      * "live" version of the attributes.
      *
      *
@@ -1337,7 +1360,7 @@ open class Element : Content, Parent {
      * @return whether the attribute was removed
      */
     fun removeAttribute(attname: String?, ns: Namespace?): Boolean {
-        if (attributes == null) {
+        if (attributeListField == null) {
             return false
         }
         return getAttributeList().remove(attname, ns)
@@ -1352,7 +1375,7 @@ open class Element : Content, Parent {
      * @return whether the attribute was removed
      */
     fun removeAttribute(attribute: Attribute): Boolean {
-        if (attributes == null) {
+        if (attributeListField == null) {
             return false
         }
         return getAttributeList().remove(attribute)
@@ -1414,13 +1437,13 @@ open class Element : Content, Parent {
         // Reference to content list and attribute lists are copied by
         // super.clone() so we set it new lists if the original had lists
         element.contentList = ContentList(element)
-        element.attributes = if (attributes == null) null else AttributeList(element)
+        element.attributeListField = if (attributeListField == null) null else AttributeList(element)
 
         // Cloning attributes
-        if (attributes != null) {
-            for (i in 0 until attributes!!.size) {
-                val attribute = attributes!![i]
-                element.attributes!!.add(attribute.clone())
+        if (attributeListField != null) {
+            for (i in 0 until attributeListField!!.size) {
+                val attribute = attributeListField!![i]
+                element.attributeListField!!.add(attribute.clone())
             }
         }
 
@@ -1694,8 +1717,8 @@ open class Element : Content, Parent {
                     }
                 }
             }
-            if (attributes != null) {
-                for (att in getAttributes()) {
+            if (attributeListField != null) {
+                for (att in attributes) {
                     val ns = att.namespace
                     if (Namespace.NO_NAMESPACE != ns && !namespaces.containsKey(ns.prefix)) {
                         namespaces.put(ns.prefix, ns)
@@ -1865,8 +1888,8 @@ open class Element : Content, Parent {
      * @param comparator The Comparator to use for the sorting.
      */
     fun sortAttributes(comparator: Comparator<in Attribute>?) {
-        if (attributes != null) {
-            attributes!!.sortAttributes(comparator)
+        if (attributeListField != null) {
+            attributeListField!!.sortAttributes(comparator)
         }
     }
 
@@ -2009,10 +2032,10 @@ open class Element : Content, Parent {
             out.writeInt(0)
         }
         if (hasAttributes()) {
-            val ans = attributes!!.size
+            val ans = attributeListField!!.size
             out.writeInt(ans)
             for (i in 0 until ans) {
-                out.writeObject(attributes!![i])
+                out.writeObject(attributeListField!![i])
             }
         } else {
             out.writeInt(0)

@@ -56,6 +56,8 @@
 
 package fi.sykero.kdom
 
+import fi.sykero.kdom.internal.unsafeNull
+
 /**
  * An XML comment. Methods allow the user to get and set the text of the
  * comment.
@@ -72,8 +74,14 @@ open class Comment : Content {
      *
      * @return `String` - text of comment.
      */
-    var text: String? = null
-        private set
+    var text: String
+        get() = unsafeNull(textField)
+        @JvmSynthetic
+        set(text) {
+            setText(text)
+        }
+
+    private var textField: String? = null
 
     /**
      * Default, no-args constructor for implementations to use if needed.
@@ -95,7 +103,7 @@ open class Comment : Content {
      *
      * @return the text of this comment
      */
-    override val value: String?
+    override val value: String
         get() = text
 
     /**
@@ -112,7 +120,7 @@ open class Comment : Content {
             throw IllegalDataException(text, "comment", reason)
         }
 
-        this.text = text
+        this.textField = text
         return this
     }
 

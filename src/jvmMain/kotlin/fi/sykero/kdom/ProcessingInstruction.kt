@@ -56,6 +56,8 @@
 
 package fi.sykero.kdom
 
+import fi.sykero.kdom.internal.unsafeNull
+
 import java.util.ArrayList
 import java.util.Collections
 import java.util.LinkedHashMap
@@ -79,8 +81,14 @@ open class ProcessingInstruction : Content {
      *
      * @return `String` - target of PI.
      */
-    var target: String? = null
-        private set
+    var target: String
+        get() = unsafeNull(targetField)
+        @JvmSynthetic
+        set(v) {
+            setTarget(v)
+        }
+
+    private var targetField: String? = null
 
     /**
      * The data for the PI as a String
@@ -151,7 +159,7 @@ open class ProcessingInstruction : Content {
             throw IllegalTargetException(newTarget, reason)
         }
 
-        target = newTarget
+        targetField = newTarget
         return this
     }
 
@@ -161,16 +169,20 @@ open class ProcessingInstruction : Content {
      *
      * @return the data of this PI
      */
-    override val value: String?
-        get() = rawData
+    override val value: String
+        get() = unsafeNull(rawData)
 
     /**
      * This will return the raw data from all instructions.
      *
      * @return `String` - data of PI.
      */
-    val data: String?
-        get() = rawData
+    var data: String
+        get() = unsafeNull(rawData)
+        @JvmSynthetic
+        set(v) {
+            setData(v)
+        }
 
     /**
      * This will return a `List` containing the names of the

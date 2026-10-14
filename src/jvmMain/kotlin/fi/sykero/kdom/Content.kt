@@ -239,7 +239,7 @@ abstract class Content protected constructor(type: CType) : CloneBase(), Seriali
      *
      * @return xpath string value of this child.
      */
-    abstract val value: String?
+    abstract val value: String
 
     public override fun clone(): Content {
         val c = super.clone() as Content
