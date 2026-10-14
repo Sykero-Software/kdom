@@ -571,3 +571,16 @@ After Task 9 fix round 1: 58 classes / 773 tests / 2 skipped / 0 failures (+5 `K
 - `KdomEventProvider(Element)` is `element.document ?: Document(element)`: a detached element is wrapped (a parent-less element is
   required), an attached one reports its whole document and is not detached.
 - The handler parameters are non-null (`prefix: String`, ...), unlike the JDK's platform types.
+
+## Query axes (Task 11, new code)
+
+`fi.sykero.kdom.query` (`Axes.kt`) replaces the XPath expressions `:app` evaluated through jdom2/jaxen. Differentially tested
+against jaxen (`AxesJaxenDifferentialTest`: every expression from every context node, attached and detached).
+
+- Absolute `//` from a detached tree is empty, as with jaxen on jdom2: `Parent.xpathRoot()` is `Document?` (a Document itself,
+  an attached element's Document, null for a detached element or any node of a detached subtree) and `findAll` returns an empty
+  list when there is no root. Callers that need the descendants of a detached element use `descendantElements()`; relative axes
+  (`.//x`, `../x`, `descendant::`, `ancestor::`, siblings) work on detached trees exactly as in jaxen (ruling R10).
+- Name tests compare localName and namespace URI (never the prefix); `NO_NAMESPACE` matches no-namespace elements only, so the
+  unprefixed XPath name `note` is `isNamed("note", Namespace.NO_NAMESPACE)`.
+- `precedingSiblingElements()` and `ancestorElements()` are nearest first (XPath reverse axes); the rest is document order.
