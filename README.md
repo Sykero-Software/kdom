@@ -5,7 +5,8 @@ JDOM 2.0.6.1 that JSword and AndBible use, plus new code (an event-based parser 
 xmlutil, a SAX-shaped bridge and query axes). Behaviour stays that of jdom2 2.0.6.1; differences are
 listed in `docs/translation-notes.md`.
 
-Targets: `jvm`, `iosArm64`, `iosSimulatorArm64`. `commonMain` depends only on the Kotlin stdlib and
+Targets: `jvm`, `iosArm64`, `iosSimulatorArm64`, plus `linuxX64` for running the common tests natively
+on Linux (not shipped; `nativeMain`/`nativeTest` hold the actuals it shares with iOS). `commonMain` depends only on the Kotlin stdlib and
 xmlutil (`io.github.pdvrieze.xmlutil:core`). Test-only (`jvmTest`): JUnit 4, jdom2 and jaxen as oracles.
 
 ## Package map (1:1 with jdom2)
@@ -56,6 +57,7 @@ declarations are kept as written. Details: `docs/xmlutil-probes.md` ("DOCTYPE po
 
 ```
 ./gradlew jvmTest
+./gradlew linuxX64Test     # Kotlin/Native behaviour without a Mac (e.g. no implicit null checks)
 ./gradlew compileKotlinIosSimulatorArm64
 ```
 
