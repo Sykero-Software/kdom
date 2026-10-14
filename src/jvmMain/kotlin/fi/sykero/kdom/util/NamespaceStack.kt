@@ -54,21 +54,14 @@
 
  */
 
-package fi.sykero.kdom.util;
+package fi.sykero.kdom.util
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
-
-import fi.sykero.kdom.Attribute;
-import fi.sykero.kdom.Element;
-import fi.sykero.kdom.Namespace;
-import fi.sykero.kdom.internal.ArrayCopy;
-
+import fi.sykero.kdom.Attribute
+import fi.sykero.kdom.Element
+import fi.sykero.kdom.Namespace
+import fi.sykero.kdom.internal.ArrayCopy
+import java.util.Arrays
+import java.util.Collections
 
 /**
  * A high-performance stack for processing those Namespaces that are introduced
@@ -103,632 +96,571 @@ import fi.sykero.kdom.internal.ArrayCopy;
  * @author Rolf Lear
  *
  */
-public final class NamespaceStack implements Iterable<Namespace> {
+class NamespaceStack(seed: Array<Namespace>) : Iterable<Namespace> {
 
-	/**
-	 * Simple read-only iterator that walks an array of Namespace.
-	 * 
-	 * @author rolf
-	 *
-	 */
-	private static final class ForwardWalker implements Iterator<Namespace> {
-		private final Namespace[] namespaces;
-		int cursor = 0;
+    private class ForwardWalker(private val namespaces: Array<Namespace>) : Iterator<Namespace> {
+        private var cursor = 0
 
-		public ForwardWalker(Namespace[] namespaces) {
-			this.namespaces = namespaces;
-		}
+        override fun hasNext(): Boolean {
+            return cursor < namespaces.size
+        }
 
-		@Override
-		public boolean hasNext() {
-			return cursor < namespaces.length;
-		}
+        override fun next(): Namespace {
+            if (cursor >= namespaces.size) {
+                throw NoSuchElementException("Cannot over-iterate...")
+            }
+            return namespaces[cursor++]
+        }
 
-		@Override
-		public Namespace next() {
-			if (cursor >= namespaces.length) {
-				throw new NoSuchElementException("Cannot over-iterate...");
-			}
-			return namespaces[cursor++];
-		}
+        fun remove() {
+            throw UnsupportedOperationException(
+                "Cannot remove Namespaces from iterator"
+            )
+        }
+    }
 
-		@Override
-		public void remove() {
-			throw new UnsupportedOperationException(
-					"Cannot remove Namespaces from iterator");
+    private class BackwardWalker(private val namespaces: Array<Namespace>) : Iterator<Namespace> {
+        private var cursor = namespaces.size - 1
 
-		}
+        override fun hasNext(): Boolean {
+            return cursor >= 0
+        }
 
-	}
+        override fun next(): Namespace {
+            if (cursor < 0) {
+                throw NoSuchElementException("Cannot over-iterate...")
+            }
+            return namespaces[cursor--]
+        }
 
-	/**
-	 * Simple read-only iterator that walks an array of Namespace in reverse.
-	 * 
-	 * @author rolf
-	 *
-	 */
-	private static final class BackwardWalker implements Iterator<Namespace> {
-		private final Namespace[] namespaces;
-		int cursor = -1;
+        fun remove() {
+            throw UnsupportedOperationException(
+                "Cannot remove Namespaces from iterator"
+            )
+        }
+    }
 
-		public BackwardWalker(Namespace[] namespaces) {
-			this.namespaces = namespaces;
-			cursor = namespaces.length - 1;
-		}
+    private class NamespaceIterable(
+        private val namespaces: Array<Namespace>,
+        private val forward: Boolean
+    ) : Iterable<Namespace> {
+        override fun iterator(): Iterator<Namespace> {
+            return if (forward) ForwardWalker(namespaces) else BackwardWalker(namespaces)
+        }
+    }
 
-		@Override
-		public boolean hasNext() {
-			return cursor >= 0;
-		}
+    /**
+     * Convenience class that makes very fast work for an empty Namespace array.
+     * It doubles up as both Iterator and Interable.
+     * @author rolf
+     */
+    private class EmptyIterable : Iterable<Namespace>, Iterator<Namespace> {
+        override fun iterator(): Iterator<Namespace> {
+            return this
+        }
 
-		@Override
-		public Namespace next() {
-			if (cursor < 0) {
-				throw new NoSuchElementException("Cannot over-iterate...");
-			}
-			return namespaces[cursor--];
-		}
+        override fun hasNext(): Boolean {
+            return false
+        }
 
-		@Override
-		public void remove() {
-			throw new UnsupportedOperationException(
-					"Cannot remove Namespaces from iterator");
-		}
+        override fun next(): Namespace {
+            throw NoSuchElementException(
+                "Can not call next() on an empty Iterator."
+            )
+        }
 
-	}
+        fun remove() {
+            throw UnsupportedOperationException(
+                "Cannot remove Namespaces from iterator"
+            )
+        }
+    }
 
-	/**
-	 * Simple Iterable instance that produces either Forward or Backward
-	 * read-only iterators of the Namespaces
-	 * 
-	 * @author rolf
-	 *
-	 */
-	private static final class NamespaceIterable implements Iterable<Namespace> {
-		private final boolean forward;
-		private final Namespace[] namespaces;
-		public NamespaceIterable(Namespace[] data, boolean forward) {
-			this.forward = forward;
-			this.namespaces = data;
-		}
-		@Override
-		public Iterator<Namespace> iterator() {
-			return forward ? new ForwardWalker(namespaces)
-					: new BackwardWalker(namespaces);
-		}
-	}
+    /** The namespaces added to the scope at each depth */
+    private var added: Array<Array<Namespace>?> = arrayOfNulls<Array<Namespace>>(10)
 
-	/**
-	 * Convenience class that makes very fast work for an empty Namespace array.
-	 * It doubles up as both Iterator and Interable.
-	 * @author rolf
-	 */
-	private static final class EmptyIterable
-			implements Iterable<Namespace>, Iterator<Namespace> {
-		@Override
-		public Iterator<Namespace> iterator() {
-			return this;
-		}
+    /** The entire scope at each depth */
+    private var scopes: Array<Array<Namespace>?> = arrayOfNulls<Array<Namespace>>(10)
 
-		@Override
-		public boolean hasNext() {
-			return false;
-		}
+    /** The current depth */
+    private var depth = -1
 
-		@Override
-		public Namespace next() {
-			throw new NoSuchElementException(
-					"Can not call next() on an empty Iterator.");
-		}
+    /**
+     * Create a NamespaceWalker ready to use as a stack.
+     * <br>
+     * @see push (Element) for comprehensive notes.
+     */
+    constructor() : this(DEFAULTSEED)
 
-		@Override
-		public void remove() {
-			throw new UnsupportedOperationException(
-					"Cannot remove Namespaces from iterator");
-		}
-	}
+    init {
+        depth++
+        added[depth] = seed
 
-	/** A simple empty Namespace Array to avoid redundant empty instances */
-	private static final Namespace[] EMPTY = new Namespace[0];
-	
-	private static final List<Namespace> EMPTYLIST = Collections.emptyList();
-	
-	/** A simple Iterable instance that is always empty. Saves some memory */
-	private static final Iterable<Namespace> EMPTYITER = new EmptyIterable();
+        scopes[depth] = added[depth]
+    }
 
-	/** A comparator that sorts Namespaces by their prefix. */
-	private static final Comparator<Namespace> NSCOMP = new Comparator<Namespace>() {
-		@Override
-		public int compare(Namespace ns1, Namespace ns2) {
-			return ns1.getPrefix().compareTo(ns2.getPrefix());
-		}
-	};
-	private static final Namespace[] DEFAULTSEED = new Namespace[] {
-				Namespace.NO_NAMESPACE, Namespace.XML_NAMESPACE};
+    /**
+     * Create a new in-scope level for the Stack based on an Element.
+     *
+     * The Namespaces associated with the input Element are used to modify the
+     * 'in-scope' Namespaces in this NamespaceStack.
+     *
+     * The following 'rules' will be applied:
+     *
+     * - Namespaces used in the input Element that were not part of the previous
+     *   scope will be added to the new scope level in the stack.
+     * - If a new Namespace is added to the scope, but the previous scope
+     *   already had a namespace with the same prefix, then that previous
+     *   namespace is removed from the new scope (the new Namespace replaces
+     *   the previous namespace with the same prefix).
+     * - The order of the in-scope Namespaces will always be: first the
+     *   Namespace of the input Element followed by all other in-scope
+     *   Namespaces sorted alphabetically by prefix.
+     * - The new in-scope Namespace values will be available in this class's
+     *   iterator() method (which is available as part of this class's
+     *   *Iterable* implementation.
+     * - The namespaces added to the scope by the input Element will be
+     *   available in the [addedForward] Iterable. The order of
+     *   the added Namespaces follows the same rules as above: first the
+     *   Element Namespace (only if that Namespace is actually added) followed
+     *   by the other added namespaces in alphabetical-by-prefix order.
+     * - The same added namespaces are also available in reverse order in
+     *   the [addedReverse] Iterable.
+     *
+     * @param element The element at the new level of the stack.
+     */
+    fun push(element: Element) {
 
-	/**
-	 * Lots of reasons for having our own binarySearch.
-	 * <ul>
-	 * <li> We can make it specific for Namespaces (using == search).
-	 * <li> There is a bug in IBM's AIX JVM in all Java's prior to (including):
-	 *      IBM J9 VM (build 2.4, J2RE 1.6.0 IBM J9 2.4 AIX ppc-32
-	 *              jvmap3260-20081105_25433 (JIT enabled, AOT enabled))
-	 *      where it returns '-1' for all instances where 'from == to' instead
-	 *      of returning '-from -1'. See
-	 *      <a href="http://www.ibm.com/developerworks/forums/thread.jspa?threadID=351575&tstart=0">
-	 *      this description</a> for how it is broken, and pre-checking to make
-	 *      sure that <code>left &lt; right</code> for each test is a pain.
-	 * <li> Ahh, actually, we will never encounter the bug, because we always
-	 *      have a larger-than-1 scope array.... see comment inside code...
-	 * <li> It's not that complicated, really.
-	 * </ul>
-	 * @param data The Namespaces to search.
-	 * @param left The left side of the range to search <b>INCLUSIVE</b>
-	 * @param right The right side of the range to search <b>EXCLUSIVE</b>
-	 * @param key The Namespace to search for.
-	 * @return the 'insertion point' - This return value follows the same convention
-	 *      as the standard Java BinarySearch methods (see the JavaDoc for Arrays.binarySearch().
-	 *      In summary, if the value exists then the return value is the index of the existing value.
-	 *      If the value was not found, then the return value will be negative, and the
-	 *      place where the missing value should be inserted, can be determined by
-	 *      adding 1, and converting back to positive (or converting to positive, and subtracting 1).
-	 *      </i>
-	 */
-	private static final int binarySearch(final Namespace[] data,
-			int left, int right, final Namespace key) {
-		// assume all input is valid. No need to waste time checking.
+        // how many times do you add more than 8 namespaces in one go...
+        // we can add more if we need to...
+        val toadd = ArrayList<Namespace>(8)
+        val mns = element.namespace
+        // check to see whether the Namespace is new-to-scope.
+        var newscope = checkNamespace(toadd, mns, scopes[depth]!!)
+        if (element.hasAdditionalNamespaces()) {
+            for (ns in element.additionalNamespaces) {
+                if (ns === mns) {
+                    continue
+                }
+                // check to see whether the Namespace is new-to-scope.
+                newscope = checkNamespace(toadd, ns, newscope)
+            }
+        }
+        if (element.hasAttributes()) {
+            for (a in element.attributes) {
+                val ns = a.namespace
+                if (ns === Namespace.NO_NAMESPACE) {
+                    // Attributes are allowed to be in the NO_NAMESPACE without
+                    // changing the in-scope set of the Element.... special-case
+                    continue
+                }
+                if (ns === mns) {
+                    continue
+                }
+                // check to see whether the Namespace is new-to-scope.
+                newscope = checkNamespace(toadd, ns, newscope)
+            }
+        }
 
-		//		Because we are always searching inside of the scope array, and
-		//		because there's always at least two scope members, we will always have
-		//		a minimum value of 2 for 'right', and a maximum value of 1 for 'left'
-		//		thus the following check is never needed.
-		//
-		//		if (left >= right) {
-		//			// we are searching in nothing, return the correct value
-		//			// ... this is where IBM's JDK is broken - it just returns -1
-		//			return -left - 1;
-		//		}
-		// make the right-side 'inclusive' instead of 'exclusive'
-		right--;
+        pushStack(mns, newscope, toadd)
+    }
 
-		while (left <= right) {
-			// get the mid-point. See the notes on the binary-search bug...
-			// ... not that we'll ever have that many Namspaces.... ;-)
-			// http://googleresearch.blogspot.com/2006/06/extra-extra-read-all-about-it-nearly.html
-			final int mid = (left + right) >>> 1;
-			if (data[mid] == key) {
-				// exact namespace match.
-				return mid;
-			}
-			final int cmp = NSCOMP.compare(data[mid], key);
+    /**
+     * Create a new in-scope level for the Stack based on an Attribute.
+     *
+     * @param att The attribute to contribute to the namespace scope.
+     */
+    fun push(att: Attribute) {
+        val toadd = ArrayList<Namespace>(1)
+        val mns = att.namespace
+        // check to see whether the Namespace is new-to-scope.
+        val newscope = checkNamespace(toadd, mns, scopes[depth]!!)
 
-			if (cmp < 0) {
-				left = mid + 1;
-			} else if (cmp > 0) {
-				right = mid - 1;
-			} else {
-				// Namespace prefix match.
-				return mid;
-			}
-		}
-		return -left - 1;
-	}
+        pushStack(mns, newscope, toadd)
+    }
 
-	/** The namespaces added to the scope at each depth */
-	private Namespace[][] added = new Namespace[10][];
-	/** The entire scope at each depth */
-	private Namespace[][] scope = new Namespace[10][];
-	/** The current depth */
-	private int depth = -1;
+    /**
+     * Create a new in-scope level for the Stack based on an arbitrary set of Namespaces.
+     * @param namespaces The Iterable format for the Namespaces.
+     */
+    fun push(namespaces: Iterable<Namespace>) {
 
-	/**
-	 * Create a NamespaceWalker ready to use as a stack.
-	 * <br>
-	 * @see #push(Element) for comprehensive notes.
-	 */
-	public NamespaceStack() {
-		this(DEFAULTSEED);
-	}
+        // how many times do you add more than 8 namespaces in one go...
+        // we can add more if we need to...
+        val toadd = ArrayList<Namespace>(8)
+        var newscope = scopes[depth]!!
+        for (ns in namespaces) {
+            // check to see whether the Namespace is new-to-scope.
+            newscope = checkNamespace(toadd, ns, newscope)
+        }
 
-	/**
-	 * Create a NamespaceWalker ready to use as a stack.
-	 * <br>
-	 * @see #push(Element) for comprehensive notes.
-	 * @param seed The namespaces to set as the top level of the stack.
-	 */
-	public NamespaceStack(Namespace[] seed) {
-		depth++;
-		added[depth] = seed;
+        pushStack(Namespace.XML_NAMESPACE, newscope, toadd)
+    }
 
-		scope[depth] = added[depth];
-	}
+    /**
+     * Create a new in-scope level for the Stack based on an arbitrary set of Namespaces.
+     * The first Namespace in the list will be considered the 'primary' namespace for this scope
+     * and will be sorted to the front. If no namespaces are supplied then the 'current' scope will
+     * be duplicated (including sort order) as the new scope.
+     * @param namespaces The array of Namespaces.
+     */
+    fun push(vararg namespaces: Namespace) {
 
-	/**
-	 * Inspect the <i>scope</i> array to see whether the <i>namespace</i>
-	 * Namespace is 'new' or not. If it is 'new' then it is added to the
-	 * <i>store</i> List.
-	 * @param store Where to add the <i>namespace</i> if it is 'new'
-	 * @param namespace The Namespace to check
-	 * @param scope The array of Namespaces that are currently in-scope.
-	 * @return The revised version of 'in-scope' if the scope has changed. If
-	 *         there is no modification then the same input scope will be returned.
-	 */
-	private static final Namespace[] checkNamespace(List<Namespace> store,
-			Namespace namespace, Namespace[] scope) {
-		// Scope is always sorted as the primary namespace first, then the
-		// rest are in prefix order.
-		// We can guarantee that the prefixes are all unique too.
-		// There is always going to be at least two namespaces in scope with
-		// the prefixes : "" and "xml"
-		// As a result we can use the 0th index with impunity.
-		if (namespace == scope[0]) {
-			// we are already in scope.
-			return scope;
-		}
-		if (namespace.getPrefix().equals(scope[0].getPrefix())) {
-			// the prefix is the previous scope's primary prefix. This means
-			// that we know for sure that the input namespace is new-to-scope.
-			store.add(namespace);
-			final Namespace[] nscope = ArrayCopy.copyOf(scope, scope.length);
-			nscope[0] = namespace;
-			return nscope;
-		}
-		// will return +ve number if the prefix matches too.
-		int ip = binarySearch(scope, 1, scope.length, namespace);
-		if (ip >= 0 && namespace == scope[ip]) {
-			// the namespace is already in scope.
-			return scope;
-		}
-		store.add(namespace);
-		if (ip >= 0) {
-			// a different namespace with the same prefix as us is in-scope.
-			// replace it....
-			final Namespace[] nscope = ArrayCopy.copyOf(scope, scope.length);
-			nscope[ip] = namespace;
-			return nscope;
-		}
-		// We are a new prefix in-scope.
-		final Namespace[] nscope = ArrayCopy.copyOf(scope, scope.length + 1);
-		ip = - ip - 1;
-		System.arraycopy(nscope, ip, nscope, ip + 1, nscope.length - ip - 1);
-		nscope[ip] = namespace;
-		return nscope;
-	}
+        if (namespaces.size == 0) {
+            // duplicate the current level to the new one.
+            pushStack(scopes[depth]!![0], scopes[depth]!!, EMPTYLIST)
+            return
+        }
 
-	/**
-	 * Create a new in-scope level for the Stack based on an Element.
-	 * <br>
-	 * The Namespaces associated with the input Element are used to modify the
-	 * 'in-scope' Namespaces in this NamespaceStack.
-	 * <br>
-	 * The following 'rules' will be applied:
-	 * <ul>
-	 * <li>Namespaces used in the input Element that were not part of the previous
-	 *     scope will be added to the new scope level in the stack.
-	 * <li>If a new Namespace is added to the scope, but the previous scope
-	 *     already had a namespace with the same prefix, then that previous
-	 *     namespace is removed from the new scope (the new Namespace replaces
-	 *     the previous namespace with the same prefix).
-	 * <li>The order of the in-scope Namespaces will always be: first the
-	 *     Namespace of the input Element followed by all other in-scope
-	 *     Namespaces sorted alphabetically by prefix.
-	 * <li>The new in-scope Namespace values will be available in this class's
-	 *     iterator() method (which is available as part of this class's
-	 *     <i>Iterable</i> implementation.
-	 * <li>The namespaces added to the scope by the input Element will be
-	 *     available in the {@link #addedForward()} Iterable. The order of
-	 *     the added Namespaces follows the same rules as above: first the
-	 *     Element Namespace (only if that Namespace is actually added) followed
-	 *     by the other added namespaces in alphabetical-by-prefix order.
-	 * <li>The same added namespaces are also available in reverse order in
-	 *     the {@link #addedReverse()} Iterable.
-	 * </ul>
-	 * @param element The element at the new level of the stack.
-	 */
-	public void push(Element element) {
+        // how many times do you add more than 8 namespaces in one go...
+        // we can add more if we need to...
+        val toadd = ArrayList<Namespace>(8)
+        var newscope = scopes[depth]!!
+        for (ns in namespaces) {
+            // check to see whether the Namespace is new-to-scope.
+            newscope = checkNamespace(toadd, ns, newscope)
+        }
 
-		// how many times do you add more than 8 namespaces in one go...
-		// we can add more if we need to...
-		final List<Namespace> toadd = new ArrayList<Namespace>(8);
-		final Namespace mns = element.getNamespace();
-		// check to see whether the Namespace is new-to-scope.
-		Namespace[] newscope = checkNamespace(toadd, mns, scope[depth]);
-		if (element.hasAdditionalNamespaces()) {
-			for (final Namespace ns : element.getAdditionalNamespaces()) {
-				if (ns == mns) {
-					continue;
-				}
-				// check to see whether the Namespace is new-to-scope.
-				newscope = checkNamespace(toadd, ns, newscope);
-			}
-		}
-		if (element.hasAttributes()) {
-			for (final Attribute a : element.getAttributes()) {
-				final Namespace ns = a.getNamespace();
-				if (ns == Namespace.NO_NAMESPACE) {
-					// Attributes are allowed to be in the NO_NAMESPACE without
-					// changing the in-scope set of the Element.... special-case
-					continue;
-				}
-				if (ns == mns) {
-					continue;
-				}
-				// check to see whether the Namespace is new-to-scope.
-				newscope = checkNamespace(toadd, ns, newscope);
-			}
-		}
-		
-		pushStack(mns, newscope, toadd);
+        pushStack(namespaces[0], newscope, toadd)
+    }
 
-	}
-	
-	/**
-	 * Create a new in-scope level for the Stack based on an Attribute.
-	 * 
-	 * @param att The attribute to contribute to the namespace scope.
-	 */
-	public void push(Attribute att) {
-		final List<Namespace> toadd = new ArrayList<Namespace>(1);
-		final Namespace mns = att.getNamespace();
-		// check to see whether the Namespace is new-to-scope.
-		Namespace[] newscope = checkNamespace(toadd, mns, scope[depth]);
-		
-		pushStack(mns, newscope, toadd);
-	}
+    private fun pushStack(mns: Namespace, newscope: Array<Namespace>, toadd: MutableList<Namespace>) {
+        var newscope = newscope
+        // OK, we've checked the namespaces in the Element, and 'toadd' contains
+        // all namespaces that are not already in scope.
+        depth++
 
-	/**
-	 * Create a new in-scope level for the Stack based on an arbitrary set of Namespaces.
-	 * @param namespaces The Iterable format for the Namespaces.
-	 */
-	public void push(Iterable<Namespace> namespaces) {
+        if (depth >= scopes.size) {
+            // we need more space on the stack.
+            scopes = ArrayCopy.copyOf(scopes, scopes.size * 2)
+            added = ArrayCopy.copyOf(added, scopes.size)
+        }
 
-		// how many times do you add more than 8 namespaces in one go...
-		// we can add more if we need to...
-		final List<Namespace> toadd = new ArrayList<Namespace>(8);
-		Namespace[] newscope = scope[depth];
-		for (final Namespace ns : namespaces) {
-			// check to see whether the Namespace is new-to-scope.
-			newscope = checkNamespace(toadd, ns, newscope);
-		}
-		
-		pushStack(Namespace.XML_NAMESPACE, newscope, toadd);
-	}
-	
-	/**
-	 * Create a new in-scope level for the Stack based on an arbitrary set of Namespaces.
-	 * The first Namespace in the list will be considered the 'primary' namespace for this scope
-	 * and will be sorted to the front. If no namespaces are supplied then the 'current' scope will
-	 * be duplicated (including sort order) as the new scope. 
-	 * @param namespaces The array of Namespaces.
-	 */
-	public void push(Namespace ... namespaces) {
+        // Sort out the added namespaces.
+        if (toadd.isEmpty()) {
+            // nothing changed in the scope.
+            added[depth] = EMPTY
+        } else {
+            val addedNow = toadd.toTypedArray()
+            added[depth] = addedNow
+            if (addedNow[0] === mns) {
+                Arrays.sort(addedNow, 1, addedNow.size, NSCOMP)
+            } else {
+                Arrays.sort(addedNow, NSCOMP)
+            }
+        }
 
-		if (namespaces == null || namespaces.length == 0) {
-			// duplicate the current level to the new one.
-			pushStack(scope[depth][0], scope[depth], EMPTYLIST);
-			return;
-		}
-		
-		// how many times do you add more than 8 namespaces in one go...
-		// we can add more if we need to...
-		final List<Namespace> toadd = new ArrayList<Namespace>(8);
-		Namespace[] newscope = scope[depth];
-		for (final Namespace ns : namespaces) {
-			// check to see whether the Namespace is new-to-scope.
-			newscope = checkNamespace(toadd, ns, newscope);
-		}
-		
-		pushStack(namespaces[0], newscope, toadd);
-	}
-	
-	private final void pushStack(final Namespace mns, Namespace[] newscope, 
-			final List<Namespace> toadd) {
-		// OK, we've checked the namespaces in the Element, and 'toadd' contains
-		// all namespaces that are not already in scope.
-		depth++;
+        if (mns !== newscope[0]) {
+            if (toadd.isEmpty()) {
+                // we need to make newscope a copy of the previous level's
+                // scope, because it is not yet a copy.
+                newscope = ArrayCopy.copyOf(newscope, newscope.size)
+            }
+            // we need to take the Namespace at position 0, and insert it
+            // in its place later in the array.
+            // we need to take the mns from later in the array, and move it
+            // to the front.
+            val tmp = newscope[0]
+            var ip = -binarySearch(newscope, 1, newscope.size, tmp) - 1
+            // we can be sure that (- ip - 1 ) is >= 1
+            // we also know that we want to move the data before the ip
+            // backwards one spot, so the math is slightly different....
+            ip--
+            System.arraycopy(newscope, 1, newscope, 0, ip)
+            newscope[ip] = tmp
 
-		if (depth >= scope.length) {
-			// we need more space on the stack.
-			scope = ArrayCopy.copyOf(scope, scope.length * 2);
-			added = ArrayCopy.copyOf(added, scope.length);
-		}
+            ip = binarySearch(newscope, 0, newscope.size, mns)
+            // we can be sure that ip is >= 0
+            System.arraycopy(newscope, 0, newscope, 1, ip)
+            newscope[0] = mns
+        }
 
-		// Sort out the added namespaces.
-		if (toadd.isEmpty()) {
-			// nothing changed in the scope.
-			added[depth] = EMPTY;
-		} else {
-			added[depth] = toadd.toArray(new Namespace[toadd.size()]);
-			if (added[depth][0] == mns) {
-				Arrays.sort(added[depth], 1, added[depth].length, NSCOMP);
-			} else {
-				Arrays.sort(added[depth], NSCOMP);
-			}
-		}
+        scopes[depth] = newscope
+    }
 
-		if (mns != newscope[0]) {
-			if (toadd.isEmpty()) {
-				// we need to make newscope a copy of the previous level's
-				// scope, because it is not yet a copy.
-				newscope = ArrayCopy.copyOf(newscope, newscope.length);
-			}
-			// we need to take the Namespace at position 0, and insert it
-			// in its place later in the array.
-			// we need to take the mns from later in the array, and move it
-			// to the front.
-			final Namespace tmp = newscope[0];
-			int ip = - binarySearch(newscope, 1, newscope.length, tmp) - 1;
-			// we can be sure that (- ip - 1 ) is >= 1
-			// we also know that we want to move the data before the ip
-			// backwards one spot, so the math is slightly different....
-			ip--;
-			System.arraycopy(newscope, 1, newscope, 0, ip);
-			newscope[ip] = tmp;
+    /**
+     * Restore stack to the level prior to the current one. The various Iterator
+     * methods will thus return the data at the previous level.
+     */
+    fun pop() {
+        if (depth <= 0) {
+            throw IllegalStateException("Cannot over-pop the stack.")
+        }
+        scopes[depth] = null
+        added[depth] = null
+        depth--
+    }
 
-			ip = binarySearch(newscope, 0, newscope.length, mns);
-			// we can be sure that ip is >= 0
-			System.arraycopy(newscope, 0, newscope, 1, ip);
-			newscope[0] = mns;
-		}
+    /**
+     * Return an Iterable containing all the Namespaces introduced to the
+     * current-level's scope.
+     * @see push (Element) for the details on the data order.
+     * @return A read-only Iterable containing added Namespaces (may be empty);
+     */
+    fun addedForward(): Iterable<Namespace> {
+        if (added[depth]!!.size == 0) {
+            return EMPTYITER
+        }
+        return NamespaceIterable(added[depth]!!, true)
+    }
 
-		scope[depth] = newscope;
-	}
+    /**
+     * Return an Iterable containing all the Namespaces introduced to the
+     * current-level's scope but in reverse order to [addedForward].
+     * @see push (Element) for the details on the data order.
+     * @return A read-only Iterable containing added Namespaces (may be empty);
+     */
+    fun addedReverse(): Iterable<Namespace> {
+        if (added[depth]!!.size == 0) {
+            return EMPTYITER
+        }
+        return NamespaceIterable(added[depth]!!, false)
+    }
 
-	/**
-	 * Restore stack to the level prior to the current one. The various Iterator
-	 * methods will thus return the data at the previous level.
-	 */
-	public void pop() {
-		if (depth <= 0) {
-			throw new IllegalStateException("Cannot over-pop the stack.");
-		}
-		scope[depth] = null;
-		added[depth] = null;
-		depth--;
-	}
+    /**
+     * Get all the Namespaces in-scope at the current level of the stack.
+     * @see push (Element) for the details on the data order.
+     * @return A read-only Iterator containing added Namespaces (may be empty);
+     */
+    override fun iterator(): Iterator<Namespace> {
+        return ForwardWalker(scopes[depth]!!)
+    }
 
-	/**
-	 * Return an Iterable containing all the Namespaces introduced to the
-	 * current-level's scope.
-	 * @see #push(Element) for the details on the data order.
-	 * @return A read-only Iterable containing added Namespaces (may be empty);
-	 */
-	public Iterable<Namespace> addedForward() {
-		if (added[depth].length == 0) {
-			return EMPTYITER;
-		}
-		return new NamespaceIterable(added[depth], true);
-	}
+    /**
+     * Return a new array instance representing the current scope.
+     * Modifying the returned array will not affect this scope.
+     * @return a copy of the current scope.
+     */
+    val scope: Array<Namespace>
+        get() = ArrayCopy.copyOf(scopes[depth]!!, scopes[depth]!!.size)
 
-	/**
-	 * Return an Iterable containing all the Namespaces introduced to the
-	 * current-level's scope but in reverse order to {@link #addedForward()}.
-	 * @see #push(Element) for the details on the data order.
-	 * @return A read-only Iterable containing added Namespaces (may be empty);
-	 */
-	public Iterable<Namespace> addedReverse() {
-		if (added[depth].length == 0) {
-			return EMPTYITER;
-		}
-		return new NamespaceIterable(added[depth], false);
-	}
+    /**
+     * Inspect the current scope and return true if the specified namespace is
+     * in scope.
+     * @param ns The Namespace to check
+     * @return true if the current scope contains that Namespace.
+     */
+    fun isInScope(ns: Namespace): Boolean {
+        if (ns === scopes[depth]!![0]) {
+            return true
+        }
+        val ip = binarySearch(scopes[depth]!!, 1, scopes[depth]!!.size, ns)
+        if (ip >= 0) {
+            // we have the same prefix.
+            return ns === scopes[depth]!![ip]
+        }
+        return false
+    }
 
-	/**
-	 * Get all the Namespaces in-scope at the current level of the stack.
-	 * @see #push(Element) for the details on the data order.
-	 * @return A read-only Iterator containing added Namespaces (may be empty);
-	 */
-	@Override
-	public Iterator<Namespace> iterator() {
-		return new ForwardWalker(scope[depth]);
-	}
-	
-	/**
-	 * Return a new array instance representing the current scope.
-	 * Modifying the returned array will not affect this scope.
-	 * @return a copy of the current scope.
-	 */
-	public Namespace[] getScope() {
-		return ArrayCopy.copyOf(scope[depth], scope[depth].length);
-	}
+    /**
+     * Get the Namespace in the current scope with the specified prefix.
+     * @param prefix The prefix to get the namespace for (null is treated the same as "").
+     * @return The Namespace with the specified prefix, or null if the prefix is not in scope.
+     * @since JDOM 2.1.0
+     */
+    fun getNamespaceForPrefix(prefix: String?): Namespace? {
+        if (prefix == null) {
+            return getNamespaceForPrefix("")
+        }
+        val nsa = scopes[depth]!!
+        for (ns in nsa) {
+            if (prefix == ns.prefix) {
+                return ns
+            }
+        }
+        return null
+    }
 
-	/**
-	 * Inspect the current scope and return true if the specified namespace is
-	 * in scope.
-	 * @param ns The Namespace to check
-	 * @return true if the current scope contains that Namespace.
-	 */
-	public boolean isInScope(Namespace ns) {
-		if (ns == scope[depth][0]) {
-			return true;
-		}
-		final int ip = binarySearch(scope[depth], 1, scope[depth].length, ns);
-		if (ip >= 0) {
-			// we have the same prefix.
-			return ns == scope[depth][ip];
-		}
-		return false;
-	}
-	
-	/**
-	 * Get the Namespace in the current scope with the specified prefix.
-	 * @param prefix The prefix to get the namespace for (null is treated the same as "").
-	 * @return The Namespace with the specified prefix, or null if the prefix is not in scope.
-	 * @since JDOM 2.1.0
-	 */
-	public Namespace getNamespaceForPrefix(final String prefix) {
-		if (prefix == null) {
-			return getNamespaceForPrefix("");
-		}
-		final Namespace[] nsa = scope[depth];
-		for (final Namespace ns : nsa) {
-			if (prefix.equals(ns.getPrefix())) {
-				return ns;
-			}
-		}
-		return null;
-	}
-	
-	/**
-	 * Get the <strong>first</strong> Namespace in the current scope that is bound to the specified URI.
-	 * @param uri The URI to get the first prefix for (null is treated the same as "").
-	 * @return The first bound Namespace for the specified URI, or null if the URI is not bound.
-	 * @since JDOM 2.1.0
-	 */
-	public Namespace getFirstNamespaceForURI(final String uri) {
-		if (uri == null) {
-			return getFirstNamespaceForURI("");
-		}
-		for (final Namespace ns : scope[depth]) {
-			if (uri.equals(ns.getURI())) {
-				return ns;
-			}
-		}
-		return null;
-	}
-	
-	/**
-	 * Get all prefixes in the current scope that are bound to the specified URI.
-	 * @param uri The URI to get the first prefix for (null is treated the same as "").
-	 * @return All bound prefixes for the specified URI, or an empty array if the URI is not bound.
-	 * @since JDOM 2.1.0
-	 */
-	public Namespace[] getAllNamespacesForURI(final String uri) {
-		if (uri == null) {
-			return getAllNamespacesForURI("");
-		}
-		ArrayList<Namespace> al = new ArrayList<Namespace>(4);
-		for (final Namespace ns : scope[depth]) {
-			if (uri.equals(ns.getURI())) {
-				al.add(ns);
-			}
-		}
-		return al.toArray(new Namespace[al.size()]);
-	}
+    /**
+     * Get the **first** Namespace in the current scope that is bound to the specified URI.
+     * @param uri The URI to get the first prefix for (null is treated the same as "").
+     * @return The first bound Namespace for the specified URI, or null if the URI is not bound.
+     * @since JDOM 2.1.0
+     */
+    fun getFirstNamespaceForURI(uri: String?): Namespace? {
+        if (uri == null) {
+            return getFirstNamespaceForURI("")
+        }
+        for (ns in scopes[depth]!!) {
+            if (uri == ns.uri) {
+                return ns
+            }
+        }
+        return null
+    }
 
-	/**
-	 * If the specified prefix was bound in the previous bind level, and has
-	 * been rebound to a different URI in the current level, then return the
-	 * Namespace the the prefix <strong>was bound to</strong> before.
-	 * @param prefix The prefix to check for re-binding
-	 * @return the previous binding for the specified prefix, or null if the prefix was
-	 *         not previously bound, or was not changed in this level of the stack.
-	 * @since JDOM 2.1.0
-	 */
-	public Namespace getRebound(final String prefix) {
-		if (depth <= 0) {
-			return null;
-		}
-		for (Namespace nsa : added[depth]) {
-			if (nsa.getPrefix().equals(prefix)) {
-				for (Namespace nsp : scope[depth - 1]) {
-					if (nsp.getPrefix().equals(prefix)) {
-						return nsp;
-					}
-				}
-				return null;
-			}
-		}
-		return null;
-	}
+    /**
+     * Get all prefixes in the current scope that are bound to the specified URI.
+     * @param uri The URI to get the first prefix for (null is treated the same as "").
+     * @return All bound prefixes for the specified URI, or an empty array if the URI is not bound.
+     * @since JDOM 2.1.0
+     */
+    fun getAllNamespacesForURI(uri: String?): Array<Namespace> {
+        if (uri == null) {
+            return getAllNamespacesForURI("")
+        }
+        val al = ArrayList<Namespace>(4)
+        for (ns in scopes[depth]!!) {
+            if (uri == ns.uri) {
+                al.add(ns)
+            }
+        }
+        return al.toTypedArray()
+    }
+
+    /**
+     * If the specified prefix was bound in the previous bind level, and has
+     * been rebound to a different URI in the current level, then return the
+     * Namespace the the prefix **was bound to** before.
+     * @param prefix The prefix to check for re-binding
+     * @return the previous binding for the specified prefix, or null if the prefix was
+     *         not previously bound, or was not changed in this level of the stack.
+     * @since JDOM 2.1.0
+     */
+    fun getRebound(prefix: String?): Namespace? {
+        if (depth <= 0) {
+            return null
+        }
+        for (nsa in added[depth]!!) {
+            if (nsa.prefix == prefix) {
+                for (nsp in scopes[depth - 1]!!) {
+                    if (nsp.prefix == prefix) {
+                        return nsp
+                    }
+                }
+                return null
+            }
+        }
+        return null
+    }
+
+    private companion object {
+        /** A simple empty Namespace Array to avoid redundant empty instances */
+        private val EMPTY: Array<Namespace> = arrayOf()
+
+        private val EMPTYLIST: MutableList<Namespace> = Collections.emptyList()
+
+        /** A simple Iterable instance that is always empty. Saves some memory */
+        private val EMPTYITER: Iterable<Namespace> = EmptyIterable()
+
+        /** A comparator that sorts Namespaces by their prefix. */
+        private val NSCOMP: Comparator<Namespace> = Comparator<Namespace> { ns1, ns2 ->
+            ns1.prefix.compareTo(ns2.prefix)
+        }
+
+        private val DEFAULTSEED: Array<Namespace> = arrayOf(
+            Namespace.NO_NAMESPACE, Namespace.XML_NAMESPACE
+        )
+
+        /**
+         * Lots of reasons for having our own binarySearch (specific for Namespaces, using == search;
+         * see the original JDOM notes on the IBM J9 AIX bug, which we never encounter because the
+         * scope array always has more than one member).
+         * @param data The Namespaces to search.
+         * @param left The left side of the range to search **INCLUSIVE**
+         * @param right The right side of the range to search **EXCLUSIVE**
+         * @param key The Namespace to search for.
+         * @return the 'insertion point' - This return value follows the same convention
+         *      as the standard Java BinarySearch methods (see the JavaDoc for Arrays.binarySearch().
+         *      In summary, if the value exists then the return value is the index of the existing value.
+         *      If the value was not found, then the return value will be negative, and the
+         *      place where the missing value should be inserted, can be determined by
+         *      adding 1, and converting back to positive (or converting to positive, and subtracting 1).
+         */
+        private fun binarySearch(data: Array<Namespace>, left: Int, right: Int, key: Namespace): Int {
+            var left = left
+            var right = right
+            // assume all input is valid. No need to waste time checking.
+
+            //		Because we are always searching inside of the scope array, and
+            //		because there's always at least two scope members, we will always have
+            //		a minimum value of 2 for 'right', and a maximum value of 1 for 'left'
+            //		thus the following check is never needed.
+            //
+            //		if (left >= right) {
+            //			// we are searching in nothing, return the correct value
+            //			// ... this is where IBM's JDK is broken - it just returns -1
+            //			return -left - 1;
+            //		}
+            // make the right-side 'inclusive' instead of 'exclusive'
+            right--
+
+            while (left <= right) {
+                // get the mid-point. See the notes on the binary-search bug...
+                // ... not that we'll ever have that many Namspaces.... ;-)
+                // http://googleresearch.blogspot.com/2006/06/extra-extra-read-all-about-it-nearly.html
+                val mid = (left + right) ushr 1
+                if (data[mid] === key) {
+                    // exact namespace match.
+                    return mid
+                }
+                val cmp = NSCOMP.compare(data[mid], key)
+
+                if (cmp < 0) {
+                    left = mid + 1
+                } else if (cmp > 0) {
+                    right = mid - 1
+                } else {
+                    // Namespace prefix match.
+                    return mid
+                }
+            }
+            return -left - 1
+        }
+
+        /**
+         * Inspect the *scope* array to see whether the *namespace*
+         * Namespace is 'new' or not. If it is 'new' then it is added to the
+         * *store* List.
+         * @param store Where to add the *namespace* if it is 'new'
+         * @param namespace The Namespace to check
+         * @param scope The array of Namespaces that are currently in-scope.
+         * @return The revised version of 'in-scope' if the scope has changed. If
+         *         there is no modification then the same input scope will be returned.
+         */
+        private fun checkNamespace(
+            store: MutableList<Namespace>,
+            namespace: Namespace,
+            scope: Array<Namespace>
+        ): Array<Namespace> {
+            // Scope is always sorted as the primary namespace first, then the
+            // rest are in prefix order.
+            // We can guarantee that the prefixes are all unique too.
+            // There is always going to be at least two namespaces in scope with
+            // the prefixes : "" and "xml"
+            // As a result we can use the 0th index with impunity.
+            if (namespace === scope[0]) {
+                // we are already in scope.
+                return scope
+            }
+            if (namespace.prefix == scope[0].prefix) {
+                // the prefix is the previous scope's primary prefix. This means
+                // that we know for sure that the input namespace is new-to-scope.
+                store.add(namespace)
+                val nscope = ArrayCopy.copyOf(scope, scope.size)
+                nscope[0] = namespace
+                return nscope
+            }
+            // will return +ve number if the prefix matches too.
+            var ip = binarySearch(scope, 1, scope.size, namespace)
+            if (ip >= 0 && namespace === scope[ip]) {
+                // the namespace is already in scope.
+                return scope
+            }
+            store.add(namespace)
+            if (ip >= 0) {
+                // a different namespace with the same prefix as us is in-scope.
+                // replace it....
+                val nscope = ArrayCopy.copyOf(scope, scope.size)
+                nscope[ip] = namespace
+                return nscope
+            }
+            // We are a new prefix in-scope.
+            val nscope = ArrayCopy.copyOf(scope, scope.size + 1)
+            ip = -ip - 1
+            System.arraycopy(nscope, ip, nscope, ip + 1, nscope.size - ip - 1)
+            nscope[ip] = namespace
+            return nscope
+        }
+    }
 }

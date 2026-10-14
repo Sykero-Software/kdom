@@ -54,23 +54,26 @@
 
  */
 
-package fi.sykero.kdom;
+package fi.sykero.kdom
 
-import static fi.sykero.kdom.JDOMConstants.*;
-
-import java.io.InvalidObjectException;
-import java.io.Serializable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import fi.sykero.kdom.JDOMConstants.Companion.NS_PREFIX_DEFAULT
+import fi.sykero.kdom.JDOMConstants.Companion.NS_PREFIX_XML
+import fi.sykero.kdom.JDOMConstants.Companion.NS_PREFIX_XMLNS
+import fi.sykero.kdom.JDOMConstants.Companion.NS_URI_DEFAULT
+import fi.sykero.kdom.JDOMConstants.Companion.NS_URI_XML
+import fi.sykero.kdom.JDOMConstants.Companion.NS_URI_XMLNS
+import java.io.InvalidObjectException
+import java.io.Serializable
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
 
 /**
  * An XML namespace representation, as well as a factory for creating XML
  * namespace objects. All methods on Namespace (including
- * {@link #getNamespace(String)} and {@link #getNamespace(String, String)})
+ * [getNamespace] (String) and [getNamespace] (String, String))
  * are thread-safe.
- * 
- * <p>
- * See {@link NamespaceAware} for additional notes on how Namespaces are
+ *
+ * See [NamespaceAware] for additional notes on how Namespaces are
  * 'in-scope' in JDOM content, and how those in-scope Namespaces are accessed.
  *
  * @see NamespaceAware
@@ -80,316 +83,295 @@ import java.util.concurrent.ConcurrentMap;
  * @author  Wesley Biggs
  * @author  Rolf Lear
  */
-public final class Namespace implements Serializable {
+class Namespace private constructor(
+    /** The prefix mapped to this namespace. */
+    @Transient val prefix: String,
+    /** The URI for this namespace. */
+    @get:JvmName("getURI") @Transient val uri: String
+) : Serializable {
 
-	/** 
-	 * Factory list of namespaces. 
-	 * Keys are <i>URI</i>&amp;<i>prefix</i>. 
-	 * Values are Namespace objects 
-	 */
-	
-	private static final ConcurrentMap<String, ConcurrentMap<String, Namespace>> 
-			namespacemap = new ConcurrentHashMap
-			<String, ConcurrentMap<String,Namespace>>(512, 0.75f, 64);
-	
-	/** Define a <code>Namespace</code> for when <i>not</i> in a namespace */
-	public static final Namespace NO_NAMESPACE = new Namespace(NS_PREFIX_DEFAULT, 
-			NS_URI_DEFAULT);
+    /**
+     * This tests for equality - Two `Namespaces`
+     * are equal if and only if their URIs are byte-for-byte equals.
+     *
+     * @param other `Object` to compare to this `Namespace`.
+     * @return `boolean` - whether the supplied object is equal to this `Namespace`.
+     */
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other is Namespace) {  // instanceof returns false if null
+            return uri == other.uri
+        }
+        return false
+    }
 
-	/** Define a <code>Namespace</code> for the standard xml prefix. */
-	public static final Namespace XML_NAMESPACE = new Namespace(NS_PREFIX_XML, 
-			NS_URI_XML);
-	
-	private static final Namespace XMLNS_NAMESPACE = new Namespace(NS_PREFIX_XMLNS,
-	        NS_URI_XMLNS);
-	
-	static {
-		// pre-populate the map with the constant namespaces that would 
-		// otherwise fail validation
-		final ConcurrentMap<String,Namespace> nmap = 
-				new ConcurrentHashMap<String, Namespace>();
-		nmap.put(NO_NAMESPACE.getPrefix(), NO_NAMESPACE);
-		namespacemap.put(NO_NAMESPACE.getURI(), nmap);
+    /**
+     * This returns a `String` representation of this
+     * `Namespace`, suitable for use in debugging.
+     *
+     * @return `String` - information about this instance.
+     */
+    override fun toString(): String {
+        return "[Namespace: prefix \"" + prefix + "\" is mapped to URI \"" +
+                uri + "\"]"
+    }
 
-		final ConcurrentMap<String,Namespace> xmap = 
-				new ConcurrentHashMap<String, Namespace>();
-		xmap.put(XML_NAMESPACE.getPrefix(), XML_NAMESPACE);
-		namespacemap.put(XML_NAMESPACE.getURI(), xmap);
+    /**
+     * This returns the hash code for the `Namespace` that conforms
+     * to the 'equals()' contract.
+     *
+     * If two namespaces have the same URI, they are equal and have the same
+     * hash code, even if they have different prefixes.
+     *
+     * @return `int` - hash code for this `Namespace`.
+     */
+    override fun hashCode(): Int {
+        return uri.hashCode()
+    }
 
-		final ConcurrentMap<String,Namespace> xnsmap = 
-		        new ConcurrentHashMap<String, Namespace>();
-		xnsmap.put(XMLNS_NAMESPACE.getPrefix(), XMLNS_NAMESPACE);
-		namespacemap.put(XMLNS_NAMESPACE.getURI(), xnsmap);
-	}
+    /* *****************************************
+     * Serialization
+     * ***************************************** */
 
-	/**
-	 * This will retrieve (if in existence) or create (if not) a 
-	 * <code>Namespace</code> for the supplied <i>prefix</i> and <i>uri</i>.
-	 * This method is thread-safe.
-	 *
-	 * @param prefix <code>String</code> prefix to map to 
-	 *               <code>Namespace</code>.
-	 * @param uri <code>String</code> URI of new <code>Namespace</code>.
-	 * @return <code>Namespace</code> - ready to use namespace.
-	 * @throws IllegalNameException if the given prefix and uri make up
-	 *         an illegal namespace name.
-	 * @see Verifier#checkNamespacePrefix(String)
-	 * @see Verifier#checkNamespaceURI(String)
-	 */
-	public static Namespace getNamespace(final String prefix, final String uri) {
-		
-		// This is a rewrite of the JDOM 1 getNamespace() to use
-		// java.util.concurrent. The motivation is:
-		// 1. avoid having to create a new NamespaceKey for each query.
-		// 2. avoid a 'big' synchronisation bottleneck in the Namespace class.
-		// 3. no-memory-lookup for pre-existing Namespaces... (avoid 'new' and
-		//    most String methods that allocate memory (like trim())
+    private class NamespaceSerializationProxy(
+        private val pprefix: String?,
+        private val puri: String?
+    ) : Serializable {
 
-		if (uri == null) {
-			if (prefix == null || NS_PREFIX_DEFAULT.equals(prefix)) {
-				return NO_NAMESPACE;
-			}
-			// we have an attempt for some prefix
-			// (not "" or it would have found NO_NAMESPACE) on the null URI
-			throw new IllegalNameException("", "namespace",
-					"Namespace URIs must be non-null and non-empty Strings");
-		}
+        private fun readResolve(): Any {
+            return getNamespace(pprefix, puri)
+        }
 
-		// must have checked for 'null' uri else namespacemap throws NPE
-		// do not 'trim' uri's any more see issue #50
-		ConcurrentMap<String, Namespace> urimap = namespacemap.get(uri);
-		if (urimap == null) {
-			// no Namespaces yet with that URI.
-			// Ensure proper naming
-			String reason;
-			if ((reason = Verifier.checkNamespaceURI(uri)) != null) {
-				throw new IllegalNameException(uri, "Namespace URI", reason);
-			}
+        private companion object {
+            private const val serialVersionUID = 200L
+        }
+    }
 
-			urimap = new ConcurrentHashMap<String, Namespace>();
-			final ConcurrentMap<String, Namespace> xmap = 
-					namespacemap.putIfAbsent(uri, urimap);
-			
-			if (xmap != null) {
-				// some other thread registered this URI between when we
-				// first checked, and when we got a new map created.
-				// we must use the already-registered value.
-				urimap = xmap;
-			}
-		}
-		
-		// OK, we have a container for the URI, let's search on the prefix.
-		
-		Namespace ns = urimap.get(prefix == null ? NS_PREFIX_DEFAULT : prefix);
-		if (ns != null) {
-			// got one.
-			return ns;
-		}
-		
-		// OK, no namespace yet for that uri/prefix
-		// validate the prefix (the uri is already validated).
-		
-		if (NS_URI_DEFAULT.equals(uri)) {
-			// we have an attempt for some prefix
-			// (not "" or it would have found NO_NAMESPACE) on the "" URI
-			// note, we have already done this check for 'null' uri above.
-			throw new IllegalNameException("", "namespace",
-					"Namespace URIs must be non-null and non-empty Strings");
-		}
-		
-        // http://www.w3.org/TR/REC-xml-names/#xmlReserved 
-		// The erratum to Namespaces in XML 1.0 that suggests this 
-		// next check is controversial. Not everyone accepts it. 
-		if (NS_URI_XML.equals(uri)) {
-			throw new IllegalNameException(uri, "Namespace URI",
-					"The " + NS_URI_XML + " must be bound to " +
-					"only the '" + NS_PREFIX_XML + "' prefix.");        
-		}
+    /**
+     * Serializes Namespace by using a proxy serialization instance.
+     * @serialData The proxy deals with the protocol.
+     * @return the Namespace proxy instance.
+     */
+    private fun writeReplace(): Any {
+        return NamespaceSerializationProxy(prefix, uri)
+    }
 
-        // http://www.w3.org/TR/REC-xml-names/#xmlReserved 
-        if (NS_URI_XMLNS.equals(uri)) {
-            throw new IllegalNameException(uri, "Namespace URI",
+    /**
+     * Because Namespace is serialized by proxy, the reading of direct Namespace
+     * instances is illegal and prohibited.
+     * @return nothing.
+     * @throws InvalidObjectException always
+     */
+    @Throws(InvalidObjectException::class)
+    private fun readResolve(): Any {
+        throw InvalidObjectException(
+            "Namespace is serialized through a proxy"
+        )
+    }
+
+    companion object {
+        /**
+         * Factory list of namespaces.
+         * Keys are *URI*&*prefix*.
+         * Values are Namespace objects
+         */
+        private val namespacemap: ConcurrentMap<String, ConcurrentMap<String, Namespace>> =
+            ConcurrentHashMap<String, ConcurrentMap<String, Namespace>>(512, 0.75f, 64)
+
+        /** Define a `Namespace` for when *not* in a namespace */
+        @JvmField
+        val NO_NAMESPACE: Namespace = Namespace(
+            NS_PREFIX_DEFAULT,
+            NS_URI_DEFAULT
+        )
+
+        /** Define a `Namespace` for the standard xml prefix. */
+        @JvmField
+        val XML_NAMESPACE: Namespace = Namespace(
+            NS_PREFIX_XML,
+            NS_URI_XML
+        )
+
+        private val XMLNS_NAMESPACE: Namespace = Namespace(
+            NS_PREFIX_XMLNS,
+            NS_URI_XMLNS
+        )
+
+        init {
+            // pre-populate the map with the constant namespaces that would
+            // otherwise fail validation
+            val nmap: ConcurrentMap<String, Namespace> = ConcurrentHashMap<String, Namespace>()
+            nmap.put(NO_NAMESPACE.prefix, NO_NAMESPACE)
+            namespacemap.put(NO_NAMESPACE.uri, nmap)
+
+            val xmap: ConcurrentMap<String, Namespace> = ConcurrentHashMap<String, Namespace>()
+            xmap.put(XML_NAMESPACE.prefix, XML_NAMESPACE)
+            namespacemap.put(XML_NAMESPACE.uri, xmap)
+
+            val xnsmap: ConcurrentMap<String, Namespace> = ConcurrentHashMap<String, Namespace>()
+            xnsmap.put(XMLNS_NAMESPACE.prefix, XMLNS_NAMESPACE)
+            namespacemap.put(XMLNS_NAMESPACE.uri, xnsmap)
+        }
+
+        /**
+         * JDOM 2.0.0 Serialization version
+         */
+        private const val serialVersionUID = 200L
+
+        /**
+         * This will retrieve (if in existence) or create (if not) a
+         * `Namespace` for the supplied *prefix* and *uri*.
+         * This method is thread-safe.
+         *
+         * @param prefix `String` prefix to map to `Namespace`.
+         * @param uri `String` URI of new `Namespace`.
+         * @return `Namespace` - ready to use namespace.
+         * @throws IllegalNameException if the given prefix and uri make up
+         *         an illegal namespace name.
+         * @see Verifier.checkNamespacePrefix
+         * @see Verifier.checkNamespaceURI
+         */
+        @JvmStatic
+        fun getNamespace(prefix: String?, uri: String?): Namespace {
+
+            // This is a rewrite of the JDOM 1 getNamespace() to use
+            // java.util.concurrent. The motivation is:
+            // 1. avoid having to create a new NamespaceKey for each query.
+            // 2. avoid a 'big' synchronisation bottleneck in the Namespace class.
+            // 3. no-memory-lookup for pre-existing Namespaces... (avoid 'new' and
+            //    most String methods that allocate memory (like trim())
+
+            if (uri == null) {
+                if (prefix == null || NS_PREFIX_DEFAULT == prefix) {
+                    return NO_NAMESPACE
+                }
+                // we have an attempt for some prefix
+                // (not "" or it would have found NO_NAMESPACE) on the null URI
+                throw IllegalNameException(
+                    "", "namespace",
+                    "Namespace URIs must be non-null and non-empty Strings"
+                )
+            }
+
+            // must have checked for 'null' uri else namespacemap throws NPE
+            // do not 'trim' uri's any more see issue #50
+            var urimap: ConcurrentMap<String, Namespace>? = namespacemap.get(uri)
+            if (urimap == null) {
+                // no Namespaces yet with that URI.
+                // Ensure proper naming
+                val reason: String? = Verifier.checkNamespaceURI(uri)
+                if (reason != null) {
+                    throw IllegalNameException(uri, "Namespace URI", reason)
+                }
+
+                urimap = ConcurrentHashMap<String, Namespace>()
+                val xmap: ConcurrentMap<String, Namespace>? =
+                    namespacemap.putIfAbsent(uri, urimap)
+
+                if (xmap != null) {
+                    // some other thread registered this URI between when we
+                    // first checked, and when we got a new map created.
+                    // we must use the already-registered value.
+                    urimap = xmap
+                }
+            }
+
+            // OK, we have a container for the URI, let's search on the prefix.
+
+            var ns: Namespace? = urimap!!.get(if (prefix == null) NS_PREFIX_DEFAULT else prefix)
+            if (ns != null) {
+                // got one.
+                return ns
+            }
+
+            // OK, no namespace yet for that uri/prefix
+            // validate the prefix (the uri is already validated).
+
+            if (NS_URI_DEFAULT == uri) {
+                // we have an attempt for some prefix
+                // (not "" or it would have found NO_NAMESPACE) on the "" URI
+                // note, we have already done this check for 'null' uri above.
+                throw IllegalNameException(
+                    "", "namespace",
+                    "Namespace URIs must be non-null and non-empty Strings"
+                )
+            }
+
+            // http://www.w3.org/TR/REC-xml-names/#xmlReserved
+            // The erratum to Namespaces in XML 1.0 that suggests this
+            // next check is controversial. Not everyone accepts it.
+            if (NS_URI_XML == uri) {
+                throw IllegalNameException(
+                    uri, "Namespace URI",
+                    "The " + NS_URI_XML + " must be bound to " +
+                            "only the '" + NS_PREFIX_XML + "' prefix."
+                )
+            }
+
+            // http://www.w3.org/TR/REC-xml-names/#xmlReserved
+            if (NS_URI_XMLNS == uri) {
+                throw IllegalNameException(
+                    uri, "Namespace URI",
                     "The " + NS_URI_XMLNS + " must be bound to " +
-                    "only the '" + NS_PREFIX_XMLNS + "' prefix.");        
-        }
+                            "only the '" + NS_PREFIX_XMLNS + "' prefix."
+                )
+            }
 
-		// no namespace found, we validate the prefix
-		final String pfx = prefix == null ? NS_PREFIX_DEFAULT : prefix;
-		
-		String reason;
-		
-        // http://www.w3.org/TR/REC-xml-names/#xmlReserved 
-		// checkNamespacePrefix no longer checks for xml prefix
-		if (NS_PREFIX_XML.equals(pfx)) {
-		    // The xml namespace prefix was in the map. attempts to rebind it are illegal
-		    throw new IllegalNameException(uri, "Namespace prefix",
+            // no namespace found, we validate the prefix
+            val pfx: String = if (prefix == null) NS_PREFIX_DEFAULT else prefix
+
+            // http://www.w3.org/TR/REC-xml-names/#xmlReserved
+            // checkNamespacePrefix no longer checks for xml prefix
+            if (NS_PREFIX_XML == pfx) {
+                // The xml namespace prefix was in the map. attempts to rebind it are illegal
+                throw IllegalNameException(
+                    uri, "Namespace prefix",
                     "The prefix " + NS_PREFIX_XML + " (any case) can only be bound to " +
-                    "only the '" + NS_URI_XML + "' uri.");
-		}
-		
-        // http://www.w3.org/TR/REC-xml-names/#xmlReserved 
-        // checkNamespacePrefix no longer checks for xmlns prefix
-        if (NS_PREFIX_XMLNS.equals(pfx)) {
-            // The xml namespace prefix was in the map. attempts to rebind it are illegal
-            throw new IllegalNameException(uri, "Namespace prefix",
+                            "only the '" + NS_URI_XML + "' uri."
+                )
+            }
+
+            // http://www.w3.org/TR/REC-xml-names/#xmlReserved
+            // checkNamespacePrefix no longer checks for xmlns prefix
+            if (NS_PREFIX_XMLNS == pfx) {
+                // The xml namespace prefix was in the map. attempts to rebind it are illegal
+                throw IllegalNameException(
+                    uri, "Namespace prefix",
                     "The prefix " + NS_PREFIX_XMLNS + " (any case) can only be bound to " +
-                    "only the '" + NS_URI_XMLNS + "' uri.");
+                            "only the '" + NS_URI_XMLNS + "' uri."
+                )
+            }
+
+            val reason: String? = Verifier.checkNamespacePrefix(pfx)
+            if (reason != null) {
+                throw IllegalNameException(pfx, "Namespace prefix", reason)
+            }
+
+            // OK, good bet that we have a new Namespace.
+            ns = Namespace(pfx, uri)
+            val prev: Namespace? = urimap.putIfAbsent(pfx, ns)
+            if (prev != null) {
+                // someone registered the same namespace as us while we were busy
+                // validating. Use their registered copy.
+                ns = prev
+            }
+            return ns
         }
-        
-		if ((reason = Verifier.checkNamespacePrefix(pfx)) != null) {
-			throw new IllegalNameException(pfx, "Namespace prefix", reason);
-		}
-		
-		// OK, good bet that we have a new Namespace.
-		ns = new Namespace(pfx, uri);
-		final Namespace prev = urimap.putIfAbsent(pfx, ns);
-		if (prev != null) {
-			// someone registered the same namespace as us while we were busy 
-			// validating. Use their registered copy.
-			ns = prev;
-		}
-		return ns;
-	}
 
-	/** The prefix mapped to this namespace */
-	private final transient String prefix;
-
-	/** The URI for this namespace */
-	private final transient String uri;
-	
-	/**
-	 * This will retrieve (if in existence) or create (if not) a 
-	 * <code>Namespace</code> for the supplied URI, and make it usable 
-	 * as a default namespace, as no prefix is supplied.
-	 * This method is thread-safe.
-	 *
-	 * @param uri <code>String</code> URI of new <code>Namespace</code>.
-	 * @return <code>Namespace</code> - ready to use namespace.
-	 */
-	public static Namespace getNamespace(final String uri) {
-		return getNamespace(NS_PREFIX_DEFAULT, uri);
-	}
-
-	/**
-	 * This constructor handles creation of a <code>Namespace</code> object
-	 * with a prefix and URI; it is intentionally left <code>private</code>
-	 * so that it cannot be invoked by external programs/code.
-	 *
-	 * @param prefix <code>String</code> prefix to map to this namespace.
-	 * @param uri <code>String</code> URI for namespace.
-	 */
-	private Namespace(final String prefix, final String uri) {
-		this.prefix = prefix;
-		this.uri = uri;
-	}
-
-	/**
-	 * This returns the prefix mapped to this <code>Namespace</code>.
-	 *
-	 * @return <code>String</code> - prefix for this <code>Namespace</code>.
-	 */
-	public String getPrefix() {
-		return prefix;
-	}
-
-	/**
-	 * This returns the namespace URI for this <code>Namespace</code>.
-	 *
-	 * @return <code>String</code> - URI for this <code>Namespace</code>.
-	 */
-	public String getURI() {
-		return uri;
-	}
-
-	/**
-	 * This tests for equality - Two <code>Namespaces</code>
-	 * are equal if and only if their URIs are byte-for-byte equals.
-	 *
-	 * @param ob <code>Object</code> to compare to this <code>Namespace</code>.
-	 * @return <code>boolean</code> - whether the supplied object is equal to
-	 *         this <code>Namespace</code>.
-	 */
-	@Override
-	public boolean equals(final Object ob) {
-		if (this == ob) {
-			return true;
-		}
-		if (ob instanceof Namespace) {  // instanceof returns false if null
-			return uri.equals(((Namespace)ob).uri);
-		}
-		return false;
-	}
-
-	/**
-	 * This returns a <code>String</code> representation of this 
-	 * <code>Namespace</code>, suitable for use in debugging.
-	 *
-	 * @return <code>String</code> - information about this instance.
-	 */
-	@Override
-	public String toString() {
-		return "[Namespace: prefix \"" + prefix + "\" is mapped to URI \"" + 
-				uri + "\"]";
-	}
-
-	/**
-	 * This returns the hash code for the <code>Namespace</code> that conforms
-	 * to the 'equals()' contract.
-	 * <p>
-	 * If two namespaces have the same URI, they are equal and have the same
-	 * hash code, even if they have different prefixes.
-	 *
-	 * @return <code>int</code> - hash code for this <code>Namespace</code>.
-	 */
-	@Override
-	public int hashCode() {
-		return uri.hashCode();
-	}
-	
-	
-	/* *****************************************
-	 * Serialization
-	 * ***************************************** */
-	
-	/**
-	 * JDOM 2.0.0 Serialization version
-	 */
-	private static final long serialVersionUID = 200L;
-
-	private static final class NamespaceSerializationProxy 
-			implements Serializable {
-
-		private static final long serialVersionUID = 200L;
-		private final String pprefix, puri;
-		public NamespaceSerializationProxy(String pprefix, String puri) {
-			this.pprefix = pprefix;
-			this.puri = puri;
-		}
-		
-		private Object readResolve() {
-			return Namespace.getNamespace(pprefix, puri);
-		}
-		
-	}
-
-	/**
-	 * Serializes Namespace by using a proxy serialization instance.
-	 * @serialData The proxy deals with the protocol.
-	 * @return the Namespace proxy instance.
-	 */
-	private Object writeReplace() {
-		return new NamespaceSerializationProxy(prefix, uri);
-	}
-	
-	/**
-	 * Because Namespace is serialized by proxy, the reading of direct Namespace
-	 * instances is illegal and prohibited.
-	 * @return nothing.
-	 * @throws InvalidObjectException always
-	 */
-	private Object readResolve() throws InvalidObjectException {
-		throw new InvalidObjectException(
-				"Namespace is serialized through a proxy");
-	}
-	
+        /**
+         * This will retrieve (if in existence) or create (if not) a
+         * `Namespace` for the supplied URI, and make it usable
+         * as a default namespace, as no prefix is supplied.
+         * This method is thread-safe.
+         *
+         * @param uri `String` URI of new `Namespace`.
+         * @return `Namespace` - ready to use namespace.
+         */
+        @JvmStatic
+        fun getNamespace(uri: String?): Namespace {
+            return getNamespace(NS_PREFIX_DEFAULT, uri)
+        }
+    }
 }
