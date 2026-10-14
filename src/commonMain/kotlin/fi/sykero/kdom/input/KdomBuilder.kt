@@ -14,6 +14,11 @@ import kotlin.Throws
  * parsed by [XmlEventParser]. Malformed input throws [JDOMParseException] (message `Error on line N: ...`, the
  * [SAXParseException] as cause, its line/column, and the partial document when the root element was started), as
  * jdom2's `SAXBuilder` did.
+ *
+ * Unlike jdom2, a failure of the tree layer (`IllegalNameException`, `IllegalTargetException`, `IllegalDataException`,
+ * `IllegalAddException` or any other `RuntimeException` while building, e.g. a namespace URI starting with white space
+ * that the parser accepts but `Namespace` rejects) is also wrapped in a [JDOMParseException] with the position of the
+ * event, so callers that catch [JDOMException] (JSword's fallback chain) see every rejected input.
  */
 public class KdomBuilder {
     private val parser = XmlEventParser(namespaceAware = true)
@@ -33,6 +38,11 @@ public class KdomBuilder {
             throw JDOMParseException("Error on line " + e.lineNumber + ": " + e.message, e, doc, null, null, e.lineNumber, e.columnNumber)
         } catch (e: SAXException) {
             throw JDOMParseException("Error in building: " + e.message, e, handler.document)
+        } catch (e: RuntimeException) {
+            val line = handler.locator?.lineNumber ?: -1
+            val column = handler.locator?.columnNumber ?: -1
+            val doc = handler.document.takeIf { it.hasRootElement() }
+            throw JDOMParseException("Error on line $line: " + e.message, e, doc, null, null, line, column)
         }
         return handler.document
     }

@@ -36,7 +36,13 @@ internal class TreeBuildingHandler : ContentHandler, LexicalEventHandler {
     private var previousCDATA = false
     private var inCDATA = false
 
-    override fun setDocumentLocator(locator: Locator?) {}
+    /** The parser's locator: the position of the current event (used to place tree-building errors). */
+    var locator: Locator? = null
+        private set
+
+    override fun setDocumentLocator(locator: Locator?) {
+        this.locator = locator
+    }
     override fun startDocument() {}
     override fun endDocument() {}
 
