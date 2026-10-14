@@ -10,7 +10,7 @@ import fi.sykero.kdom.Element;
 import fi.sykero.kdom.EntityRef;
 import fi.sykero.kdom.IllegalDataException;
 import fi.sykero.kdom.IllegalNameException;
-import fi.sykero.kdom.test.util.UnitTestUtil;
+import fi.sykero.kdom.test.util.JvmTestUtil;
 import org.junit.Test;
 
 @SuppressWarnings("javadoc")
@@ -139,9 +139,9 @@ public class TestEntityRef {
 
 		try {
 			er.setSystemID("12" + (char)0x0c + "34");
-			UnitTestUtil.failNoException(IllegalDataException.class);
+			JvmTestUtil.failNoException(IllegalDataException.class);
 		} catch (Exception e) {
-			UnitTestUtil.checkException(IllegalDataException.class, e);
+			JvmTestUtil.checkException(IllegalDataException.class, e);
 		}
 	}
 

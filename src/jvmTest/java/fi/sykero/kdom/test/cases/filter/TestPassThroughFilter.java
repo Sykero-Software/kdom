@@ -10,7 +10,7 @@ import java.util.RandomAccess;
 
 import fi.sykero.kdom.filter.Filter;
 import fi.sykero.kdom.filter.Filters;
-import fi.sykero.kdom.test.util.UnitTestUtil;
+import fi.sykero.kdom.test.util.JvmTestUtil;
 
 import org.junit.Test;
 
@@ -34,9 +34,9 @@ public class TestPassThroughFilter  {
 		
 		try {
 			filtered.add("boo");
-			UnitTestUtil.failNoException(UnsupportedOperationException.class);
+			JvmTestUtil.failNoException(UnsupportedOperationException.class);
 		} catch (Exception e) {
-			UnitTestUtil.checkException(UnsupportedOperationException.class, e);
+			JvmTestUtil.checkException(UnsupportedOperationException.class, e);
 		}
 		
 	}
@@ -59,9 +59,9 @@ public class TestPassThroughFilter  {
 		
 		try {
 			filtered.add("boo");
-			UnitTestUtil.failNoException(UnsupportedOperationException.class);
+			JvmTestUtil.failNoException(UnsupportedOperationException.class);
 		} catch (Exception e) {
-			UnitTestUtil.checkException(UnsupportedOperationException.class, e);
+			JvmTestUtil.checkException(UnsupportedOperationException.class, e);
 		}
 		
 	}
@@ -78,9 +78,9 @@ public class TestPassThroughFilter  {
 		
 		try {
 			filtered.add("boo");
-			UnitTestUtil.failNoException(UnsupportedOperationException.class);
+			JvmTestUtil.failNoException(UnsupportedOperationException.class);
 		} catch (Exception e) {
-			UnitTestUtil.checkException(UnsupportedOperationException.class, e);
+			JvmTestUtil.checkException(UnsupportedOperationException.class, e);
 		}
 		
 	}
@@ -96,9 +96,9 @@ public class TestPassThroughFilter  {
 		
 		try {
 			filtered.add("boo");
-			UnitTestUtil.failNoException(UnsupportedOperationException.class);
+			JvmTestUtil.failNoException(UnsupportedOperationException.class);
 		} catch (Exception e) {
-			UnitTestUtil.checkException(UnsupportedOperationException.class, e);
+			JvmTestUtil.checkException(UnsupportedOperationException.class, e);
 		}
 		
 	}

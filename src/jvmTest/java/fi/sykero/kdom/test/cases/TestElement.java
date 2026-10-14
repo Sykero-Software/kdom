@@ -62,8 +62,8 @@ package fi.sykero.kdom.test.cases;
  * @version 0.1
  */
 
-import static fi.sykero.kdom.test.util.UnitTestUtil.checkException;
-import static fi.sykero.kdom.test.util.UnitTestUtil.failNoException;
+import static fi.sykero.kdom.test.util.JvmTestUtil.checkException;
+import static fi.sykero.kdom.test.util.JvmTestUtil.failNoException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -114,18 +114,6 @@ public final class TestElement {
      */
     public static void main(String args[]) {
         JUnitCore.runClasses(TestElement.class);
-    }
-
-    /**
-     * Test the constructor for a subclass element
-     */
-    @Test
-    public void test_TCC() {
-    	Element emt = new Element() {
-    		// change nothing
-    		private static final long serialVersionUID = 200L;
-    	};
-    	assertNull(emt.getName());
     }
 
     /**

@@ -6,6 +6,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static fi.sykero.kdom.test.util.UnitTestUtil.*;
+import static fi.sykero.kdom.test.util.JvmTestUtil.*;
 
 import java.lang.reflect.Array;
 import java.util.Arrays;

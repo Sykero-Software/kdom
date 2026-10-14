@@ -16,7 +16,7 @@ import org.junit.Test;
 import fi.sykero.kdom.Content;
 import fi.sykero.kdom.Document;
 import fi.sykero.kdom.Element;
-import fi.sykero.kdom.test.util.UnitTestUtil;
+import fi.sykero.kdom.test.util.JvmTestUtil;
 import fi.sykero.kdom.util.IteratorIterable;
 
 @SuppressWarnings("javadoc")
@@ -154,7 +154,7 @@ public class TestDescendantIterator {
 			it1.remove();
 			fail ("Should not be able to double-remove");
 		} catch (Exception e) {
-			UnitTestUtil.checkException(IllegalStateException.class, e);
+			JvmTestUtil.checkException(IllegalStateException.class, e);
 		}
 		ArrayList<String> al = new ArrayList<String>();
 		Iterator<Content> it2 = doc.getDescendants();

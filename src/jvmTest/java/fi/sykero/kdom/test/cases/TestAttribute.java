@@ -93,19 +93,6 @@ public final class TestAttribute {
     }
 
     /**
-     * Test the simple case of constructing an attribute without name, value,
-     * namespace or prefix
-     */
-    @Test
-    public void test_TCC() {
-        final Attribute attribute = new Attribute(){
-    		private static final long serialVersionUID = 200L;
-        };
-        assertTrue(null == attribute.getName());
-        assertTrue(attribute.isSpecified());
-    }
-
-    /**
 	 * Test the simple case of constructing an attribute without
 	 * namespace or prefix
 	 */

@@ -63,6 +63,7 @@ package fi.sykero.kdom.test.cases;
  */
 import static org.junit.Assert.*;
 import static fi.sykero.kdom.test.util.UnitTestUtil.*;
+import static fi.sykero.kdom.test.util.JvmTestUtil.*;
 
 import fi.sykero.kdom.*;
 import org.junit.Before;

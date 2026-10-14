@@ -8,7 +8,7 @@ import java.util.Arrays;
 import org.junit.Test;
 
 import fi.sykero.kdom.internal.ArrayCopy;
-import fi.sykero.kdom.test.util.UnitTestUtil;
+import fi.sykero.kdom.test.util.JvmTestUtil;
 
 @SuppressWarnings("javadoc")
 public class TestArrayCopy {
@@ -31,9 +31,9 @@ public class TestArrayCopy {
 		assertTrue(Arrays.equals(ArrayCopy.copyOfRange(val, 1, 5), Arrays.copyOfRange(val, 1, 5)));
 		try {
 			ArrayCopy.copyOfRange(val, 3, 2);
-			UnitTestUtil.failNoException(IllegalArgumentException.class);
+			JvmTestUtil.failNoException(IllegalArgumentException.class);
 		} catch (Exception e) {
-			UnitTestUtil.checkException(IllegalArgumentException.class, e);
+			JvmTestUtil.checkException(IllegalArgumentException.class, e);
 		}
 	}
 

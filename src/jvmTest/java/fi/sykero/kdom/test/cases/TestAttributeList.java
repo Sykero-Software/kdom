@@ -20,6 +20,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 import static fi.sykero.kdom.test.util.UnitTestUtil.*;
+import static fi.sykero.kdom.test.util.JvmTestUtil.*;
 
 @SuppressWarnings("javadoc")
 public class TestAttributeList extends AbstractTestList<Attribute> {

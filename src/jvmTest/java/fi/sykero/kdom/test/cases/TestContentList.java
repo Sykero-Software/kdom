@@ -1,8 +1,8 @@
 /* Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software. */
 package fi.sykero.kdom.test.cases;
 
-import static fi.sykero.kdom.test.util.UnitTestUtil.checkException;
-import static fi.sykero.kdom.test.util.UnitTestUtil.failNoException;
+import static fi.sykero.kdom.test.util.JvmTestUtil.checkException;
+import static fi.sykero.kdom.test.util.JvmTestUtil.failNoException;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 

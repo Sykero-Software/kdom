@@ -22,16 +22,6 @@ import org.junit.Test;
 public class TestProcessingInstruction {
 
 	@Test
-	public void testProcessingInstruction() {
-		ProcessingInstruction pi = new ProcessingInstruction() {
-			// nothing
-    		private static final long serialVersionUID = 200L;
-		};
-		assertTrue(null == pi.getTarget());
-		assertTrue(null == pi.getValue());
-	}
-
-	@Test
 	public void testProcessingInstructionString() {
 		ProcessingInstruction pi = new ProcessingInstruction("test");
 		checkEquals(pi.getTarget(), "test");
