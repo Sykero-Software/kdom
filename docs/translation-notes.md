@@ -575,6 +575,7 @@ After Task 9 fix round 1: 58 classes / 773 tests / 2 skipped / 0 failures (+5 `K
 +1 `KdomBuilderDifferentialTest`; new cases added to the existing differential lists).
 
 After Task 11 (query axes): 62 classes / 808 tests / 2 skipped / 0 failures (+`AxesTest` 10, +`AxesJaxenDifferentialTest` 2; fix round 1 added one `AxesTest`).
+After the M0 gate fixes (Task 13): 66 classes / 827 tests / 2 skipped / 0 failures with `-Dkdom.corpus` (corpus differential: equal=17379, both-reject=7, other 0). Task 12 added `CorpusDifferentialTest` and `OutputterDifferentialTest`; Task 13 added `DocTypeDifferentialTest` 3, `XmlByteDecoderDifferentialTest` 1, `KdomBuilderTest` +7 (DOCTYPE mode, encodings), `XmlEventParserProbeTest` +1.
 
 ### Import notes (fix round 1)
 
