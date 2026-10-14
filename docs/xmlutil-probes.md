@@ -163,21 +163,23 @@ the declaration), and the byte-input encodings listed in translation-notes.md.
   sees the DOCTYPE: `SourceScanner` reads it (case-sensitive `<!DOCTYPE` S Name, optional `SYSTEM`/`PUBLIC` id with the
   JDK's white-space and public-id character rules, optional internal subset; once, before the root) and the masked copy
   replaces it by a placeholder PI `<?T?>` plus white space with the same line ends, so positions after it stay exact. The
-  internal subset scan honours quoted literals (a `]` or `>` or `<` inside an entity value), comments and PIs; element,
-  entity (general, parameter, external, unparsed) and notation declarations are read; `ATTLIST` declarations and
+  internal subset scan honours quoted literals (a `]` or `>` or `<` inside an entity value), comments and PIs; element
+  declarations (content-model syntax checked as XML 1.0 [46]-[51]: `EMPTY`, `ANY`, Mixed, choice/seq groups with one
+  separator kind, quantifiers; the model is reported with its white space removed, as by SAX), entity (general, parameter,
+  external, unparsed) and notation declarations are read; `ATTLIST` declarations and
   parameter-entity references are rejected as unsupported (they would change the tree: default attributes, attribute
   types, conditional declarations). **The external subset is never loaded** (no network, no files).
   - SAX events: `startDTD(name, publicId, systemId)`, the `DeclHandler` events and internal-subset comments in order, `endDTD`
     (internal-subset PIs are not reported, as by the JDK parser), through the internal `LexicalEventHandler`.
   - Entity references (only in a document with a DOCTYPE): predefined and character references as always; an internal
     entity is expanded (replacement text with markup or with references other than the predefined ones is rejected as
-    unsupported); an external parsed entity is `skippedEntity` in content and an error in an attribute value; an unparsed
+    unsupported; `]]>` in it is an error in content, as with SAX, but allowed in an attribute value); an external parsed entity is `skippedEntity` in content and an error in an attribute value; an unparsed
     one is an error; an undeclared one is `skippedEntity` in content and dropped from an attribute value when the DOCTYPE has
     an external id and the document is not `standalone="yes"`, else an error. This is what the JDK parser does with
     `external-general-entities` and `load-external-dtd` off. Each such reference is replaced in the masked copy by a mark
     character plus its index in base-256 digit characters (all absent from the document), and restored in the events.
   - The R7 `<`-in-attribute check, lone-CR masking, name and QName checks run unchanged outside the DOCTYPE.
-  - Pinned by `DocTypeDifferentialTest` (jvmTest: 38 EPUB-like and malformed inputs against jdom2 `SAXBuilder` configured as
+  - Pinned by `DocTypeDifferentialTest` (jvmTest: 50 EPUB-like and malformed inputs against jdom2 `SAXBuilder` configured as
     `CommonUtils` plus `load-external-dtd` off, raw output, internal subset and node kinds; SAX events against the JDK parser
     in both namespace modes for those and 4 entity-expansion inputs), `KdomBuilderTest` and `XmlEventParserProbeTest`
     (probes 18/19 accepted in permissive mode, still rejected in strict mode).
