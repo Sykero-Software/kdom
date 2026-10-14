@@ -16,7 +16,7 @@ DescendantIterator DocType Document Element EntityRef FilterIterator IllegalAddE
 IllegalNameException IllegalTargetException JDOMConstants JDOMException Namespace NamespaceAware Parent
 ProcessingInstruction Text Verifier
 filter/AbstractFilter filter/AndFilter filter/AttributeFilter filter/ClassFilter filter/ElementFilter filter/Filter
-filter/Filters filter/NegateFilter filter/OrFilter filter/PassThroughFilter filter/TextOnlyFilter
+filter/ContentFilter filter/Filters filter/NegateFilter filter/OrFilter filter/PassThroughFilter filter/TextOnlyFilter
 input/JDOMParseException internal/ArrayCopy internal/SystemProperty
 output/EscapeStrategy output/Format output/LineSeparator output/XMLOutputter
 output/support/AbstractFormattedWalker output/support/AbstractOutputProcessor output/support/AbstractXMLOutputProcessor

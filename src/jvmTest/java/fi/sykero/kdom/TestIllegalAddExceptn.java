@@ -3,7 +3,6 @@ package fi.sykero.kdom;
 
 import static org.junit.Assert.*;
 
-import fi.sykero.kdom.DefaultJDOMFactory;
 import fi.sykero.kdom.IllegalAddException;
 import org.junit.Test;
 
@@ -12,97 +11,85 @@ public class TestIllegalAddExceptn {
 	
 	@Test
 	public void testIllegalAddExceptionElementAttributeString() {
-		DefaultJDOMFactory fac = new DefaultJDOMFactory();
 		assertTrue (null != 
-				new IllegalAddException(fac.element("emt"), 
-						fac.attribute("att", "val"), "msg").getMessage());
+				new IllegalAddException(new Element("emt"), 
+						new Attribute("att", "val"), "msg").getMessage());
 	}
 
 	@Test
 	public void testIllegalAddExceptionElementElementString() {
-		DefaultJDOMFactory fac = new DefaultJDOMFactory();
 		assertTrue (null != 
-				new IllegalAddException(fac.element("emt1"), 
-						fac.element("emt2"), "msg").getMessage());
+				new IllegalAddException(new Element("emt1"), 
+						new Element("emt2"), "msg").getMessage());
 	}
 
 	@Test
 	public void testIllegalAddExceptionElementString() {
-		DefaultJDOMFactory fac = new DefaultJDOMFactory();
 		assertTrue (null != 
-				new IllegalAddException(fac.element("emt"), 
+				new IllegalAddException(new Element("emt"), 
 						"msg").getMessage());
 	}
 
 	@Test
 	public void testIllegalAddExceptionElementProcessingInstructionString() {
-		DefaultJDOMFactory fac = new DefaultJDOMFactory();
 		assertTrue (null != 
-				new IllegalAddException(fac.element("emt"), 
-						fac.processingInstruction("target", "data"), "msg").getMessage());
+				new IllegalAddException(new Element("emt"), 
+						new ProcessingInstruction("target", "data"), "msg").getMessage());
 	}
 
 	@Test
 	public void testIllegalAddExceptionProcessingInstructionString() {
-		DefaultJDOMFactory fac = new DefaultJDOMFactory();
 		assertTrue (null != 
-				new IllegalAddException(fac.processingInstruction("target", "data"), 
+				new IllegalAddException(new ProcessingInstruction("target", "data"), 
 						"msg").getMessage());
 	}
 
 	@Test
 	public void testIllegalAddExceptionElementCommentString() {
-		DefaultJDOMFactory fac = new DefaultJDOMFactory();
 		assertTrue (null != 
-				new IllegalAddException(fac.element("emt"), 
-						fac.comment("no comment!"), "msg").getMessage());
+				new IllegalAddException(new Element("emt"), 
+						new Comment("no comment!"), "msg").getMessage());
 	}
 
 	@Test
 	public void testIllegalAddExceptionElementCDATAString() {
-		DefaultJDOMFactory fac = new DefaultJDOMFactory();
 		assertTrue (null != 
-				new IllegalAddException(fac.element("emt"), 
-						fac.cdata("cdata"), "msg").getMessage());
+				new IllegalAddException(new Element("emt"), 
+						new CDATA("cdata"), "msg").getMessage());
 	}
 
 	@Test
 	public void testIllegalAddExceptionElementTextString() {
-		DefaultJDOMFactory fac = new DefaultJDOMFactory();
 		assertTrue (null != 
-				new IllegalAddException(fac.element("emt"), 
-						fac.text("text"), "msg").getMessage());
+				new IllegalAddException(new Element("emt"), 
+						new Text("text"), "msg").getMessage());
 	}
 
 	@Test
 	public void testIllegalAddExceptionCommentString() {
-		DefaultJDOMFactory fac = new DefaultJDOMFactory();
 		assertTrue (null != 
-				new IllegalAddException(fac.comment("no comment!"), "msg").getMessage());
+				new IllegalAddException(new Comment("no comment!"), "msg").getMessage());
 	}
 
 	@Test
 	public void testIllegalAddExceptionElementEntityRefString() {
-		DefaultJDOMFactory fac = new DefaultJDOMFactory();
 		assertTrue (null != 
-				new IllegalAddException(fac.element("emt"), 
-						fac.entityRef("name"), "msg").getMessage());
+				new IllegalAddException(new Element("emt"), 
+						new EntityRef("name"), "msg").getMessage());
 	}
 
 	@Test
 	public void testIllegalAddExceptionElementNamespaceString() {
-		DefaultJDOMFactory fac = new DefaultJDOMFactory();
 		assertTrue (null != 
-				new IllegalAddException(fac.element("emt"), 
+				new IllegalAddException(new Element("emt"), 
 						Namespace.getNamespace("prefix", "ns"), "msg").getMessage());
 	}
 
 	@Test
 	public void testIllegalAddExceptionDocTypeString() {
-		DefaultJDOMFactory fac = new DefaultJDOMFactory();
 		assertTrue (null != 
 				new IllegalAddException( 
-						fac.docType("emt"), "msg").getMessage());
+						new DocType("emt"), "msg").getMessage());
 	}
 
 	@Test
