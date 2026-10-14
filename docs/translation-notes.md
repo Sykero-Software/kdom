@@ -279,7 +279,7 @@ New public API (`commonMain`): `fi.sykero.kdom.sax.{SAXException, SAXParseExcept
 `build(File)`: read fully, then parse; the stream is not closed; read errors are `IOException`). Internal: `TreeBuildingHandler`
 (jdom2 2.0.6.1 `SAXHandler` without the DTD parts), `LexicalEventHandler` (comment / CDATA events; there is no public
 `LexicalHandler`), `ParsedAttributes`, `SourceScanner`, `XmlSourceMask`, `XmlByteDecoder`. How the probes' requirements P1..P8
-are met: `docs/xmlutil-probes.md`. New files carry no licence header (like the other new kdom files, e.g. `internal/Chars.kt`), except `TreeBuildingHandler`, a condensed port of jdom2's `input/sax/SAXHandler.java`, which carries that file's JDOM header and the translation line (M0 gate fix M1).
+are met: `docs/xmlutil-probes.md`. New files carry no licence header, except `TreeBuildingHandler`, a condensed port of jdom2's `input/sax/SAXHandler.java`, which carries that file's JDOM header and the translation line (M0 gate fix M1); see "Licence headers" for the complete list of header layouts and exceptions.
 
 Tree rules (as jdom2's `SAXBuilder`): adjacent character data is one `Text`; CDATA is a `CDATA` node; empty comments are
 dropped and an empty CDATA section is kept; jdom2's quirk that text directly before an *empty* CDATA section becomes that
@@ -472,18 +472,41 @@ Differences from the Java tests (none changes an expectation):
   `LinkedHashMap`; they cast to `Map<String?, String>` (unchecked) to keep the Java call.
 - **Static init order.** `Filters` keeps the Java field order in its companion; `Attribute` keeps the `*_TYPE` constants in the companion.
 
-## Licence headers (M0 gate fix I1)
+## Licence headers (M0 gate fix I1, round 2)
 
 Every translated file carries its upstream jdom2 source's `/*-- ... */` licence block **byte for byte** (taken from
 hunterhacker/jdom tag `JDOM-2.0.6.1`, including upstream's trailing white space, year ranges and the
 `<request_AT_jdom_DOT_org).` typo in some files), with the single line
 ` Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.` inserted as the block's last text line
-(before the closing blank line and ` */`). `scripts/fix-headers.py <kdom> <jdom2 checkout>` (run with `python3 -I`) rewrites
-the blocks; it maps each `src/*/fi/sykero/kdom/<path>` to `core|test/src/java/org/jdom2/<path>.java` (plus an explicit map,
-e.g. `input/TreeBuildingHandler.kt` <- `input/sax/SAXHandler.java`). Check: rerun the script (it must report `changed 0`) and
-the review checker (`review-scratch/m0/hdr2.py <kdom> <jdom2 checkout>`): every file with an upstream header must be
-`UPHDR verbatim` with exactly one translation line. Translated test files whose upstream has no header keep a one-line
-`/* Kotlin Multiplatform translation ... */` comment.
+(before the closing blank line and ` */`), at the place upstream has it:
+- first in the file (60 files: all main sources and most tests);
+- after the `package` line (package line, blank line, block) where the upstream test puts it there (8 files: `TestAttribute`,
+  `TestComment`, `TestElement`, `TestNamespace`, `TestVerifier` (Kotlin, commonTest), `TestDocType`, `TestFilterList` (Java,
+  jvmTest) and `RawInstanceTest`, see below).
+Translated files whose upstream source has no licence block (34 tests) start with the one-line comment
+`/* Kotlin Multiplatform translation ... */`.
+
+`scripts/fix-headers.py [--check] <kdom> <jdom2 checkout>` (run with `python3 -I`) maps each `src/*/fi/sykero/kdom/<path>` to
+`core|test/src/java/org/jdom2/<path>.java`, finds the upstream block (first, or within the first 10 lines after `package`) and
+rewrites the kdom block; `--check` only reports, byte for byte, and must print `changed 0` with every translated file
+`verbatim` / `ok`. Explicit map (file without a same-named upstream): `input/TreeBuildingHandler.kt` <-
+`input/sax/SAXHandler.java` (condensed port), `output/XMLOutputterJvm.kt` <- `output/XMLOutputter.java` (its OutputStream
+overloads, split out in Task 7), `test/cases/RawInstanceTest.java` <- `test/cases/TestElement.java` (raw-instance tests cut
+from TestText/TestComment/TestProcessingInstruction/TestAttribute/TestElement; the licensed ones among them share
+TestElement's block).
+
+Exceptions (new kdom code, no upstream file):
+- `internal/UnsafeNull.kt` and `PropertySyntaxTest.kt` (jvmTest) carry the JDOM licence block in the LICENSE-file form
+  (`Copyright (C) 2000-2012`, Task 5 template) plus the translation line: written together with the translated tree classes
+  (the raw-instance null semantics, the property/dual-setter API) and kept under the same licence; not verbatim copies of an
+  upstream header.
+- `test/util/JvmTestUtil.java` (jvmTest) has the one-line comment: it holds methods cut from `UnitTestUtil.java`, whose
+  upstream has no licence block.
+- Every other new file (parser, builder, SAX bridge, query axes, tests) carries no header.
+
+Review checkers: `review-scratch/m0/hdr2.py` and `review-scratch/m0r/bytehdr.py` recognise only the block-first layout, so they
+list the 7 package-first upstream tests as "UP-NOHDR"/"UP-NOHDR-but-copyright-in-upstream" (and bytehdr flags the `NOTICE`
+sentence "Copyright (C) 2026 Sykerö Software." as a translation-line variant); `fix-headers.py --check` verifies those files.
 
 ## Task 3: jdom2 subset import (Java)
 
