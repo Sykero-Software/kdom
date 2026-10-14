@@ -1095,23 +1095,23 @@ public final class XMLOutputter implements Cloneable {
 	public String toString() {
 		StringBuilder buffer = new StringBuilder();
 		buffer.append("XMLOutputter[omitDeclaration = ");
-		buffer.append(myFormat.omitDeclaration);
+		buffer.append(myFormat.getOmitDeclaration());
 		buffer.append(", ");
 		buffer.append("encoding = ");
-		buffer.append(myFormat.encoding);
+		buffer.append(myFormat.getEncoding());
 		buffer.append(", ");
 		buffer.append("omitEncoding = ");
-		buffer.append(myFormat.omitEncoding);
+		buffer.append(myFormat.getOmitEncoding());
 		buffer.append(", ");
 		buffer.append("indent = '");
-		buffer.append(myFormat.indent);
+		buffer.append(myFormat.getIndent());
 		buffer.append("'");
 		buffer.append(", ");
 		buffer.append("expandEmptyElements = ");
-		buffer.append(myFormat.expandEmptyElements);
+		buffer.append(myFormat.getExpandEmptyElements());
 		buffer.append(", ");
 		buffer.append("lineSeparator = '");
-		for (char ch : myFormat.lineSeparator.toCharArray()) {
+		for (char ch : myFormat.getLineSeparator().toCharArray()) {
 			switch (ch) {
 				case '\r':
 					buffer.append("\\r");
@@ -1129,7 +1129,7 @@ public final class XMLOutputter implements Cloneable {
 		}
 		buffer.append("', ");
 		buffer.append("textMode = ");
-		buffer.append(myFormat.mode + "]");
+		buffer.append(myFormat.getTextMode() + "]");
 		return buffer.toString();
 	}
 

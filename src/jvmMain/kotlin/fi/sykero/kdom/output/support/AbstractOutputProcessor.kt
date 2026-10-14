@@ -52,64 +52,57 @@
 
  Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
 
+ Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
+
  */
+package fi.sykero.kdom.output.support
 
-package fi.sykero.kdom.output.support;
-
-import java.util.List;
-
-import fi.sykero.kdom.Content;
+import fi.sykero.kdom.Content
+import fi.sykero.kdom.output.Format.TextMode
 
 /**
  * Methods common/useful for all Outputter processors.
- * 
+ *
  * @since JDOM2
  * @author Rolf Lear
  */
-public abstract class AbstractOutputProcessor {
-	
-	/*
-	 * ========================================================================
-	 * Support methods for Text-content formatting. Should all be protected. The
-	 * following are used when printing Text-based data. Because of complicated
-	 * multi-sequential text sometimes the requirements are odd. All Text
-	 * content will be output using these methods, which is why there is the None
-	 * version.
-	 * ========================================================================
-	 */
+abstract class AbstractOutputProcessor {
 
-	/**
-	 * Create a walker to process Content List values.
-	 * <p>
-	 * If you require a custom walker to process content in a specific way
-	 * then you probably want to override this method to build the walker you
-	 * want.
-	 * 
-	 * @param fstack The current FormatStack for the walker (this should not be 
-	 * 		modified by the Walker).
-	 * @param content The list of content to walk.
-	 * @param escape If you want the Text values to be XMLEscaped then supply
-	 *      a non-null EscapeStrategy to use.
-	 * @return the created walker.
-	 */
-	protected Walker buildWalker(final FormatStack fstack, 
-			final List<? extends Content> content, boolean escape) {
-		
-		switch (fstack.getTextMode()) {
-			case PRESERVE:
-				return new WalkerPRESERVE(content);
-			case NORMALIZE:
-				return new WalkerNORMALIZE(content, fstack, escape);
-			case TRIM:
-				return new WalkerTRIM(content, fstack, escape);
-			case TRIM_FULL_WHITE:
-				return new WalkerTRIM_FULL_WHITE(content, fstack, escape);
-		}
-		// all cases should be handled in the switch statement above. If someone
-		// creates a new TextMode though, then it will create a warning in
-		// eclipse above, and the code will fall through to this 'default' raw
-		// instance.
-		return new WalkerPRESERVE(content);
-	}
+    /*
+     * ========================================================================
+     * Support methods for Text-content formatting. Should all be protected. The
+     * following are used when printing Text-based data. Because of complicated
+     * multi-sequential text sometimes the requirements are odd. All Text
+     * content will be output using these methods, which is why there is the None
+     * version.
+     * ========================================================================
+     */
 
+    /**
+     * Create a walker to process Content List values.
+     *
+     * If you require a custom walker to process content in a specific way
+     * then you probably want to override this method to build the walker you
+     * want.
+     *
+     * @param fstack The current FormatStack for the walker (this should not be
+     * modified by the Walker).
+     * @param content The list of content to walk.
+     * @param escape If you want the Text values to be XMLEscaped then supply
+     * a non-null EscapeStrategy to use.
+     * @return the created walker.
+     */
+    protected open fun buildWalker(
+        fstack: FormatStack,
+        content: List<Content>,
+        escape: Boolean
+    ): Walker {
+
+        when (fstack.textMode) {
+            TextMode.PRESERVE -> return WalkerPRESERVE(content)
+            TextMode.NORMALIZE -> return WalkerNORMALIZE(content, fstack, escape)
+            TextMode.TRIM -> return WalkerTRIM(content, fstack, escape)
+            TextMode.TRIM_FULL_WHITE -> return WalkerTRIM_FULL_WHITE(content, fstack, escape)
+        }
+    }
 }

@@ -52,426 +52,310 @@
 
  Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
 
+ Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
+
  */
+package fi.sykero.kdom.output.support
 
-package fi.sykero.kdom.output.support;
-
-import fi.sykero.kdom.internal.ArrayCopy;
-import fi.sykero.kdom.output.EscapeStrategy;
-import fi.sykero.kdom.output.Format;
-import fi.sykero.kdom.output.Format.TextMode;
+import fi.sykero.kdom.internal.ArrayCopy
+import fi.sykero.kdom.output.EscapeStrategy
+import fi.sykero.kdom.output.Format
+import fi.sykero.kdom.output.Format.TextMode
 
 /**
  * FormatStack implements a mechanism where the formatting details can be
  * changed mid-tree, but then get reverted when that tree segment is
  * complete.
- * <p>
+ *
  * This class is intended as a working-class for in the various outputter
  * implementations. It is only public so that people extending the
  * Abstract*Processor classes can take advantage of its functionality.
- * <p>
+ *
  * The value this class adds is:
- * <ul>
- * <li>Fast - 
- * </ul>
- * 
+ *  * Fast -
+ *
  * @since JDOM2
  * @author Rolf Lear
  */
-public final class FormatStack {
+class FormatStack(format: Format) {
 
-	private int capacity = 16; // can grow if more than 16 levels in XML
-	private int depth = 0; // current level in XML
+    private var capacity = 16 // can grow if more than 16 levels in XML
+    private var depth = 0 // current level in XML
 
-	/*
-	 * ====================================================================
-	 * The following values cannot be changed mid-way through the output
-	 * ====================================================================
-	 */
+    /*
+     * ====================================================================
+     * The following values cannot be changed mid-way through the output
+     * ====================================================================
+     */
 
-	private final TextMode defaultMode; // the base/initial Text mode
+    /** The base/initial Text mode: the TextMode that was originally set for this stack before any modifications. */
+    val defaultMode: TextMode
 
-	/** The default indent is no spaces (as original document) */
-	private final String indent;
+    /** The original [Format.indent], may be null. The default indent is no spaces (as original document) */
+    val indent: String?
 
-	/** The encoding format */
-	private final String encoding;
+    /** The original [Format.encoding]. */
+    val encoding: String
 
-	/** New line separator */
-	private final String lineSeparator;
+    /** The original [Format.lineSeparator]. New line separator */
+    val lineSeparator: String?
 
-	/**
-	 * Whether or not to output the XML declaration - default is
-	 * <code>false</code>
-	 */
-	private final boolean omitDeclaration;
+    /**
+     * The original [Format.omitDeclaration]: whether or not to output the XML declaration - default is
+     * `false`
+     */
+    val isOmitDeclaration: Boolean
 
-	/**
-	 * Whether or not to output the encoding in the XML declaration -
-	 * default is <code>false</code>
-	 */
-	private final boolean omitEncoding;
+    /**
+     * The original [Format.omitEncoding]: whether or not to output the encoding in the XML declaration -
+     * default is `false`
+     */
+    val isOmitEncoding: Boolean
 
-	/**
-	 * Whether or not to expand empty elements to
-	 * &lt;tagName&gt;&lt;/tagName&gt; - default is <code>false</code>
-	 */
-	private final boolean expandEmptyElements;
-	
-	/**
-	 * Whether or not to output 'specified' Attributes only
-	 */
-	private final boolean specifiedAttributesOnly;
+    /**
+     * The original [Format.expandEmptyElements]: whether or not to expand empty elements to
+     * &lt;tagName&gt;&lt;/tagName&gt; - default is `false`
+     */
+    val isExpandEmptyElements: Boolean
 
-	/** entity escape logic */
-	private final EscapeStrategy escapeStrategy;
+    /**
+     * Indicate whether only those Attributes specified in the XML
+     * should be output: true if only the specified Attributes should be output,
+     * false if those Attributes defaulted from the DTD or XML schema
+     * should be output too.
+     */
+    val isSpecifiedAttributesOnly: Boolean
 
-	/*
-	 * ====================================================================
-	 * The following values can be changed mid-way through the output, hence
-	 * they are arrays.
-	 * ====================================================================
-	 */
+    /** The original [Format.escapeStrategy]: entity escape logic */
+    val escapeStrategy: EscapeStrategy
 
-	/** The 'current' accumulated indent */
-	private String[] levelIndent = new String[capacity];
+    /*
+     * ====================================================================
+     * The following values can be changed mid-way through the output, hence
+     * they are arrays.
+     * ====================================================================
+     */
 
-	/** The 'current' End-Of-Line */
-	private String[] levelEOL = new String[capacity];
+    /** The 'current' accumulated indent */
+    private var levelIndents: Array<String?> = arrayOfNulls(capacity)
 
-	/** The padding to put between content items */
-	private String[] levelEOLIndent = new String[capacity];
-	
-	/** The padding to put after the last item (typically one less indent) */
-	private String[] termEOLIndent  = new String[capacity];
-	
-	/**
-	 * Whether TrAX output escaping disabling/enabling PIs are ignored or
-	 * processed - default is <code>false</code>
-	 */
-	private boolean[] ignoreTrAXEscapingPIs = new boolean[capacity];
+    /** The 'current' End-Of-Line */
+    private var levelEOLs: Array<String?> = arrayOfNulls(capacity)
 
-	/** text handling mode */
-	private TextMode[] mode = new TextMode[capacity];
+    /** The padding to put between content items */
+    private var levelEOLIndents: Array<String?> = arrayOfNulls(capacity)
 
-	/** escape Output logic - can be changed by */
-	private boolean[] escapeOutput = new boolean[capacity];
+    /** The padding to put after the last item (typically one less indent) */
+    private var termEOLIndents: Array<String?> = arrayOfNulls(capacity)
 
-	/**
-	 * Creates a new FormatStack seeded with the specified Format
-	 * 
-	 * @param format
-	 *        the Format instance to seed the stack with.
-	 */
-	public FormatStack(Format format) {
-		indent = format.getIndent();
-		lineSeparator = format.getLineSeparator();
+    /**
+     * Whether TrAX output escaping disabling/enabling PIs are ignored or
+     * processed - default is `false`
+     */
+    private var ignoreTrAXEscapingPIsStack = BooleanArray(capacity)
 
-		encoding = format.getEncoding();
-		omitDeclaration = format.getOmitDeclaration();
-		omitEncoding = format.getOmitEncoding();
-		expandEmptyElements = format.getExpandEmptyElements();
-		escapeStrategy = format.getEscapeStrategy();
-		defaultMode = format.getTextMode();
-		specifiedAttributesOnly = format.isSpecifiedAttributesOnly();
+    /** text handling mode */
+    private var modes: Array<TextMode?> = arrayOfNulls(capacity)
 
-        mode[depth] = format.getTextMode();
-        if (mode[depth] == TextMode.PRESERVE) {
+    /** escape Output logic - can be changed by */
+    private var escapeOutputs = BooleanArray(capacity)
+
+    init {
+        indent = format.indent
+        lineSeparator = format.lineSeparator
+
+        encoding = format.encoding
+        isOmitDeclaration = format.omitDeclaration
+        isOmitEncoding = format.omitEncoding
+        isExpandEmptyElements = format.expandEmptyElements
+        escapeStrategy = format.escapeStrategy
+        defaultMode = format.textMode
+        isSpecifiedAttributesOnly = format.isSpecifiedAttributesOnly
+
+        modes[depth] = format.textMode
+        if (modes[depth] == TextMode.PRESERVE) {
             // undo any special indenting and end-of-line management:
-            levelIndent[depth] = null;
-            levelEOL[depth] = null;
-            levelEOLIndent[depth] = null;
-            termEOLIndent[depth] = null;
+            levelIndents[depth] = null
+            levelEOLs[depth] = null
+            levelEOLIndents[depth] = null
+            termEOLIndents[depth] = null
         } else {
-            levelIndent[depth] = format.getIndent() == null
-                    ? null : "";
-            levelEOL[depth] = format.getLineSeparator();
-            levelEOLIndent[depth] = levelIndent[depth] == null ?  
-                    null : levelEOL[depth];
-            termEOLIndent[depth] = levelEOLIndent[depth];
-            
+            levelIndents[depth] = if (format.indent == null) null else ""
+            levelEOLs[depth] = format.lineSeparator
+            levelEOLIndents[depth] = if (levelIndents[depth] == null) null else levelEOLs[depth]
+            termEOLIndents[depth] = levelEOLIndents[depth]
         }
-		ignoreTrAXEscapingPIs[depth] = format.getIgnoreTrAXEscapingPIs();
-		escapeOutput[depth] = true;
-	}
+        ignoreTrAXEscapingPIsStack[depth] = format.ignoreTrAXEscapingPIs
+        escapeOutputs[depth] = true
+    }
 
-	/**
-	 * If the indent strategy changes part way through a stack, we need to
-	 * clear the previously calculated reusable 'lower' levels of the stack.
-	 */
-	private final void resetReusableIndents() {
-		int d = depth + 1;
-		while (d < levelIndent.length && levelIndent[d] != null) {
-			// all subsequent forays in to lower levels will need to be redone
-			levelIndent[d] = null;
-			d++;
-		}
-	}
+    /**
+     * If the indent strategy changes part way through a stack, we need to
+     * clear the previously calculated reusable 'lower' levels of the stack.
+     */
+    private fun resetReusableIndents() {
+        var d = depth + 1
+        while (d < levelIndents.size && levelIndents[d] != null) {
+            // all subsequent forays in to lower levels will need to be redone
+            levelIndents[d] = null
+            d++
+        }
+    }
 
-	/**
-	 * @return the original {@link Format#getIndent()}, may be null
-	 */
-	public String getIndent() {
-		return indent;
-	}
+    /**
+     * The current depth's [Format.ignoreTrAXEscapingPIs]
+     * (settable for the current depth).
+     */
+    var isIgnoreTrAXEscapingPIs: Boolean
+        get() = ignoreTrAXEscapingPIsStack[depth]
+        set(ignoreTrAXEscapingPIs) {
+            this.ignoreTrAXEscapingPIsStack[depth] = ignoreTrAXEscapingPIs
+        }
 
-	/**
-	 * @return the original {@link Format#getLineSeparator()}
-	 */
-	public String getLineSeparator() {
-		return lineSeparator;
-	}
-	
-	/**
-	 * @return the original {@link Format#getEncoding()}
-	 */
-	public String getEncoding() {
-		return encoding;
-	}
+    /**
+     * The escapeOutput flag can be set or unset. When set, Element text and
+     * Attribute values are 'escaped' so that the output is valid XML. When
+     * unset, the Element text and Attribute values are not escaped.
+     * (The current depth's escapeOutput flag.)
+     */
+    var escapeOutput: Boolean
+        get() = escapeOutputs[depth]
+        set(escape) {
+            escapeOutputs[depth] = escape
+        }
 
-	/**
-	 * @return the original {@link Format#getOmitDeclaration()}
-	 */
-	public boolean isOmitDeclaration() {
-		return omitDeclaration;
-	}
-	
-	/**
-	 * Indicate whether only those Attributes specified in the XML
-	 * should be output.
-	 * @return true if only the specified Attributes should be output,
-	 *      false if those Attributes defaulted from the DTD or XML schema
-	 *      should be output too.
-	 */
-	public boolean isSpecifiedAttributesOnly() {
-		return specifiedAttributesOnly;
-	}
+    /**
+     * The current depth's accumulated/maintained indent, may be null.
+     * Setting it overrides the current depth's accumulated line indent.
+     */
+    var levelIndent: String?
+        get() = levelIndents[depth]
+        set(indent) {
+            this.levelIndents[depth] = indent
+            levelEOLIndents[depth] = if (indent == null || levelEOLs[depth] == null) null
+            else (levelEOLs[depth] + indent)
+            resetReusableIndents()
+        }
 
-	/**
-	 * @return the original {@link Format#getOmitEncoding()}
-	 */
-	public boolean isOmitEncoding() {
-		return omitEncoding;
-	}
+    /**
+     * Get the end-of-line indenting sequence for before the first item in an
+     * Element, as well as between subsequent items (but not after the last item):
+     * the String EOL sequence followed by an indent. Null if it should
+     * be ignored
+     */
+    val padBetween: String?
+        get() = levelEOLIndents[depth]
 
-	/**
-	 * @return the original {@link Format#getExpandEmptyElements()}
-	 */
-	public boolean isExpandEmptyElements() {
-		return expandEmptyElements;
-	}
+    /**
+     * Get the end-of-line indenting sequence for after the last item in an
+     * Element: the String EOL sequence followed by an indent. Null if it should
+     * be ignored
+     */
+    val padLast: String?
+        get() = termEOLIndents[depth]
 
-	/**
-	 * @return the original {@link Format#getEscapeStrategy()}
-	 */
-	public EscapeStrategy getEscapeStrategy() {
-		return escapeStrategy;
-	}
+    /**
+     * The current depth's End-Of-Line sequence, may be null.
+     * Setting it changes the current depth's End-Of-Line sequence.
+     */
+    var levelEOL: String?
+        get() = levelEOLs[depth]
+        set(newline) {
+            this.levelEOLs[depth] = newline
+            resetReusableIndents()
+        }
 
-	/**
-	 * @return the current depth's {@link Format#getIgnoreTrAXEscapingPIs()}
-	 */
-	public boolean isIgnoreTrAXEscapingPIs() {
-		return ignoreTrAXEscapingPIs[depth];
-	}
+    /**
+     * The current depth's [Format.textMode].
+     * Setting it changes the current level's TextMode.
+     */
+    var textMode: TextMode
+        get() = modes[depth]!!
+        set(mode) {
+            if (this.modes[depth] == mode) {
+                return
+            }
+            this.modes[depth] = mode
+            when (mode) {
+                TextMode.PRESERVE -> {
+                    levelEOLs[depth] = null
+                    levelIndents[depth] = null
+                    levelEOLIndents[depth] = null
+                    termEOLIndents[depth] = null
+                }
+                else -> {
+                    levelEOLs[depth] = lineSeparator
+                    if (indent == null || lineSeparator == null) {
+                        levelEOLIndents[depth] = null
+                        termEOLIndents[depth] = null
+                    } else {
+                        if (depth > 0) {
+                            val sb = StringBuilder(indent.length * depth)
+                            for (i in 1 until depth) {
+                                sb.append(indent)
+                            }
+                            // the start point was '1', so we are one indent
+                            // short, which is just right for the term....
+                            termEOLIndents[depth] = lineSeparator + sb.toString()
+                            // but we increase it once for the actual indent.
+                            sb.append(indent)
+                            levelIndents[depth] = sb.toString()
+                        } else {
+                            termEOLIndents[depth] = lineSeparator
+                            levelIndents[depth] = ""
+                        }
+                        levelEOLIndents[depth] = lineSeparator + levelIndents[depth]
+                    }
+                }
+            }
+            resetReusableIndents()
+        }
 
-	/**
-	 * Set the current depth's {@link Format#getIgnoreTrAXEscapingPIs()}
-	 * 
-	 * @param ignoreTrAXEscapingPIs
-	 *        the boolean value to set.
-	 */
-	public void setIgnoreTrAXEscapingPIs(boolean ignoreTrAXEscapingPIs) {
-		this.ignoreTrAXEscapingPIs[depth] = ignoreTrAXEscapingPIs;
-	}
+    /**
+     * Create a new depth level on the stack. The previous level's details
+     * are copied to this level, and the accumulated indent (if any) is
+     * indented further.
+     */
+    fun push() {
+        val prev = depth++
+        if (depth >= capacity) {
+            capacity *= 2
+            levelIndents = ArrayCopy.copyOf(levelIndents, capacity)
+            levelEOLs = ArrayCopy.copyOf(levelEOLs, capacity)
+            levelEOLIndents = ArrayCopy.copyOf(levelEOLIndents, capacity)
+            termEOLIndents = ArrayCopy.copyOf(termEOLIndents, capacity)
+            ignoreTrAXEscapingPIsStack = ArrayCopy.copyOf(ignoreTrAXEscapingPIsStack, capacity)
+            modes = ArrayCopy.copyOf(modes, capacity)
+            escapeOutputs = ArrayCopy.copyOf(escapeOutputs, capacity)
+        }
 
-	/**
-	 * The escapeOutput flag can be set or unset. When set, Element text and
-	 * Attribute values are 'escaped' so that the output is valid XML. When
-	 * unset, the Element text and Attribute values are not escaped.
-	 * 
-	 * @return the current depth's escapeOutput flag.
-	 */
-	public boolean getEscapeOutput() {
-		return escapeOutput[depth];
-	}
+        ignoreTrAXEscapingPIsStack[depth] = ignoreTrAXEscapingPIsStack[prev]
+        modes[depth] = modes[prev]
+        escapeOutputs[depth] = escapeOutputs[prev]
 
-	/**
-	 * The escapeOutput flag can be set or unset. When set, Element text and
-	 * Attribute values are 'escaped' so that the output is valid XML. When
-	 * unset, the Element text and Attribute values are not escaped.
-	 * 
-	 * @param escape
-	 *        what to set the current level's escapeOutput flag to.
-	 */
-	public void setEscapeOutput(boolean escape) {
-		escapeOutput[depth] = escape;
-	}
+        if (levelIndents[prev] == null || levelEOLs[prev] == null) {
+            levelIndents[depth] = null
+            levelEOLs[depth] = null
+            levelEOLIndents[depth] = null
+            termEOLIndents[depth] = null
+        } else if (levelIndents[depth] == null) {
+            // we need to build our level details ....
+            // cannot reuse previous ones.
+            levelEOLs[depth] = levelEOLs[prev]
+            termEOLIndents[depth] = levelEOLs[depth] + levelIndents[prev]
+            levelIndents[depth] = levelIndents[prev] + indent
+            levelEOLIndents[depth] = levelEOLs[depth] + levelIndents[depth]
+        }
+    }
 
-	/**
-	 * @return the TextMode that was originally set for this stack before
-	 *         any modifications.
-	 */
-	public TextMode getDefaultMode() {
-		return defaultMode;
-	}
-
-	/**
-	 * @return the current depth's accumulated/maintained indent, may be null
-	 */
-	public String getLevelIndent() {
-		return levelIndent[depth];
-	}
-
-	/**
-	 * Get the end-of-line indenting sequence for before the first item in an
-	 * Element, as well as between subsequent items (but not after the last item)
-	 * @return the String EOL sequence followed by an indent. Null if it should 
-	 * be ignored
-	 */
-	public String getPadBetween() {
-		return levelEOLIndent[depth];
-	}
-
-	/**
-	 * Get the end-of-line indenting sequence for after the last item in an
-	 * Element
-	 * @return the String EOL sequence followed by an indent. Null if it should 
-	 * be ignored
-	 */
-	public String getPadLast() {
-		return termEOLIndent[depth];
-	}
-	
-	/**
-	 * Override the current depth's accumulated line indent.
-	 * 
-	 * @param indent
-	 *        the indent to set.
-	 */
-	public void setLevelIndent(String indent) {
-		this.levelIndent[depth] = indent;
-		levelEOLIndent[depth] = (indent == null || levelEOL[depth] == null) ?  
-				null : (levelEOL[depth] + indent);
-		resetReusableIndents();
-	}
-
-	/**
-	 * @return the current depth's End-Of-Line sequence, may be null
-	 */
-	public String getLevelEOL() {
-		return levelEOL[depth];
-	}
-
-	/**
-	 * Set the current depth's End-Of-Line sequence
-	 * 
-	 * @param newline
-	 *        the new End-Of-Line sequence to set.
-	 */
-	public void setLevelEOL(String newline) {
-		this.levelEOL[depth] = newline;
-		resetReusableIndents();
-	}
-
-	/**
-	 * @return the current depth's {@link Format#getTextMode()}
-	 */
-	public TextMode getTextMode() {
-		return mode[depth];
-	}
-
-	/**
-	 * Change the current level's TextMode
-	 * 
-	 * @param mode
-	 *        the new mode to set.
-	 */
-	public void setTextMode(TextMode mode) {
-		if (this.mode[depth] == mode) {
-			return;
-		}
-		this.mode[depth] = mode;
-		switch (mode) {
-			case PRESERVE:
-				levelEOL[depth] = null;
-				levelIndent[depth] = null;
-				levelEOLIndent[depth] = null;
-				termEOLIndent[depth] = null;
-				break;
-			default:
-				levelEOL[depth] = lineSeparator;
-				if (indent == null || lineSeparator == null) {
-					levelEOLIndent[depth] = null;
-					termEOLIndent[depth] = null;
-				} else {
-					if (depth > 0) {
-						final StringBuilder sb = new StringBuilder(indent.length() * depth);
-						for (int i = 1; i < depth; i++) {
-							sb.append(indent);
-						}
-						// the start point was '1', so we are one indent
-						// short, which is just right for the term....
-						termEOLIndent[depth] = lineSeparator + sb.toString();
-						// but we increase it once for the actual indent.
-						sb.append(indent);
-						levelIndent[depth] = sb.toString();
-					} else {
-						termEOLIndent[depth] = lineSeparator; 
-						levelIndent[depth] = "";
-					}
-					levelEOLIndent[depth] = lineSeparator + levelIndent[depth];
-				}
-		}
-		resetReusableIndents();
-	}
-
-	/**
-	 * Create a new depth level on the stack. The previous level's details
-	 * are copied to this level, and the accumulated indent (if any) is
-	 * indented further.
-	 */
-	public void push() {
-		final int prev = depth++;
-		if (depth >= capacity) {
-			capacity *= 2;
-			levelIndent = ArrayCopy.copyOf(levelIndent, capacity);
-			levelEOL = ArrayCopy.copyOf(levelEOL, capacity);
-			levelEOLIndent = ArrayCopy.copyOf(levelEOLIndent, capacity);
-			termEOLIndent = ArrayCopy.copyOf(termEOLIndent, capacity);
-			ignoreTrAXEscapingPIs = ArrayCopy.copyOf(ignoreTrAXEscapingPIs, capacity);
-			mode = ArrayCopy.copyOf(mode, capacity);
-			escapeOutput = ArrayCopy.copyOf(escapeOutput, capacity);
-		}
-		
-		ignoreTrAXEscapingPIs[depth] = ignoreTrAXEscapingPIs[prev];
-		mode[depth] = mode[prev];
-		escapeOutput[depth] = escapeOutput[prev];
-		
-		if (levelIndent[prev] == null || levelEOL[prev] == null) {
-			levelIndent[depth] = null;
-			levelEOL[depth] = null;
-			levelEOLIndent[depth] = null;
-			termEOLIndent[depth] = null;
-		} else if (levelIndent[depth] == null) {
-			// we need to build our level details ....
-			// cannot reuse previous ones.
-			levelEOL[depth] = levelEOL[prev];
-			termEOLIndent[depth] = levelEOL[depth] + levelIndent[prev];
-			levelIndent[depth] = levelIndent[prev] + indent;
-			levelEOLIndent[depth] = levelEOL[depth] + levelIndent[depth];
-		}
-	}
-
-	/**
-	 * Move back a level on the stack.
-	 */
-	public void pop() {
-		// no need to clear previously used members in the stack.
-		// the stack is short-lived, and does not create new instances for
-		// the depth levels, in other words, it does not affect GC and does
-		// not save memory to clear the stack.
-		depth--;
-	}
-
+    /**
+     * Move back a level on the stack.
+     */
+    fun pop() {
+        // no need to clear previously used members in the stack.
+        // the stack is short-lived, and does not create new instances for
+        // the depth levels, in other words, it does not affect GC and does
+        // not save memory to clear the stack.
+        depth--
+    }
 }

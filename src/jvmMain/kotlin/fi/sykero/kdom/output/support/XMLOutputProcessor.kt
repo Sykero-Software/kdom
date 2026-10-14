@@ -52,44 +52,43 @@
 
  Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
 
+ Kotlin Multiplatform translation for kdom (fi.sykero.kdom), 2026, Sykerö Software.
+
  */
+package fi.sykero.kdom.output.support
 
-package fi.sykero.kdom.output.support;
-
-import java.io.IOException;
-import java.io.Writer;
-import java.util.List;
-
-import fi.sykero.kdom.Attribute;
-import fi.sykero.kdom.CDATA;
-import fi.sykero.kdom.Comment;
-import fi.sykero.kdom.Content;
-import fi.sykero.kdom.DocType;
-import fi.sykero.kdom.Document;
-import fi.sykero.kdom.Element;
-import fi.sykero.kdom.EntityRef;
-import fi.sykero.kdom.ProcessingInstruction;
-import fi.sykero.kdom.Text;
-import fi.sykero.kdom.output.Format;
-import fi.sykero.kdom.output.XMLOutputter;
+import fi.sykero.kdom.Attribute
+import fi.sykero.kdom.CDATA
+import fi.sykero.kdom.Comment
+import fi.sykero.kdom.Content
+import fi.sykero.kdom.DocType
+import fi.sykero.kdom.Document
+import fi.sykero.kdom.Element
+import fi.sykero.kdom.EntityRef
+import fi.sykero.kdom.ProcessingInstruction
+import fi.sykero.kdom.Text
+import fi.sykero.kdom.output.Format
+import fi.sykero.kdom.output.XMLOutputter
+import java.io.IOException
+import java.io.Writer
 
 /**
- * This interface provides a base support for the {@link XMLOutputter}.
- * <p>
+ * This interface provides a base support for the [XMLOutputter].
+ *
  * People who want to create a custom XMLOutputProcessor for XMLOutputter are
  * able to implement this interface with the following notes and restrictions:
  * <ol>
- * <li>The XMLOutputter will call one, and only one of the <code>process(Writer,Format,*)</code> methods each
+ * <li>The XMLOutputter will call one, and only one of the `process(Writer,Format,*)` methods each
  * time the XMLOutputter is requested to output some JDOM content. It is thus
- * safe to assume that a <code>process(Writer,Format,*)</code> method can set up any
+ * safe to assume that a `process(Writer,Format,*)` method can set up any
  * infrastructure needed to process the content, and that the XMLOutputter will
- * not re-call that method, or some other <code>process(Writer,Format,*)</code> method for the same output
+ * not re-call that method, or some other `process(Writer,Format,*)` method for the same output
  * sequence.
  * <li>The process methods should be thread-safe and reentrant: The same
- * <code>process(Writer,Format,*)</code> method may (will) be called concurrently from different threads.
+ * `process(Writer,Format,*)` method may (will) be called concurrently from different threads.
  * </ol>
- * <p>
- * The {@link AbstractXMLOutputProcessor} class is a full implementation of this
+ *
+ * The [AbstractXMLOutputProcessor] class is a full implementation of this
  * interface and is fully customisable. People who want a custom XMLOutputter
  * are encouraged to extend the AbstractXMLOutputProcessor rather than do a full
  * re-implementation of this interface.
@@ -99,163 +98,170 @@ import fi.sykero.kdom.output.XMLOutputter;
  * @since JDOM2
  * @author Rolf Lear
  */
-public interface XMLOutputProcessor {
+interface XMLOutputProcessor {
 
-	/**
-	 * This will print the <code>{@link Document}</code> to the given Writer.
-	 * <p>
-	 * Warning: using your own Writer may cause the outputter's preferred
-	 * character encoding to be ignored. If you use encodings other than UTF-8,
-	 * we recommend using the method that takes an OutputStream instead.
-	 * </p>
-	 * 
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @param format
-	 *        <code>Format</code> instance specifying output style
-	 * @param doc
-	 *        <code>Document</code> to format.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the input content is null
-	 */
-	public abstract void process(Writer out, Format format, Document doc) throws IOException;
+    /**
+     * This will print the `[Document]` to the given Writer.
+     *
+     * Warning: using your own Writer may cause the outputter's preferred
+     * character encoding to be ignored. If you use encodings other than UTF-8,
+     * we recommend using the method that takes an OutputStream instead.
+     *
+     * 
+     * @param out
+     *        `Writer` to use.
+     * @param format
+     *        `Format` instance specifying output style
+     * @param doc
+     *        `Document` to format.
+     * @throws IOException
+     *         if there's any problem writing.
+     * @throws NullPointerException
+     *         if the input content is null
+     */
+    @Throws(IOException::class)
+    fun process(out: Writer, format: Format, doc: Document)
 
-	/**
-	 * Print out the <code>{@link DocType}</code>.
-	 * 
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @param format
-	 *        <code>Format</code> instance specifying output style
-	 * @param doctype
-	 *        <code>DocType</code> to output.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the input content is null
-	 */
-	public abstract void process(Writer out, Format format, DocType doctype) throws IOException;
+    /**
+     * Print out the `[DocType]`.
+     * 
+     * @param out
+     *        `Writer` to use.
+     * @param format
+     *        `Format` instance specifying output style
+     * @param doctype
+     *        `DocType` to output.
+     * @throws IOException
+     *         if there's any problem writing.
+     * @throws NullPointerException
+     *         if the input content is null
+     */
+    @Throws(IOException::class)
+    fun process(out: Writer, format: Format, doctype: DocType)
 
-	/**
-	 * Print out an <code>{@link Element}</code>, including its
-	 * <code>{@link Attribute}</code>s, and all contained (child) elements, etc.
-	 * 
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @param format
-	 *        <code>Format</code> instance specifying output style
-	 * @param element
-	 *        <code>Element</code> to output.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the input content is null
-	 */
-	public abstract void process(Writer out, Format format, Element element) throws IOException;
+    /**
+     * Print out an `[Element]`, including its
+     * `[Attribute]`s, and all contained (child) elements, etc.
+     * 
+     * @param out
+     *        `Writer` to use.
+     * @param format
+     *        `Format` instance specifying output style
+     * @param element
+     *        `Element` to output.
+     * @throws IOException
+     *         if there's any problem writing.
+     * @throws NullPointerException
+     *         if the input content is null
+     */
+    @Throws(IOException::class)
+    fun process(out: Writer, format: Format, element: Element)
 
-	/**
-	 * This will handle printing out a list of nodes. This can be useful for
-	 * printing the content of an element that contains HTML, like
-	 * "&lt;description&gt;JDOM is &lt;b&gt;fun&gt;!&lt;/description&gt;".
-	 * 
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @param format
-	 *        <code>Format</code> instance specifying output style
-	 * @param list
-	 *        <code>List</code> of nodes.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the input list is null or contains null members
-	 * @throws ClassCastException
-	 *         if any of the list members are not {@link Content}
-	 */
-	public abstract void process(Writer out, Format format, List<? extends Content> list)
-			throws IOException;
+    /**
+     * This will handle printing out a list of nodes. This can be useful for
+     * printing the content of an element that contains HTML, like
+     * "&lt;description&gt;JDOM is &lt;b&gt;fun&gt;!&lt;/description&gt;".
+     * 
+     * @param out
+     *        `Writer` to use.
+     * @param format
+     *        `Format` instance specifying output style
+     * @param list
+     *        `List` of nodes.
+     * @throws IOException
+     *         if there's any problem writing.
+     * @throws NullPointerException
+     *         if the input list is null or contains null members
+     * @throws ClassCastException
+     *         if any of the list members are not [Content]
+     */
+    @Throws(IOException::class)
+    fun process(out: Writer, format: Format, list: List<Content>)
 
-	/**
-	 * Print out a <code>{@link CDATA}</code> node.
-	 * 
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @param format
-	 *        <code>Format</code> instance specifying output style
-	 * @param cdata
-	 *        <code>CDATA</code> to output.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the input content is null
-	 */
-	public abstract void process(Writer out, Format format, CDATA cdata) throws IOException;
+    /**
+     * Print out a `[CDATA]` node.
+     * 
+     * @param out
+     *        `Writer` to use.
+     * @param format
+     *        `Format` instance specifying output style
+     * @param cdata
+     *        `CDATA` to output.
+     * @throws IOException
+     *         if there's any problem writing.
+     * @throws NullPointerException
+     *         if the input content is null
+     */
+    @Throws(IOException::class)
+    fun process(out: Writer, format: Format, cdata: CDATA)
 
-	/**
-	 * Print out a <code>{@link Text}</code> node. Performs the necessary entity
-	 * escaping and whitespace stripping.
-	 * 
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @param format
-	 *        <code>Format</code> instance specifying output style
-	 * @param text
-	 *        <code>Text</code> to output.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the input content is null
-	 */
-	public abstract void process(Writer out, Format format, Text text) throws IOException;
+    /**
+     * Print out a `[Text]` node. Performs the necessary entity
+     * escaping and whitespace stripping.
+     * 
+     * @param out
+     *        `Writer` to use.
+     * @param format
+     *        `Format` instance specifying output style
+     * @param text
+     *        `Text` to output.
+     * @throws IOException
+     *         if there's any problem writing.
+     * @throws NullPointerException
+     *         if the input content is null
+     */
+    @Throws(IOException::class)
+    fun process(out: Writer, format: Format, text: Text)
 
-	/**
-	 * Print out a <code>{@link Comment}</code>.
-	 * 
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @param format
-	 *        <code>Format</code> instance specifying output style
-	 * @param comment
-	 *        <code>Comment</code> to output.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the input content is null
-	 */
-	public abstract void process(Writer out, Format format, Comment comment) throws IOException;
+    /**
+     * Print out a `[Comment]`.
+     * 
+     * @param out
+     *        `Writer` to use.
+     * @param format
+     *        `Format` instance specifying output style
+     * @param comment
+     *        `Comment` to output.
+     * @throws IOException
+     *         if there's any problem writing.
+     * @throws NullPointerException
+     *         if the input content is null
+     */
+    @Throws(IOException::class)
+    fun process(out: Writer, format: Format, comment: Comment)
 
-	/**
-	 * Print out a <code>{@link ProcessingInstruction}</code>.
-	 * 
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @param format
-	 *        <code>Format</code> instance specifying output style
-	 * @param pi
-	 *        <code>ProcessingInstruction</code> to output.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the input content is null
-	 */
-	public abstract void process(Writer out, Format format, ProcessingInstruction pi)
-			throws IOException;
+    /**
+     * Print out a `[ProcessingInstruction]`.
+     * 
+     * @param out
+     *        `Writer` to use.
+     * @param format
+     *        `Format` instance specifying output style
+     * @param pi
+     *        `ProcessingInstruction` to output.
+     * @throws IOException
+     *         if there's any problem writing.
+     * @throws NullPointerException
+     *         if the input content is null
+     */
+    @Throws(IOException::class)
+    fun process(out: Writer, format: Format, pi: ProcessingInstruction)
 
-	/**
-	 * Print out a <code>{@link EntityRef}</code>.
-	 * 
-	 * @param out
-	 *        <code>Writer</code> to use.
-	 * @param format
-	 *        <code>Format</code> instance specifying output style
-	 * @param entity
-	 *        <code>EntityRef</code> to output.
-	 * @throws IOException
-	 *         if there's any problem writing.
-	 * @throws NullPointerException
-	 *         if the input content is null
-	 */
-	public abstract void process(Writer out, Format format, EntityRef entity) throws IOException;
+    /**
+     * Print out a `[EntityRef]`.
+     * 
+     * @param out
+     *        `Writer` to use.
+     * @param format
+     *        `Format` instance specifying output style
+     * @param entity
+     *        `EntityRef` to output.
+     * @throws IOException
+     *         if there's any problem writing.
+     * @throws NullPointerException
+     *         if the input content is null
+     */
+    @Throws(IOException::class)
+    fun process(out: Writer, format: Format, entity: EntityRef)
 
 }
