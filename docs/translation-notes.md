@@ -74,7 +74,7 @@ Each parse goes through a private placeholder `parseWithKdomBuilder(String)` in 
 
 ## Baseline
 
-`:kdom:jvmTest` on the JVM after Task 3: 40 test classes, 687 tests, 10 skipped (8 K5 `@Ignore` + 2 upstream), 0 failures,
+`:kdom:jvmTest` on the JVM after Task 3: 40 test classes, 704 tests, 10 skipped (8 K5 `@Ignore` + 2 upstream), 0 failures,
 0 errors. This number may only grow; the 8 K5 ignores return in Task 9.
 
 ### Import notes (fix round 1)
