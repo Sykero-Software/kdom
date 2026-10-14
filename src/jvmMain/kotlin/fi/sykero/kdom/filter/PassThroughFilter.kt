@@ -1,6 +1,6 @@
 /*-- 
 
-Copyright (C) 2012 Jason Hunter & Brett McLaughlin.
+ Copyright (C) 2000-2012 Jason Hunter & Brett McLaughlin.
  All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -54,46 +54,46 @@ Copyright (C) 2012 Jason Hunter & Brett McLaughlin.
 
  */
 
-package fi.sykero.kdom.filter;
+package fi.sykero.kdom.filter
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.RandomAccess;
+import java.util.ArrayList
+import java.util.Collections
+import java.util.RandomAccess
 
 /**
  * A filter that does not actual filtering.
- * This is made available through {@link Filters#fpassthrough()}.
- * 
+ * This is made available through [Filters.fpassthrough].
+ *
  * @author Rolf Lear
  *
  */
-final class PassThroughFilter extends AbstractFilter<Object> {
-	/**
-	 * JDOM2 Serialization: Default mechanism
-	 */
-	private static final long serialVersionUID = 200L;
+internal class PassThroughFilter : AbstractFilter<Any>() {
 
+    override fun filter(content: Any?): Any? {
+        return content
+    }
 
-	@Override
-	public Object filter(Object content) {
-		return content;
-	}
-	
-	@Override
-	public List<Object> filter(List<?> content) {
-		if (content == null || content.isEmpty()) {
-			return Collections.emptyList();
-		}
-		if (content instanceof RandomAccess) {
-			return Collections.unmodifiableList(content);
-		}
-		ArrayList<Object> ret = new ArrayList<Object>();
-		for (Iterator<?> it = content.iterator(); it.hasNext(); ) {
-			ret.add(it.next());
-		}
-		return Collections.unmodifiableList(ret);
-	}
+    @Suppress("UNCHECKED_CAST")
+    override fun filter(content: List<*>?): List<Any> {
+        if (content == null || content.isEmpty()) {
+            return Collections.emptyList()
+        }
+        if (content is RandomAccess) {
+            return Collections.unmodifiableList(content as List<Any>)
+        }
+        val ret = ArrayList<Any>()
+        val it = content.iterator()
+        while (it.hasNext()) {
+            ret.add(it.next() as Any)
+        }
+        return Collections.unmodifiableList(ret)
+    }
+
+    private companion object {
+        /**
+         * JDOM2 Serialization: Default mechanism
+         */
+        private const val serialVersionUID = 200L
+    }
 
 }

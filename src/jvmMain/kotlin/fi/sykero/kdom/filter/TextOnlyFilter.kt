@@ -1,6 +1,6 @@
 /*-- 
 
-Copyright (C) 2012 Jason Hunter & Brett McLaughlin.
+ Copyright (C) 2000-2012 Jason Hunter & Brett McLaughlin.
  All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -54,44 +54,43 @@ Copyright (C) 2012 Jason Hunter & Brett McLaughlin.
 
  */
 
-package fi.sykero.kdom.filter;
+package fi.sykero.kdom.filter
 
-import fi.sykero.kdom.Text;
-import fi.sykero.kdom.Content.CType;
+import fi.sykero.kdom.Content.CType
+import fi.sykero.kdom.Text
 
 /**
  * A filter that matches Text, but not CDATA content.
- * This filter is made accessible through {@link Filters#textOnly()}
- * 
+ * This filter is made accessible through [Filters.textOnly]
+ *
  * @author Rolf Lear
  *
  */
-final class TextOnlyFilter extends AbstractFilter<Text> {
+internal class TextOnlyFilter : AbstractFilter<Text>() {
 
-	/**
-	 * JDOM2 Serialization: Default mechanism
-	 */
-	private static final long serialVersionUID = 200L;
+    override fun filter(content: Any?): Text? {
+        if (content is Text) {
+            val txt: Text = content
+            if (txt.cType == CType.Text) {
+                return txt
+            }
+        }
+        return null
+    }
 
-	@Override
-	public Text filter(Object content) {
-		if (content instanceof Text) {
-			final Text txt = (Text)content;
-			if (txt.getCType() == CType.Text) {
-				return txt;
-			}
-		}
-		return null;
-	}
-	
-	@Override
-	public int hashCode() {
-		return this.getClass().hashCode();
-	}
+    override fun hashCode(): Int {
+        return this.javaClass.hashCode()
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		return obj instanceof TextOnlyFilter;
-	}
-	
+    override fun equals(other: Any?): Boolean {
+        return other is TextOnlyFilter
+    }
+
+    private companion object {
+        /**
+         * JDOM2 Serialization: Default mechanism
+         */
+        private const val serialVersionUID = 200L
+    }
+
 }

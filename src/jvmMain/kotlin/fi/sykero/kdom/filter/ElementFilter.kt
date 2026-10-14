@@ -1,4 +1,4 @@
-/*--
+/*-- 
 
  Copyright (C) 2000-2012 Jason Hunter & Brett McLaughlin.
  All rights reserved.
@@ -11,8 +11,8 @@
     notice, this list of conditions, and the following disclaimer.
 
  2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions, and the disclaimer that follows
-    these conditions in the documentation and/or other materials
+    notice, this list of conditions, and the disclaimer that follows 
+    these conditions in the documentation and/or other materials 
     provided with the distribution.
 
  3. The name "JDOM" must not be used to endorse or promote products
@@ -23,12 +23,12 @@
     may "JDOM" appear in their name, without prior written permission
     from the JDOM Project Management <request_AT_jdom_DOT_org>.
 
- In addition, we request (but do not require) that you include in the
- end-user documentation provided with the redistribution and/or in the
+ In addition, we request (but do not require) that you include in the 
+ end-user documentation provided with the redistribution and/or in the 
  software itself an acknowledgement equivalent to the following:
      "This product includes software developed by the
       JDOM Project (http://www.jdom.org/)."
- Alternatively, the acknowledgment may be graphical using the logos
+ Alternatively, the acknowledgment may be graphical using the logos 
  available at http://www.jdom.org/images/logos.
 
  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
@@ -44,8 +44,8 @@
  OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  SUCH DAMAGE.
 
- This software consists of voluntary contributions made by many
- individuals on behalf of the JDOM Project and was originally
+ This software consists of voluntary contributions made by many 
+ individuals on behalf of the JDOM Project and was originally 
  created by Jason Hunter <jhunter_AT_jdom_DOT_org> and
  Brett McLaughlin <brett_AT_jdom_DOT_org>.  For more information
  on the JDOM Project, please see <http://www.jdom.org/>.
@@ -54,127 +54,124 @@
 
  */
 
-package fi.sykero.kdom.filter;
+package fi.sykero.kdom.filter
 
-import fi.sykero.kdom.Element;
-import fi.sykero.kdom.Namespace;
+import fi.sykero.kdom.Element
+import fi.sykero.kdom.Namespace
 
 /**
- * A Filter that only matches {@link fi.sykero.kdom.Element} objects.
+ * A Filter that only matches [fi.sykero.kdom.Element] objects.
  *
  * @author  Jools Enticknap
  * @author  Bradley S. Huffman
  */
-public class ElementFilter extends AbstractFilter<Element> {
+open class ElementFilter : AbstractFilter<Element> {
 
-	/**
-	 * JDOM2 Serialization: Default mechanism
-	 */
-	private static final long serialVersionUID = 200L;
+    /** The element name  */
+    private var name: String? = null
 
-	/** The element name */
-	private String name;
+    /** The element namespace  */
+    private var namespace: Namespace? = null
 
-	/** The element namespace */
-	private Namespace namespace;
+    /**
+     * Select only the Elements.
+     */
+    constructor() : super()
 
-	/**
-	 * Select only the Elements.
-	 */
-	public ElementFilter() {}
+    /**
+     * Select only the Elements with the supplied name in any Namespace.
+     *
+     * @param name   The name of the Element.
+     */
+    constructor(name: String?) : super() {
+        this.name = name
+    }
 
-	/**
-	 * Select only the Elements with the supplied name in any Namespace.
-	 *
-	 * @param name   The name of the Element.
-	 */
-	public ElementFilter(String name) {
-		this.name   = name;
-	}
+    /**
+     * Select only the Elements with the supplied Namespace.
+     *
+     * @param namespace The namespace the Element lives in.
+     */
+    constructor(namespace: Namespace?) : super() {
+        this.namespace = namespace
+    }
 
-	/**
-	 * Select only the Elements with the supplied Namespace.
-	 *
-	 * @param namespace The namespace the Element lives in.
-	 */
-	public ElementFilter(Namespace namespace) {
-		this.namespace = namespace;
-	}
+    /**
+     * Select only the Elements with the supplied name and Namespace.
+     *
+     * @param name   The name of the Element.
+     * @param namespace The namespace the Element lives in.
+     */
+    constructor(name: String?, namespace: Namespace?) : super() {
+        this.name = name
+        this.namespace = namespace
+    }
 
-	/**
-	 * Select only the Elements with the supplied name and Namespace.
-	 *
-	 * @param name   The name of the Element.
-	 * @param namespace The namespace the Element lives in.
-	 */
-	public ElementFilter(String name, Namespace namespace) {
-		this.name   = name;
-		this.namespace = namespace;
-	}
+    /**
+     * Check to see if the object matches a predefined set of rules.
+     *
+     * @param content The object to verify.
+     * @return `true` if the objected matched a predfined
+     *           set of rules.
+     */
+    override fun filter(content: Any?): Element? {
+        if (content is Element) {
+            val el: Element = content
+            if (name == null) {
+                if (namespace == null) {
+                    return el
+                }
+                return if (namespace == el.namespace) el else null
+            }
+            if (name != el.name) {
+                return null
+            }
+            if (namespace == null) {
+                return el
+            }
+            return if (namespace == el.namespace) el else null
+        }
+        return null
+    }
 
-	/**
-	 * Check to see if the object matches a predefined set of rules.
-	 *
-	 * @param content The object to verify.
-	 * @return <code>true</code> if the objected matched a predfined
-	 *           set of rules.
-	 */
-	@Override
-	public Element filter(Object content) {
-		if (content instanceof Element) {
-			Element el = (Element) content;
-			if (name == null) {
-				if (namespace == null) {
-					return el;
-				}
-				return namespace.equals(el.getNamespace()) ? el : null;
-			}
-			if (!name.equals(el.getName())) {
-				return null;
-			}
-			if (namespace == null) {
-				return el;
-			}
-			return namespace.equals(el.getNamespace()) ? el : null;
-		}
-		return null;
-	}
+    /**
+     * Returns whether the two filters are equivalent (i&#46;e&#46; the
+     * matching names and namespace are equivalent).
+     *
+     * @param  other                   the object to compare against
+     * @return                     whether the two filters are equal
+     */
+    override fun equals(other: Any?): Boolean {
+        // Generated by IntelliJ
+        if (this === other) return true
+        if (other !is ElementFilter) return false
 
-	/**
-	 * Returns whether the two filters are equivalent (i&#46;e&#46; the
-	 * matching names and namespace are equivalent).
-	 *
-	 * @param  obj                   the object to compare against
-	 * @return                     whether the two filters are equal
-	 */
-	@Override
-	public boolean equals(Object obj) {
-		// Generated by IntelliJ
-		if (this == obj) return true;
-		if (!(obj instanceof ElementFilter)) return false;
+        val filter: ElementFilter = other
 
-		final ElementFilter filter = (ElementFilter) obj;
+        if (if (name != null) name != filter.name else filter.name != null) return false
+        if (if (namespace != null) namespace != filter.namespace else filter.namespace != null) return false
 
-		if (name != null ? !name.equals(filter.name) : filter.name != null) return false;
-		if (namespace != null ? !namespace.equals(filter.namespace) : filter.namespace != null) return false;
+        return true
+    }
 
-		return true;
-	}
+    override fun hashCode(): Int {
+        // Generated by IntelliJ
+        var result: Int
+        result = (if (name != null) name.hashCode() else 0)
+        result = 29 * result + (if (namespace != null) namespace.hashCode() else 0)
+        return result
+    }
 
-	@Override
-	public int hashCode() {
-		// Generated by IntelliJ
-		int result;
-		result = (name != null ? name.hashCode() : 0);
-		result = 29 * result + (namespace != null ? namespace.hashCode() : 0);
-		return result;
-	}
+    override fun toString(): String {
+        return "[ElementFilter: Name " + (if (name == null) "*any*" else name) +
+                " with Namespace " + namespace + "]"
+    }
 
-	@Override
-	public String toString() {
-		return "[ElementFilter: Name " + (name == null ? "*any*" : name) +
-				" with Namespace " + namespace + "]";
-	}
-
+    private companion object {
+        /**
+         * JDOM2 Serialization: Default mechanism
+         */
+        private const val serialVersionUID = 200L
+    }
 
 }

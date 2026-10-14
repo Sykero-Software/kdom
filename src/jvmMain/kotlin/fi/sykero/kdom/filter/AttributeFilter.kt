@@ -1,6 +1,6 @@
-/*--
+/*-- 
 
- Copyright (C) 2011-2012 Jason Hunter & Brett McLaughlin.
+ Copyright (C) 2000-2012 Jason Hunter & Brett McLaughlin.
  All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -11,8 +11,8 @@
     notice, this list of conditions, and the following disclaimer.
 
  2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions, and the disclaimer that follows
-    these conditions in the documentation and/or other materials
+    notice, this list of conditions, and the disclaimer that follows 
+    these conditions in the documentation and/or other materials 
     provided with the distribution.
 
  3. The name "JDOM" must not be used to endorse or promote products
@@ -23,12 +23,12 @@
     may "JDOM" appear in their name, without prior written permission
     from the JDOM Project Management <request_AT_jdom_DOT_org>.
 
- In addition, we request (but do not require) that you include in the
- end-user documentation provided with the redistribution and/or in the
+ In addition, we request (but do not require) that you include in the 
+ end-user documentation provided with the redistribution and/or in the 
  software itself an acknowledgement equivalent to the following:
      "This product includes software developed by the
       JDOM Project (http://www.jdom.org/)."
- Alternatively, the acknowledgment may be graphical using the logos
+ Alternatively, the acknowledgment may be graphical using the logos 
  available at http://www.jdom.org/images/logos.
 
  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
@@ -44,8 +44,8 @@
  OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  SUCH DAMAGE.
 
- This software consists of voluntary contributions made by many
- individuals on behalf of the JDOM Project and was originally
+ This software consists of voluntary contributions made by many 
+ individuals on behalf of the JDOM Project and was originally 
  created by Jason Hunter <jhunter_AT_jdom_DOT_org> and
  Brett McLaughlin <brett_AT_jdom_DOT_org>.  For more information
  on the JDOM Project, please see <http://www.jdom.org/>.
@@ -54,120 +54,113 @@
 
  */
 
-package fi.sykero.kdom.filter;
+package fi.sykero.kdom.filter
 
-import fi.sykero.kdom.Attribute;
-import fi.sykero.kdom.Namespace;
+import fi.sykero.kdom.Attribute
+import fi.sykero.kdom.Namespace
 
 /**
- * A Filter that only matches {@link fi.sykero.kdom.Attribute} objects.
+ * A Filter that only matches [fi.sykero.kdom.Attribute] objects.
  *
  * @author  Rolf Lear
  */
-public class AttributeFilter extends AbstractFilter<Attribute> {
+open class AttributeFilter : AbstractFilter<Attribute> {
 
-	/**
-	 * JDOM2 Serialization: Default mechanism
-	 */
-	private static final long serialVersionUID = 200L;
+    /** The element name  */
+    private val name: String?
 
-	/** The element name */
-	private final String name;
+    /** The element namespace  */
+    private val namespace: Namespace?
 
-	/** The element namespace */
-	private final Namespace namespace;
+    /**
+     * Select only the Elements.
+     */
+    constructor() : this(null, null)
 
-	/**
-	 * Select only the Elements.
-	 */
-	public AttributeFilter() {
-		this(null,null);
-	}
+    /**
+     * Select only the Elements with the supplied name in any Namespace.
+     *
+     * @param name   The name of the Element.
+     */
+    constructor(name: String?) : this(name, null)
 
-	/**
-	 * Select only the Elements with the supplied name in any Namespace.
-	 *
-	 * @param name   The name of the Element.
-	 */
-	public AttributeFilter(String name) {
-		this(name, null);
-	}
+    /**
+     * Select only the Attributes with the supplied Namespace.
+     *
+     * @param namespace The namespace the Attribute lives in.
+     */
+    constructor(namespace: Namespace?) : this(null, namespace)
 
-	/**
-	 * Select only the Attributes with the supplied Namespace.
-	 *
-	 * @param namespace The namespace the Attribute lives in.
-	 */
-	public AttributeFilter(Namespace namespace) {
-		this(null, namespace);
-	}
+    /**
+     * Select only the Attributes with the supplied name and Namespace.
+     *
+     * @param name   The name of the Attribute.
+     * @param namespace The namespace the Attribute lives in.
+     */
+    constructor(name: String?, namespace: Namespace?) : super() {
+        this.name = name
+        this.namespace = namespace
+    }
 
-	/**
-	 * Select only the Attributes with the supplied name and Namespace.
-	 *
-	 * @param name   The name of the Attribute.
-	 * @param namespace The namespace the Attribute lives in.
-	 */
-	public AttributeFilter(String name, Namespace namespace) {
-		this.name   = name;
-		this.namespace = namespace;
-	}
+    /**
+     * Check to see if the Content matches a predefined set of rules.
+     *
+     * @param content The Content to verify.
+     * @return `true` if the objected matched a predfined
+     *           set of rules.
+     */
+    override fun filter(content: Any?): Attribute? {
+        if (content is Attribute) {
+            val att: Attribute = content
+            if (name == null) {
+                if (namespace == null) {
+                    return att
+                }
+                return if (namespace == att.namespace) att else null
+            }
+            if (name != att.name) {
+                return null
+            }
+            if (namespace == null) {
+                return att
+            }
+            return if (namespace == att.namespace) att else null
+        }
+        return null
+    }
 
-	/**
-	 * Check to see if the Content matches a predefined set of rules.
-	 *
-	 * @param content The Content to verify.
-	 * @return <code>true</code> if the objected matched a predfined
-	 *           set of rules.
-	 */
-	@Override
-	public Attribute filter(Object content) {
-		if (content instanceof Attribute) {
-			Attribute att = (Attribute) content;
-			if (name == null) {
-				if (namespace == null) {
-					return att;
-				}
-				return namespace.equals(att.getNamespace()) ? att : null;
-			}
-			if (!name.equals(att.getName())) {
-				return null;
-			}
-			if (namespace == null) {
-				return att;
-			}
-			return namespace.equals(att.getNamespace()) ? att : null;
-		}
-		return null;
-	}
+    /**
+     * Returns whether the two filters are equivalent (i&#46;e&#46; the
+     * matching names and namespace are equivalent).
+     *
+     * @param  other                   the object to compare against
+     * @return                     whether the two filters are equal
+     */
+    override fun equals(other: Any?): Boolean {
+        // Generated by IntelliJ
+        if (this === other) return true
+        if (other !is AttributeFilter) return false
 
-	/**
-	 * Returns whether the two filters are equivalent (i&#46;e&#46; the
-	 * matching names and namespace are equivalent).
-	 *
-	 * @param  obj                   the object to compare against
-	 * @return                     whether the two filters are equal
-	 */
-	@Override
-	public boolean equals(Object obj) {
-		// Generated by IntelliJ
-		if (this == obj) return true;
-		if (!(obj instanceof AttributeFilter)) return false;
+        val filter: AttributeFilter = other
 
-		final AttributeFilter filter = (AttributeFilter) obj;
+        if (if (name != null) name != filter.name else filter.name != null) return false
+        if (if (namespace != null) namespace != filter.namespace else filter.namespace != null) return false
 
-		if (name != null ? !name.equals(filter.name) : filter.name != null) return false;
-		if (namespace != null ? !namespace.equals(filter.namespace) : filter.namespace != null) return false;
+        return true
+    }
 
-		return true;
-	}
+    override fun hashCode(): Int {
+        var result: Int
+        result = (if (name != null) name.hashCode() else 0)
+        result = 29 * result + (if (namespace != null) namespace.hashCode() else 0)
+        return result
+    }
 
-	@Override
-	public int hashCode() {
-		int result;
-		result = (name != null ? name.hashCode() : 0);
-		result = 29 * result + (namespace != null ? namespace.hashCode() : 0);
-		return result;
-	}
+    private companion object {
+        /**
+         * JDOM2 Serialization: Default mechanism
+         */
+        private const val serialVersionUID = 200L
+    }
 
 }

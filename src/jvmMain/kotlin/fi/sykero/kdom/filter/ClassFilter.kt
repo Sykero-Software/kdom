@@ -1,6 +1,6 @@
 /*-- 
 
- Copyright (C) 2011-2012 Jason Hunter & Brett McLaughlin.
+ Copyright (C) 2000-2012 Jason Hunter & Brett McLaughlin.
  All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -54,56 +54,51 @@
 
  */
 
-package fi.sykero.kdom.filter;
+package fi.sykero.kdom.filter
 
 /**
  * Filter input according to the input class.
- * 
+ *
  * @author Rolf Lear
  *
  * @param <T> The generic type of the filtered data.
  */
-final class ClassFilter<T> extends AbstractFilter<T> {
+internal class ClassFilter<T : Any>
+/**
+ * Construct the new ClassFilter.
+ * @param tclass the class instance for the generic type.
+ */
+(
+    private val fclass: Class<out T>
+) : AbstractFilter<T>() {
 
-	/**
-	 * JDOM2 Serialization: Default mechanism
-	 */
-	private static final long serialVersionUID = 200L;
+    override fun filter(content: Any?): T? {
+        return if (fclass.isInstance(content)) fclass.cast(content) else null
+    }
 
-	private final Class<? extends T> fclass;
+    override fun toString(): String {
+        return "[ClassFilter: Class " + fclass.name + "]"
+    }
 
-	/**
-	 * Construct the new ClassFilter.
-	 * @param tclass the class instance for the generic type.
-	 */
-	public ClassFilter(Class<? extends T> tclass) {
-		fclass = tclass;
-	}
+    override fun equals(other: Any?): Boolean {
+        if (other === this) {
+            return true
+        }
+        if (other is ClassFilter<*>) {
+            return fclass == other.fclass
+        }
+        return false
+    }
 
-	@Override
-	public T filter(Object content) {
-		return fclass.isInstance(content) ? fclass.cast(content) : null;
-	}
-	
-	@Override
-	public String toString() {
-		return "[ClassFilter: Class " + fclass.getName() + "]";
-	}
-	
-	@Override
-	public boolean equals(Object obj) {
-		if (obj == this) {
-			return true;
-		}
-		if (obj instanceof ClassFilter<?>) {
-			return fclass.equals(((ClassFilter<?>)obj).fclass);
-		}
-		return false;
-	}
-	
-	@Override
-	public int hashCode() {
-		return fclass.hashCode();
-	}
+    override fun hashCode(): Int {
+        return fclass.hashCode()
+    }
+
+    private companion object {
+        /**
+         * JDOM2 Serialization: Default mechanism
+         */
+        private const val serialVersionUID = 200L
+    }
 
 }
