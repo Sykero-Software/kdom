@@ -279,7 +279,7 @@ New public API (`commonMain`): `fi.sykero.kdom.sax.{SAXException, SAXParseExcept
 `build(File)`: read fully, then parse; the stream is not closed; read errors are `IOException`). Internal: `TreeBuildingHandler`
 (jdom2 2.0.6.1 `SAXHandler` without the DTD parts), `LexicalEventHandler` (comment / CDATA events; there is no public
 `LexicalHandler`), `ParsedAttributes`, `SourceScanner`, `XmlSourceMask`, `XmlByteDecoder`. How the probes' requirements P1..P8
-are met: `docs/xmlutil-probes.md`. New files carry no licence header (like the other new kdom files, e.g. `internal/Chars.kt`).
+are met: `docs/xmlutil-probes.md`. New files carry no licence header (like the other new kdom files, e.g. `internal/Chars.kt`), except `TreeBuildingHandler`, a condensed port of jdom2's `input/sax/SAXHandler.java`, which carries that file's JDOM header and the translation line (M0 gate fix M1).
 
 Tree rules (as jdom2's `SAXBuilder`): adjacent character data is one `Text`; CDATA is a `CDATA` node; empty comments are
 dropped and an empty CDATA section is kept; jdom2's quirk that text directly before an *empty* CDATA section becomes that
