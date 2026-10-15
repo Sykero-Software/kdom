@@ -1,7 +1,33 @@
 # Translation notes
 
 Differences between kdom and jdom2 2.0.6.1. Every intended behavioural or API difference gets a test
-and a line here.
+and a line here. Historical Task 3-8 inventories below describe those checkpoints, not the current
+source layout or ignored-test count. The accepted parser dependency is xmlutil **1.0.2.1**; kdom remains
+independent of JSword/AndBible (stdlib + xmlutil in production common code).
+
+## Current compatibility inventory (Task 23 final documentation pass)
+
+The detailed sections below remain the record of exceptions; this index does not waive any of them.
+No claim of complete JDOM compatibility or Native execution follows from source compilation.
+
+| Boundary / difference | Evidence or explicit limit |
+|---|---|
+| Removed `SystemProperty`, line-separator override | `LineSeparatorTest.defaultIgnoresTheJdom2SystemProperty`; `DEFAULT` remains CRLF, platform `SYSTEM` is separate. |
+| Removed `Element.getXMLBaseURI()`; Java serialization markers/hooks/UIDs/proxy | Exact removals and removed test names are listed under Task 7 and "Removed test methods". These APIs have no replacement-equivalence test: their removal is intentional. Excluded factory, located, transform, DOM/StAX and XPath APIs were never part of the imported subset. |
+| Property plus fluent API, JVM acronym getters, parameterized getters/factories, getter checked throws | `PropertySyntaxTest`, `JDOMParseExceptionTest`, translated `TestAttribute` / `TestFormat` and the explicit "Property rule exceptions" inventory. Final/internal/protected visibility and synthetic JVM artifacts remain as listed under "API shape"; these are not general subclass API parity claims. |
+| Common `Appendable`, JVM OutputStream extensions, protected output hooks | `OutputDifferentialTest`, `OutputterDifferentialTest`, `TestXMLOutputProcessor`; `OutputStreamBindingTest` pins the PrintStream encoding/binding difference and `NullSetterTest` pins earlier JVM null-setter failures. |
+| Name-based escape strategy rather than arbitrary JDK charset lookup | `FormatEscapeStrategyTest`, adjusted `TestFormat.testCharsetEncodingEscapes` / `testIllegalEncodingEscapes`. |
+| Explicit clone copies; unknown subclass loses runtime subclass | `CloneTest` (including `subclassClonesToKdomClass`), translated tree clone tests. Raw constructor null assertions stay in JVM `RawInstanceTest`, `TestEntityRef`, `TestDocType`; Native use as non-null is undefined and is not pinned by a common test. |
+| Read-only views, namespace order, boxed class filters / whitespace | `CommonCollectionsTest.readOnlyViewsRejectMutation`, `namespacesInScopeOrderMatchesJdom2`, `CommonHelpersTest`; `TestPassThroughFilter` retains the Java mutation contract. The Kotlin mutable-cast distinction is documented below, not Native parity evidence. |
+| Live-list sorting | `CommonCollectionsTest.liveListSortOnJvm` covers the JVM override; Native generic `sortWith` is unsupported as detailed below. Use the explicit Element sorting methods. No Native runtime equivalence is claimed. |
+| Platform error class names and float/double grammar | JVM `CommonHelpersTest.boxedClassFilters` and translated attribute tests are bounded evidence; unusual Native numeric grammar and Native diagnostic-name parity remain unverified. |
+| Parser / strict and permissive DOCTYPE / byte encodings | `KdomBuilderTest`, `KdomBuilderDifferentialTest`, `SaxEventDifferentialTest`, `XmlEventParserProbeTest`, `DocTypeDifferentialTest`, `XmlByteDecoderDifferentialTest`. The "Remaining differences" list below keeps pre-scan timing, positions, XML 1.1, unsupported encodings/DTD declarations, tree-error wrapping and locator/chunking limits explicit. |
+| SAX-shaped tree replay and query axes (new APIs, not full SAX/XPath implementations) | `KdomEventProviderTest`, `KdomEventProviderDifferentialTest`, `AxesTest`, `AxesJaxenDifferentialTest`; detached-root, URI-name matching, ordering and lazy mutation rules remain explicit below. |
+
+The eight Task 3 builder-dependent ignores were re-enabled in Task 9. Current remaining upstream
+ignores are `TestProcessingInstruction.testIllegalAttnameC` / `testIllegalAttValueA`; historical
+baseline totals below are not a new Task 23 test run. Host `iosSimulatorArm64Test` runtime acceptance
+must be checked separately; Linux or iOS compilation alone does not pay that gate.
 
 ## Property rule exceptions
 
@@ -308,7 +334,7 @@ Remaining differences from a JAXP SAX parser / jdom2 `SAXBuilder` (all deliberat
   parameter-entity references and entities whose replacement text holds markup are rejected (jdom2/JDK accept them);
   relative system ids of declarations in the internal subset are kept as written (the JDK expands them against the
   working directory); internal-subset comments are kept in `DocType.internalSubset` and PIs are dropped (as jdom2 with that
-  configuration). **Task 18 note**: AndBible's `CommonUtils.useSaxBuilder` (EPUB and other non-Sword XML) constructs
+  configuration). **Task 18 note**: AndBible's `CommonUtils.useKdomBuilder` (EPUB and other non-Sword XML) constructs
   `KdomBuilder(allowDocType = true)`; JSword's `OSISFilter` (and every Sword-text parse) keeps the strict default.
 - **Errors found by the raw pre-scan are reported before any event** (illegal character, `<` in an attribute value, bad
   character reference, DOCTYPE, raw duplicate attribute, missing white space between attributes, `]]>` in text, unterminated
@@ -649,5 +675,8 @@ against jaxen (`AxesJaxenDifferentialTest`: every expression from every context 
 - **Corpus size (M4)**: the Task 12 corpus differential (`CorpusDifferentialTest`, `-Dkdom.corpus=.local/k5-corpus`) runs
   17,386 XML inputs (OSIS and the ThML chain stages); the 2,827 GBF inputs of the dump are skipped (GBF's filter builds its
   OSIS in code, there is nothing to parse), so the plan's "near 25,982" spike figure does not apply.
-- **Native execution (M3, waived by ruling R12)**: there is no linux_x64 Native smoke run in the container; Native test
-  execution is covered by the iOS CI job (`:kdom:iosSimulatorArm64Test`), whose reports are uploaded as an artifact.
+- **Native execution (M0 gate M3, ruling R12)**: the original gate waived the container linux_x64 smoke in favor of
+  required host iOS CI (`:kdom:iosSimulatorArm64Test`, reports uploaded as an artifact). The library now also declares
+  `linuxX64` with shared `nativeMain`/`nativeTest` actuals; target availability or compilation is not an executed-test
+  result. Task 23 does not assert a successful host runtime run; that acceptance gate remains owed until its reports
+  are read. This M0 gate label is distinct from the later JSword common-filter M3 implementation checkpoint.

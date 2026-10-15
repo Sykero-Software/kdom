@@ -2,12 +2,13 @@
 
 kdom (`fi.sykero.kdom`) is a Kotlin Multiplatform XML tree library: a translation of the subset of
 JDOM 2.0.6.1 that JSword and AndBible use, plus new code (an event-based parser and builder on
-xmlutil, a SAX-shaped bridge and query axes). Behaviour stays that of jdom2 2.0.6.1; differences are
-listed in `docs/translation-notes.md`.
+xmlutil, a SAX-shaped bridge and query axes). It preserves the characterized jdom2 2.0.6.1 behavior
+within that subset, with explicit API/platform differences listed in `docs/translation-notes.md`.
 
 Targets: `jvm`, `iosArm64`, `iosSimulatorArm64`, plus `linuxX64` for running the common tests natively
 on Linux (not shipped; `nativeMain`/`nativeTest` hold the actuals it shares with iOS). `commonMain` depends only on the Kotlin stdlib and
-xmlutil (`io.github.pdvrieze.xmlutil:core`). Test-only (`jvmTest`): JUnit 4, jdom2 and jaxen as oracles.
+xmlutil (`io.github.pdvrieze.xmlutil:core:1.0.2.1`). It has no JSword or AndBible production dependency.
+Test-only (`jvmTest`): JUnit 4, jdom2 and jaxen as oracles.
 
 ## Package map (1:1 with jdom2)
 
@@ -39,10 +40,10 @@ Void jdom2 setters are plain `var` properties. Exceptions and details are listed
 ## Parsing and DOCTYPE policy
 
 `KdomBuilder` (jdom2 `SAXBuilder` replacement) and `XmlEventParser` (SAX-shaped events) read XML with
-xmlutil. In the default **strict** mode they reject every input the JDK's JAXP SAX parser rejects
-(pinned by differential tests and a mutation fuzz; the only known accept/reject differences are that a
+xmlutil. In the default **strict** mode the differential corpus and mutation fuzz pin rejection against
+the JDK's JAXP SAX parser (not a proof for all possible XML); known accept/reject differences include that a
 DOCTYPE is always rejected and that a malformed `encoding` name in the XML declaration of a *string*
-input is rejected, while the JDK ignores it). In strict mode any DOCTYPE is a parse error, which is what JSword's OSIS/ThML/GBF parsing relies on (a malformed verse keeps
+input is rejected, while the JDK ignores it. In strict mode any DOCTYPE is a parse error, which is what JSword's OSIS/ThML/GBF parsing relies on (a malformed verse keeps
 taking its fallback chain). For EPUB XHTML/OPF/NCX and other non-Sword XML, `KdomBuilder(allowDocType =
 true)` / `XmlEventParser(namespaceAware, allowDocType = true)` accept a DOCTYPE and build a `DocType`
 node as jdom2 does; the external subset is never loaded (no network, no files), internal-subset
@@ -52,6 +53,27 @@ entities whose replacement text holds markup or non-predefined references are re
 them); internal-subset processing instructions are dropped; relative system ids of internal-subset
 declarations are kept as written. Details: `docs/xmlutil-probes.md` ("DOCTYPE policy") and
 `docs/translation-notes.md`.
+
+## Compatibility boundary
+
+This is the used subset, not a drop-in implementation of every JDOM API. In particular:
+
+- Common output takes `Appendable`; `OutputStream` output is a JVM extension (import
+  `fi.sykero.kdom.output.output`). A `PrintStream` selects the Appendable member and uses its own encoding,
+  not `Format.encoding` (`OutputStreamBindingTest`).
+- Java serialization, `SystemProperty` and `Element.getXMLBaseURI()` were removed. Clone uses explicit
+  copies; an unknown subclass clones to its kdom base class (`CloneTest.subclassClonesToKdomClass`).
+- Some members are final where JDOM allowed overriding; getter JVM names, null handling, raw protected
+  constructors and fluent setters have specific exceptions. See the full inventory in the translation notes.
+- `fi.sykero.kdom.query` supplies axes/name tests, not an XPath evaluator. Absolute queries require a
+  document; detached trees need relative axes. Lazy sequences must be materialized before mutation
+  (`AxesTest`, `AxesJaxenDifferentialTest`).
+- Native compilation is not Native runtime verification. Raw-instance non-null/null tricks, live-list
+  `sortWith`, unusual floating-point grammar and platform diagnostic names have documented limits.
+  Use `Element.sortContent/sortChildren/sortAttributes` for portable live-list sorting.
+
+The translation notes retain historical baseline counts separately from current behavior; they list
+removed members, API-shape exceptions, parser/output differences, test references and unverified cases.
 
 ## Build
 
