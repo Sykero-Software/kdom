@@ -142,6 +142,20 @@ class KdomBuilderTest {
         assertEquals("\u00E9\u20AC\uD83D\uDE00", KdomBuilder().build(bytes).rootElement.text)
     }
 
+    @Test fun xmlPrefixedPiEncodingDoesNotAffectUtf8Bytes() {
+        for (encoding in listOf("ISO-8859-1", "unsupported")) {
+            val bytes = "<?xml-stylesheet encoding='$encoding'?><a>é€</a>".encodeToByteArray()
+            assertEquals("é€", KdomBuilder().build(bytes).rootElement.text)
+        }
+    }
+
+    @Test fun longDeclarationSelectsLatin1WithoutScanningBodyForEncoding() {
+        val head = "<?xml version='1.0'" + " ".repeat(1400) + "encoding='ISO-8859-1'?><a>"
+        val bytes = head.encodeToByteArray() + byteArrayOf(0xE9.toByte()) + "</a>".encodeToByteArray()
+        assertEquals("é", KdomBuilder().build(bytes).rootElement.text)
+        assertEquals("encoding='unsupported'", KdomBuilder().build("<?xml version='1.0'?><a>encoding='unsupported'</a>".encodeToByteArray()).rootElement.text)
+    }
+
     @Test fun bytesWithoutBomAreUtf8() {
         assertEquals("\u00E9", KdomBuilder().build("<?xml version=\"1.0\"?><a>\u00E9</a>".encodeToByteArray()).rootElement.text)
     }

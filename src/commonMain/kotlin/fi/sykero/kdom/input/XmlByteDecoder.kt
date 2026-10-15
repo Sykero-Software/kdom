@@ -32,15 +32,7 @@ internal object XmlByteDecoder {
      * the JDK parser (a UTF-8 BOM followed by `encoding="ISO-8859-1"` is read as ISO-8859-1).
      */
     private fun eightBit(b: ByteArray, from: Int): String {
-        val head = StringBuilder()
-        var i = from
-        while (i < b.size && i < from + 1024) {
-            val c = (b[i].toInt() and 0xFF).toChar()
-            head.append(c)
-            if (c == '>') break
-            i++
-        }
-        val enc = declaredEncoding(head.toString())?.uppercase()
+        val enc = declaredEncoding(b.size - from) { (b[from + it].toInt() and 0xFF).toChar() }?.uppercase()
         return when {
             enc == null || enc == "UTF-8" -> utf8(b, from, lenient = false)
             enc == "UTF8" -> utf8(b, from, lenient = true)
@@ -56,28 +48,36 @@ internal object XmlByteDecoder {
     /** UTF-16 whose declaration (if any) must name UTF-16 of the same byte order (as the JDK parser checks). */
     private fun checkedUtf16(b: ByteArray, from: Int, bigEndian: Boolean): String {
         val text = utf16(b, from, bigEndian)
-        val enc = declaredEncoding(text.substring(0, minOf(text.length, 1024)))?.uppercase()
+        val enc = declaredEncoding(text.length) { text[it] }?.uppercase()
         val ok = enc == null || enc == "UTF-16" || enc == "UTF16" || enc == "UNICODE" ||
             (bigEndian && (enc == "UTF-16BE" || enc == "UNICODEBIG")) || (!bigEndian && (enc == "UTF-16LE" || enc == "UNICODELITTLE"))
         if (!ok) throw SAXParseException("Encoding \"$enc\" declared, but the bytes are UTF-16" + (if (bigEndian) "BE" else "LE") + ".", 1, 1)
         return text
     }
 
-    /** The `encoding` value of an XML declaration at the very start of [head], or null. */
-    private fun declaredEncoding(head: String): String? {
-        if (!head.startsWith("<?xml")) return null
-        val close = head.indexOf("?>")
-        val decl = if (close < 0) head else head.substring(0, close)
-        var k = decl.indexOf("encoding")
-        if (k < 0) return null
-        k += "encoding".length
-        while (k < decl.length && isXmlSpace(decl[k])) k++
-        if (k >= decl.length || decl[k] != '=') return null
+    /** Scan only an exact XML declaration through `?>`, in linear time and without copying the document. */
+    private inline fun declaredEncoding(length: Int, charAt: (Int) -> Char): String? {
+        val prefix = "<?xml"
+        if (length <= prefix.length || prefix.indices.any { charAt(it) != prefix[it] } || !isXmlSpace(charAt(5))) return null
+        var close = 5
+        while (close + 1 < length && !(charAt(close) == '?' && charAt(close + 1) == '>')) close++
+        if (close + 1 >= length) return null // The XML parser reports the unterminated declaration.
+        val token = "encoding"
+        var k = 5
+        while (k + token.length <= close) {
+            if (isXmlSpace(charAt(k - 1)) && token.indices.all { charAt(k + it) == token[it] }) break
+            k++
+        }
+        k += token.length
+        while (k < close && isXmlSpace(charAt(k))) k++
+        if (k >= close || charAt(k) != '=') return null
         k++
-        while (k < decl.length && isXmlSpace(decl[k])) k++
-        if (k >= decl.length || (decl[k] != '"' && decl[k] != '\'')) return null
-        val end = decl.indexOf(decl[k], k + 1)
-        return if (end < 0) null else decl.substring(k + 1, end)
+        while (k < close && isXmlSpace(charAt(k))) k++
+        if (k >= close || (charAt(k) != '"' && charAt(k) != '\'')) return null
+        val quote = charAt(k++)
+        val start = k
+        while (k < close && charAt(k) != quote) k++
+        return if (k == close) null else buildString(k - start) { for (p in start until k) append(charAt(p)) }
     }
 
     // Encoding names, matched case-insensitively, as accepted by the JDK parser (each checked against it, see

@@ -54,6 +54,18 @@ them); internal-subset processing instructions are dropped; relative system ids 
 declarations are kept as written. Details: `docs/xmlutil-probes.md` ("DOCTYPE policy") and
 `docs/translation-notes.md`.
 
+### Internal entity safety limit
+
+Permissive parsing has a cumulative **1,000,000 UTF-16 code-unit** budget per parse for internal
+replacement text. The scanner reserves units before appending decoded definition text (including
+parameter and duplicate declarations), and before expanding each use in content, attributes or
+namespace values. Definition storage and uses share the budget; supplementary characters take two
+units. Definition accounting precedes line-end normalization, so CRLF takes two units there.
+Exceeding the limit throws a controlled parse exception; the parser/builder remains reusable.
+This is an explicit kdom safety boundary, not a measured legacy-parser threshold or a claim of
+unbounded legacy parity. Ordinary document text and predefined references outside internal
+replacement text are not charged to this budget.
+
 ## Compatibility boundary
 
 This is the used subset, not a drop-in implementation of every JDOM API. In particular:
@@ -87,3 +99,11 @@ removed members, API-shape exceptions, parser/output differences, test reference
 
 JDOM licence, see `LICENSE` and `NOTICE`. The licence (clause 4) forbids "JDOM" in the name of a
 derived product, so the library name must never contain "JDOM".
+
+The JVM JAR packages the complete files as `META-INF/kdom/LICENSE` and `META-INF/kdom/NOTICE`.
+Binary redistributors must retain the copyright, conditions and disclaimer in documentation or
+other materials delivered with their distribution. Native libraries are linked into downstream
+binaries, where JAR resource packaging is not meaningful: downstream Native applications must
+explicitly ship the complete `LICENSE` and `NOTICE` with their binary (for example in the app's
+licence screen or bundled third-party notices). Merely linking kdom or naming its licence is not
+sufficient. AndBible's Android licence resource includes both complete texts.

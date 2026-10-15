@@ -45,6 +45,26 @@ class XmlByteDecoderDifferentialTest {
         if (problems.isNotEmpty()) fail(problems.size.toString() + " mismatches:\n" + problems.joinToString("\n"))
     }
 
+    @Test fun xmlPrefixedProcessingInstructionsDoNotSelectEncoding() {
+        for (target in listOf("xml-stylesheet", "xmlfoo")) for (encoding in listOf("ISO-8859-1", "unsupported")) {
+            val bytes = "<?$target encoding='$encoding'?><a>é€</a>".encodeToByteArray()
+            org.junit.Assert.assertEquals("target=$target encoding=$encoding", jdk(bytes), kdom(bytes))
+        }
+    }
+
+    @Test fun longLatin1DeclarationIsReadThroughItsTerminator() {
+        val bytes = ("<?xml version='1.0'" + " \t".repeat(700) + "encoding='ISO-8859-1'?><a>")
+            .encodeToByteArray() + byteArrayOf(0xE9.toByte()) + "</a>".encodeToByteArray()
+        org.junit.Assert.assertEquals(jdk(bytes), kdom(bytes))
+    }
+
+    @Test fun longUtf16ConflictingDeclarationIsRejected() {
+        val text = "<?xml version='1.0'" + " ".repeat(1400) + "encoding='UTF-16BE'?><a/>"
+        val bytes = byteArrayOf(0xFF.toByte(), 0xFE.toByte()) + text.toByteArray(Charsets.UTF_16LE)
+        org.junit.Assert.assertThrows(Exception::class.java) { jdk(bytes) }
+        org.junit.Assert.assertThrows(fi.sykero.kdom.sax.SAXParseException::class.java) { kdom(bytes) }
+    }
+
     private fun hex(sb: CharSequence) = sb.map { it.code.toString(16) }.joinToString(" ")
 
     private fun jdk(bytes: ByteArray): String {

@@ -87,6 +87,15 @@ internal class SourceScanner(
 
     private var seenRoot = false
     private var standaloneYes = false
+    private var replacementUnits = 0
+
+    /** Definition decoding and all uses share a per-parse, overflow-safe UTF-16 allocation budget. */
+    private fun reserveReplacement(units: Int, at: Int) {
+        if (units > 1_000_000 - replacementUnits) {
+            fail(at, "Internal entity replacement text exceeds the per-parse budget of 1000000 UTF-16 code units.")
+        }
+        replacementUnits += units
+    }
 
     fun scan() {
         checkCharacters()
@@ -598,17 +607,19 @@ internal class SourceScanner(
                 c == '%' -> fail(k, "kdom does not support parameter-entity references in a DOCTYPE internal subset.")
                 c == '&' && k + 1 < to && s[k + 1] == '#' -> {
                     val after = charRef(k)
-                    sb.append(charRefText(k, after))
+                    val text = charRefText(k, after)
+                    sb.append(text)
                     k = after
                 }
                 c == '&' -> {
                     val semi = s.indexOf(';', k)
                     if (semi < 0 || semi >= to || semi == k + 1) fail(k, "The reference to an entity must end with the ';' delimiter.")
                     checkName(k + 1, semi, "The entity name must immediately follow the '&' in the entity reference.")
+                    reserveReplacement(semi + 1 - k, k)
                     sb.append(s, k, semi + 1)
                     k = semi + 1
                 }
-                else -> { sb.append(c); k++ }
+                else -> { reserveReplacement(1, k); sb.append(c); k++ }
             }
         }
         return normalizeLineEnds(sb.toString())
@@ -619,6 +630,7 @@ internal class SourceScanner(
         val hex = s[from + 2] == 'x'
         val digits = s.substring(from + (if (hex) 3 else 2), after - 1)
         val cp = digits.toInt(if (hex) 16 else 10)
+        reserveReplacement(if (cp >= 0x10000) 2 else 1, from)
         return if (cp >= 0x10000) {
             val v = cp - 0x10000
             charArrayOf((0xD800 + (v shr 10)).toChar(), (0xDC00 + (v and 0x3FF)).toChar()).concatToString()
@@ -656,7 +668,9 @@ internal class SourceScanner(
             }
             else -> {
                 val text = expandReplacementText(decl.value, at, name, inAttribute)
-                EntityUse.Expand(if (inAttribute) text.map { if (it == '\t' || it == '\n' || it == '\r') ' ' else it }.joinToString("") else text)
+                EntityUse.Expand(if (inAttribute) buildString(text.length) {
+                    for (c in text) append(if (c == '\t' || c == '\n' || c == '\r') ' ' else c)
+                } else text)
             }
         }
         entityRefs.add(intArrayOf(at, nameEnd + 1, entityUses.size))
@@ -670,15 +684,19 @@ internal class SourceScanner(
         if (!inAttribute && value.contains("]]>")) {
             fail(at, "The character sequence \"]]>\" must not appear in content unless used to mark the end of a CDATA section.")
         }
-        if (!value.contains('&') && !value.contains('<')) return value
+        if (!value.contains('&') && !value.contains('<')) {
+            reserveReplacement(value.length, at)
+            return value
+        }
         if (value.contains('<')) fail(at, "kdom does not support entity \"$name\": its replacement text contains markup.")
         val sb = StringBuilder()
         var k = 0
         while (k < value.length) {
             val c = value[k]
-            if (c != '&') { sb.append(c); k++; continue }
+            if (c != '&') { reserveReplacement(1, at); sb.append(c); k++; continue }
             val semi = value.indexOf(';', k)
             if (semi < 0) fail(at, "XML document structures must start and end within the same entity (in entity \"$name\").")
+            reserveReplacement(1, at)
             when (val ref = value.substring(k + 1, semi)) {
                 "lt" -> sb.append('<')
                 "gt" -> sb.append('>')

@@ -26,6 +26,11 @@ kotlin {
     }
 }
 
+// Keep the complete upstream materials in the independent JVM binary, without maintaining copies.
+tasks.named<ProcessResources>("jvmProcessResources") {
+    from(files("LICENSE", "NOTICE")) { into("META-INF/kdom") }
+}
+
 tasks.withType<Test>().configureEach {
     systemProperty("kdom.corpus", System.getProperty("kdom.corpus") ?: "")
 }
